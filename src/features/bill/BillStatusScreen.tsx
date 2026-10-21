@@ -6,7 +6,7 @@ import { Info, QrCode } from "lucide-react";
 import { TABLE } from "@/mocks/table";
 import { delay } from "@/shared/lib/delay";
 import { useScreenState } from "@/shared/lib/use-screen-state";
-import { PrimaryButton, SecondaryButton, StateCard, StatusBar, type ButtonProps } from "@/shared/ui";
+import { PrimaryButton, SecondaryButton, StateCard, type ButtonProps } from "@/shared/ui";
 import { getTableSummary, useTableSession } from "@/features/table-session";
 import { mutedPrimary } from "@/features/table";
 import { AccountStatusCard } from "./AccountStatusCard";
@@ -44,7 +44,7 @@ export function BillStatusScreen() {
     if (notRequested) router.replace("/table/bill");
   }, [notRequested, router]);
 
-  if ((!hydrated && !forced) || view === "not-requested") return <StatusBar />;
+  if ((!hydrated && !forced) || view === "not-requested") return null;
 
   const copy = BILL_STATUS_COPY[view];
   const summary = getTableSummary(orders);
@@ -87,7 +87,6 @@ export function BillStatusScreen() {
 
   return (
     <>
-      <StatusBar />
       <BillStatusHero
         cafeName={TABLE.cafeName}
         table={TABLE.number}

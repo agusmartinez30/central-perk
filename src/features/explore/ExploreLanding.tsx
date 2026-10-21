@@ -2,14 +2,13 @@ import { Search } from "lucide-react";
 import { MOMENTS } from "@/mocks/moments";
 import { TABLE } from "@/mocks/table";
 import { CartFloatingCta } from "@/features/cart";
-import { BottomDock, BottomNav, StatusBar } from "@/shared/ui";
+import { BottomDock, BottomNav } from "@/shared/ui";
 import { MomentCard } from "./MomentCard";
 
 /** Screen 02B · Explore landing: pick a consumption moment. */
 export function ExploreLanding() {
   return (
     <>
-      <StatusBar />
       <main className="flex flex-1 flex-col px-4 pt-3 pb-[164px]">
         <header className="flex flex-col gap-[13px]">
           <div className="flex items-center justify-between">

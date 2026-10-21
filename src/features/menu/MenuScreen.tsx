@@ -5,7 +5,7 @@ import { CATEGORIES } from "@/mocks/menu";
 import { TABLE } from "@/mocks/table";
 import type { CategoryId } from "@/mocks/types";
 import { CartFloatingCta } from "@/features/cart";
-import { BottomDock, BottomNav, FilterChips, StatusBar } from "@/shared/ui";
+import { BottomDock, BottomNav, FilterChips } from "@/shared/ui";
 import { MenuHeader } from "./MenuHeader";
 import { PromoBanner } from "./PromoBanner";
 import { ProductCard, ProductRow } from "./ProductCard";
@@ -19,7 +19,6 @@ export function MenuScreen() {
 
   return (
     <>
-      <StatusBar />
       <MenuHeader cafeName={TABLE.cafeName} table={TABLE.number} />
       <main className="flex flex-1 flex-col pt-1.5 pb-[164px]">
         <PromoBanner />

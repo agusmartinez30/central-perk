@@ -12,7 +12,6 @@ import {
   PrimaryButton,
   SecondaryButton,
   StateCard,
-  StatusBar,
 } from "@/shared/ui";
 import { OrderHero } from "./OrderHero";
 import { OrderOutcomeView } from "./OrderOutcomeView";
@@ -59,13 +58,12 @@ export function OrderStatusScreen({ orderId }: OrderStatusScreenProps) {
     );
   }
 
-  if (!hydrated) return <StatusBar tone="brand" />;
+  if (!hydrated) return null;
 
   const order = getOrder(orderId);
   if (!order) {
     return (
       <>
-        <StatusBar />
         <main className="flex flex-1 flex-col justify-center gap-4 px-4 pb-10">
           <StateCard variant="empty" icon={SearchX} title="No encontramos este pedido">
             Puede que el enlace sea viejo o que el pedido se haya hecho desde otro dispositivo.
@@ -80,7 +78,6 @@ export function OrderStatusScreen({ orderId }: OrderStatusScreenProps) {
 
   return (
     <>
-      <StatusBar tone="brand" />
       <OrderHero
         cafeName={TABLE.cafeName}
         table={TABLE.number}

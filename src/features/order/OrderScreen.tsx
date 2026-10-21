@@ -9,7 +9,6 @@ import {
   PrimaryButton,
   SecondaryButton,
   StateCard,
-  StatusBar,
   StickyFooter,
   formatItemCount,
 } from "@/shared/ui";
@@ -27,7 +26,6 @@ export function OrderScreen() {
 
   return (
     <>
-      <StatusBar />
       <header className="flex flex-col gap-[7px] px-4">
         <div className="flex h-10 items-center justify-between">
           <Link href="/menu" aria-label="Volver al menú" className={roundAction}>

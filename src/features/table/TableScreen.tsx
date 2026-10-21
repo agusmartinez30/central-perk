@@ -13,7 +13,6 @@ import {
   ScreenHeader,
   SecondaryButton,
   StateCard,
-  StatusBar,
   StatusPill,
   StickyFooter,
 } from "@/shared/ui";
@@ -42,7 +41,6 @@ export function TableScreen() {
   if (!hydrated && !forced) {
     return (
       <>
-        <StatusBar />
         {header}
         <main className="flex-1" aria-busy="true" />
       </>
@@ -105,7 +103,6 @@ export function TableScreen() {
 
   return (
     <>
-      <StatusBar />
       {header}
       <main className="flex flex-1 flex-col gap-3 px-4 pt-3 pb-4">
         <TableHeading heading={copy.heading} />

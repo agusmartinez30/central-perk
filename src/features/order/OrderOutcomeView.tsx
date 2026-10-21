@@ -1,5 +1,5 @@
 import { TABLE } from "@/mocks/table";
-import { Notice, PrimaryButton, SecondaryButton, StateCard, StatusBar } from "@/shared/ui";
+import { Notice, PrimaryButton, SecondaryButton, StateCard } from "@/shared/ui";
 import { OrderHero } from "./OrderHero";
 import type { OrderOutcomeCopy } from "./order-outcomes";
 
@@ -15,7 +15,6 @@ type OrderOutcomeViewProps = {
 export function OrderOutcomeView({ copy, onPrimary, primaryLoading, feedback }: OrderOutcomeViewProps) {
   return (
     <>
-      <StatusBar tone="brand" />
       <OrderHero
         cafeName={TABLE.cafeName}
         table={TABLE.number}

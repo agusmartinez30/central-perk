@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Coffee, MapPin } from "lucide-react";
 import { TABLE } from "@/mocks/table";
-import { StatusBar } from "@/shared/ui";
 
 export const LINE_ART_SRC = encodeURI("/assets/Ilustración · Café Central line art.png");
 
@@ -10,7 +9,8 @@ export const LINE_ART_SRC = encodeURI("/assets/Ilustración · Café Central lin
 export function WelcomeScreen() {
   return (
     <div className="flex min-h-dvh flex-1 flex-col bg-brand text-white">
-      <StatusBar tone="brand" />
+      {/* Full-bleed brand background beyond the 390px column. */}
+      <div aria-hidden className="fixed inset-0 -z-10 bg-brand" />
       <main className="flex flex-1 flex-col justify-between gap-6 px-5 pt-3 pb-6">
         <header className="flex h-11 items-center justify-between">
           <div className="flex items-center gap-[9px]">

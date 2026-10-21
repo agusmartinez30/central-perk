@@ -11,7 +11,7 @@ export function MobileFrame({ children, className }: MobileFrameProps) {
   return (
     <div
       className={clsx(
-        "relative mx-auto flex min-h-dvh w-full max-w-[390px] flex-col bg-cream",
+        "relative mx-auto flex min-h-dvh w-full max-w-[390px] flex-col bg-cream pt-[env(safe-area-inset-top)]",
         className,
       )}
     >

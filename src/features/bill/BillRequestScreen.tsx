@@ -12,7 +12,6 @@ import {
   PrimaryButton,
   ScreenHeader,
   SecondaryButton,
-  StatusBar,
   StickyFooter,
 } from "@/shared/ui";
 import { getTableSummary, useTableSession, type PaymentPreference } from "@/features/table-session";
@@ -74,7 +73,6 @@ export function BillRequestScreen() {
   if (!session.hydrated && !forced) {
     return (
       <>
-        <StatusBar />
         {header}
         <main className="flex-1" aria-busy="true" />
       </>
@@ -114,7 +112,6 @@ export function BillRequestScreen() {
     const locked = BILL_REQUEST_LOCKED[view];
     return (
       <>
-        <StatusBar />
         {header}
         <main className="flex flex-1 flex-col gap-3 px-4 pt-3 pb-6">
           <BillHero
@@ -167,7 +164,6 @@ export function BillRequestScreen() {
 
   return (
     <>
-      <StatusBar />
       {header}
       <main className="flex flex-1 flex-col gap-3 px-4 pt-2 pb-6">
         <BillSummaryCard

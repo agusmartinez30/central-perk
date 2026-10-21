@@ -9,7 +9,7 @@ import { getUnitPrice } from "@/mocks/menu";
 import type { CategoryId, Product } from "@/mocks/types";
 import { useCart } from "@/features/cart";
 import { formatPrice } from "@/shared/lib/format-price";
-import { Notice, PrimaryButton, QuantityStepper, StatusBar, StickyFooter } from "@/shared/ui";
+import { Notice, PrimaryButton, QuantityStepper, StickyFooter } from "@/shared/ui";
 import { OptionGroupField } from "./OptionGroupField";
 import {
   getFromPrice,
@@ -68,7 +68,6 @@ export function ProductDetail({ product }: ProductDetailProps) {
 
   return (
     <>
-      <StatusBar />
       <header className="sticky top-0 z-10 flex h-14 items-center justify-between bg-cream px-4">
         <button
           type="button"

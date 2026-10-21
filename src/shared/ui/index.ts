@@ -1,5 +1,4 @@
 export { MobileFrame } from "./MobileFrame";
-export { StatusBar } from "./StatusBar";
 export { TableBadge } from "./TableBadge";
 export { PrimaryButton, SecondaryButton, type ButtonProps } from "./Button";
 export { StickyFooter } from "./StickyFooter";

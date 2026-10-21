@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowUpDown, Search, SlidersHorizontal } from "lucide-react";
 import type { Moment } from "@/mocks/types";
 import { CartFloatingCta } from "@/features/cart";
-import { BottomDock, BottomNav, FilterChips, StatusBar } from "@/shared/ui";
+import { BottomDock, BottomNav, FilterChips } from "@/shared/ui";
 import { ProductListCard } from "./ProductListCard";
 import { getMomentProducts } from "./moment-products";
 
@@ -23,7 +23,6 @@ export function ExploreResults({ moment }: ExploreResultsProps) {
 
   return (
     <>
-      <StatusBar />
       <main className="flex flex-1 flex-col px-4 pt-2 pb-[164px]">
         <Link
           href="/explore"

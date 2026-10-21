@@ -10,7 +10,7 @@ import { useCart } from "@/features/cart";
 import { useTableSession } from "@/features/table-session";
 import { delay, formatClockTime } from "@/shared/lib/delay";
 import { formatPrice } from "@/shared/lib/format-price";
-import { PrimaryButton, StatusBar, formatItemCount } from "@/shared/ui";
+import { PrimaryButton, formatItemCount } from "@/shared/ui";
 import { OrderOutcomeView } from "./OrderOutcomeView";
 import { getCartLineView, type CartLineView } from "./order-lines";
 import { ORDER_OUTCOMES } from "./order-outcomes";
@@ -80,7 +80,6 @@ export function ConfirmOrderScreen() {
 
   return (
     <>
-      <StatusBar />
       <header className="flex h-[60px] items-center gap-3.5 px-4 pt-2">
         <Link
           href="/order"
