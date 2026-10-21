@@ -18,3 +18,9 @@ export {
   type TableSessionState,
   type TableStatus,
 } from "./table-session-reducer";
+export {
+  formatOrderCount,
+  formatUnitCount,
+  getTableSummary,
+  type TableSummary,
+} from "./table-summary";
