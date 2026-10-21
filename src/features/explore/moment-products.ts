@@ -10,3 +10,10 @@ export function getMomentProducts(moment: Moment, filterId: string): Product[] {
     return product ? [product] : [];
   });
 }
+
+/** Sub-filter to open a moment with: a valid `?filter=` value, or the moment's first filter. */
+export function resolveFilterId(moment: Moment, raw: string | string[] | undefined): string {
+  const fallback = moment.filters[0]?.id ?? "todos";
+  if (typeof raw !== "string") return fallback;
+  return moment.filters.some((filter) => filter.id === raw) ? raw : fallback;
+}
