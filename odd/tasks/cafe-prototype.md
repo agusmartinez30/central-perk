@@ -23,9 +23,9 @@ The screens exist only as static design exports. We need a navigable prototype t
 - [x] T0 Bootstrap: git init, create-next-app, deps (lucide-react, clsx, vitest, sharp). Route: inline. Commits: 353417f, 6864dc8
 - [x] T1 Tokens, fonts, MobileFrame, StatusBar, base shared/ui components. Route: delegated (2+ non-trivial files). Commit: cf2ba56
 - [x] T2 Mocks, image extraction script and assets, formatPrice (+tests). Route: delegated (2+ non-trivial files, image tooling). Commit: c6f2152
-- [ ] T3 Welcome, Menu (02), BottomNav, FloatingCartCta
-- [ ] T4 Explore landing and results (02B)
-- [ ] T5 Product detail (03): options, price calc (+tests), CartProvider (+reducer tests)
+- [x] T3 Welcome, Menu (02), BottomNav, FloatingCartCta, CartProvider (+reducer tests; moved here from T5 because the menu "+" and the floating CTA need it). Route: delegated (2+ non-trivial files). Commit: 935c396
+- [x] T4 Explore landing and results (02B). Route: delegated (2+ non-trivial files). Commit: cac4222
+- [ ] T5 Product detail (03): options, price calc (+tests)
 - [ ] T6 Cart (04), Confirm (05), Order sent (06 + 06A–C)
 - [ ] T7 My table (07 + 07A–D)
 - [ ] T8 Request bill (08 + 08A–F), Bill status (09 + 09A–E)
@@ -47,5 +47,10 @@ lint, tsc, vitest, build, plus a manual walk-through with `npm run dev`.
 
 - RDD for T1+T2 (base 6864dc8, committed-only): assessed medium, `slice_budget_reached`; the user declined review for this candidate. Next review boundary: e2709d8. `.atl/` (tool cache) is excluded locally via `.git/info/exclude`.
 
+- T3 done: `src/features/cart` (pure `cart-reducer`: add with merging of identical lines, increment, decrement that removes at 1, remove, clear, hydrate; `selectItemCount`/`selectSubtotal` via `getUnitPrice`; `parseStoredCart`), `CartProvider` + `useCart` with hydration-safe localStorage restore, and the `CartFloatingCta` and `QuickAddButton` containers. Also `getDefaultChoiceIds` in `src/mocks/menu.ts`; shared `BottomNav`, `BottomDock`, `FloatingCartCta` (`bag`/`count` variants), `FilterChips`, `AddButton` and a `StatusBar` `tone`; Welcome (`/`) and Menu (`/menu`) in `src/features/menu`. RED observed for `cart-reducer.test.ts`, `menu.test.ts` and `menu-sections.test.ts` (missing modules or functions), then GREEN.
+- T4 done: `/explore` landing and `/explore/[moment]` results (`generateStaticParams` over the 4 moments; an unknown moment calls `notFound()`), with `MomentCard`, `ProductListCard` and `getMomentProducts` in `src/features/explore`. RED observed for `moment-products.test.ts`, then GREEN.
+- T3+T4 checks: vitest 34/34 pass; tsc pass (after `next typegen` generates the `PageProps` route types); lint pass; build pass (`/explore/[moment]` prerendered per moment). Dev server: `/`, `/menu`, `/explore`, `/explore/para-desayunar` and `/explore/para-tomar` return 200; `/explore/no-existe` returns 404.
+- Notes: each page passes the active tab to `BottomNav` explicitly (no `usePathname`, which avoids Cache Components Suspense requirements). `next/image` `priority` is deprecated in Next 16, so `loading="eager"` is used. The banner and welcome art reuse the white line-art PNG instead of the inline SVG paths in the exports. Product links point to `/product/[id]`, which T5 adds. The search, info, sort and filter buttons are visual only.
+
 ## Next step
-T3 + T4 (delegated writer).
+RDD assessment for the T3+T4 slice (base e2709d8), then T5 (product detail).
