@@ -11,11 +11,13 @@ import { getMomentProducts } from "./moment-products";
 
 type ExploreResultsProps = {
   moment: Moment;
+  /** Sub-filter selected on open, e.g. from `?filter=`; defaults to the first filter. */
+  initialFilterId?: string;
 };
 
 /** Screen 02B · Explore results for one moment, with sub-filter chips. */
-export function ExploreResults({ moment }: ExploreResultsProps) {
-  const [filterId, setFilterId] = useState(moment.filters[0]?.id ?? "todos");
+export function ExploreResults({ moment, initialFilterId }: ExploreResultsProps) {
+  const [filterId, setFilterId] = useState(initialFilterId ?? moment.filters[0]?.id ?? "todos");
   const products = getMomentProducts(moment, filterId);
 
   return (

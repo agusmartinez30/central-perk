@@ -23,7 +23,7 @@ Strategy `ask-on-risk`, with commits on `feat/cafe-prototype`. Forecast: about 3
 - [x] T1 Pure helpers and tests: `HOME_SECTION_LIMIT`, `getComboProducts`, `limitSection` (menu-sections), `getCategoryProducts` (new category-products), `resolveFilterId` (moment-products). Route: delegated (2+ non-trivial files).
 - [x] T2 Category results page `/explore/categoria/[category]`: extract `ProductResults` from `ExploreResults`, and add `CategoryResults`. Route: delegated.
 - [x] T3 Home: capped sections with "Ver más", and the Combos section. Route: delegated.
-- [ ] T4 Explore `?filter=` sets the initial sub-filter. Route: delegated.
+- [x] T4 Explore `?filter=` sets the initial sub-filter. Route: delegated.
 
 ## Acceptance criteria
 - `/menu` (Todos) shows 4 rows in Cafés and in Desayunos, each followed by "Ver más". The "N opciones" counter still shows the total.
@@ -40,11 +40,18 @@ vitest, lint, `tsc --noEmit`, build, and curl against `next start`.
 - `getCategoryById` lives in `category-products.ts` and excludes "todos", so the route and tests share one lookup.
 
 ## Progress / Evidence
-- T1 (delegated writer). RED: `npx vitest run` on the 3 helper test files → 3 files failed, 8 tests failed (`limitSection is not a function`, `resolveFilterId is not a function`, `Cannot find module './category-products'`). GREEN: same command → 3 files, 18 tests passed. Commit: see `git log` (`feat(menu): add home section helpers`).
+- T1 (delegated writer). RED: `npx vitest run` on the 3 helper test files → 3 files failed, 8 tests failed (`limitSection is not a function`, `resolveFilterId is not a function`, `Cannot find module './category-products'`). GREEN: same command → 3 files, 18 tests passed. Commit: `15b06fe feat(menu): add home section helpers`.
 
-- T2 (delegated writer). `npx tsc --noEmit` clean, `npx eslint src` clean, `npm run build` lists `/explore/categoria/[category]` with cafes, desayunos and "+3 more paths" (5 prerendered). No runnable RED: the change is a component extraction plus a route. Commit: `feat(explore): add category results page`.
+- T2 (delegated writer). `npx tsc --noEmit` clean, `npx eslint src` clean, `npm run build` lists `/explore/categoria/[category]` with cafes, desayunos and "+3 more paths" (5 prerendered). No runnable RED: the change is a component extraction plus a route. Commit: `e1c17f4 feat(explore): add category results page`.
 
-- T3 (delegated writer). `npx tsc --noEmit` and `npx eslint src` clean; `npx vitest run` → 113 passed. Logic is covered by the T1 helper tests; the screen wiring is checked with curl on `/menu` at closure. Commit: `feat(menu): cap home sections and add combos`.
+- T3 (delegated writer). `npx tsc --noEmit` and `npx eslint src` clean; `npx vitest run` → 113 passed. Logic is covered by the T1 helper tests; the screen wiring is checked with curl on `/menu` at closure. Commit: `8a38397 feat(menu): cap home sections and add combos`.
+
+- T4 (delegated writer). The page awaits `params` for the static shell and reads `searchParams` in a suspended child; the fallback is `ExploreResults` with the default filter. `npm run build`: the moment pages are now Partial Prerender (◐), and the category pages are still prerendered. Commit: `feat(explore): open a moment with the ?filter= sub-filter`.
+- Closure checks: `npx vitest run` → 113 passed; `npm run lint` → exit 0; `npx tsc --noEmit` → exit 0; `npm run build` → OK, 5 category paths listed. `next start` on port 3917 with curl:
+  - `/menu` → 200, "Combos" present, 3 "Ver más" (Cafés, Desayunos, Combos), and links to `/explore/categoria/{cafes,desayunos}` and `/explore/para-desayunar?filter=combos`.
+  - `/explore/categoria/cafes` → 200, 8 product links, title "Cafés · Café Central".
+  - `/explore/categoria/zzz` → 200 on the first request (the known prerender quirk), then 404.
+  - `/explore/para-desayunar?filter=combos` → 200. The streamed segment has the Combos chip `aria-selected="true"` and "2 productos". The HTML also holds the static fallback (Todos, 8 productos), which React replaces.
 
 ## Next step
-T4.
+Manual look at 390px with `npm run dev`; then run review assess per commit, as the parent decides.

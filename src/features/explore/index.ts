@@ -5,4 +5,4 @@ export { MomentCard } from "./MomentCard";
 export { ProductListCard } from "./ProductListCard";
 export { ProductResults } from "./ProductResults";
 export { getCategoryById, getCategoryProducts } from "./category-products";
-export { getMomentProducts } from "./moment-products";
+export { getMomentProducts, resolveFilterId } from "./moment-products";
