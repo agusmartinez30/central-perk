@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Caveat, DM_Sans, Inter } from "next/font/google";
 import { CartProvider } from "@/features/cart";
+import { TableSessionProvider } from "@/features/table-session";
 import { MobileFrame } from "@/shared/ui";
 import "./globals.css";
 
@@ -38,9 +39,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${dmSans.variable} ${caveat.variable} ${inter.variable} antialiased`}
     >
       <body className="bg-cream font-sans text-ink">
-        <CartProvider>
-          <MobileFrame>{children}</MobileFrame>
-        </CartProvider>
+        <TableSessionProvider>
+          <CartProvider>
+            <MobileFrame>{children}</MobileFrame>
+          </CartProvider>
+        </TableSessionProvider>
       </body>
     </html>
   );

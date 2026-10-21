@@ -32,6 +32,8 @@ export type CartContextValue = {
   lines: CartLine[];
   itemCount: number;
   subtotal: Ars;
+  /** False until the persisted cart has been restored after mount. */
+  hydrated: boolean;
   addItem: (input: AddItemInput) => void;
   increment: (lineId: string) => void;
   decrement: (lineId: string) => void;
@@ -65,9 +67,11 @@ function writeStoredCart(value: string) {
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, emptyCart);
   const hasRestored = useRef(false);
+  const [hydrated, markHydrated] = useReducer(() => true, false);
 
   useEffect(() => {
     dispatch({ type: "hydrate", state: readStoredCart() });
+    markHydrated();
   }, []);
 
   useEffect(() => {
@@ -84,13 +88,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       lines: state.lines,
       itemCount: selectItemCount(state),
       subtotal: selectSubtotal(state),
+      hydrated,
       addItem: (input) => dispatch({ type: "add", ...input }),
       increment: (lineId) => dispatch({ type: "increment", lineId }),
       decrement: (lineId) => dispatch({ type: "decrement", lineId }),
       remove: (lineId) => dispatch({ type: "remove", lineId }),
       clear: () => dispatch({ type: "clear" }),
     }),
-    [state],
+    [state, hydrated],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

@@ -12,3 +12,4 @@ export { FloatingCartCta, formatItemCount } from "./FloatingCartCta";
 export { FilterChips, type FilterChipItem } from "./FilterChips";
 export { AddButton } from "./AddButton";
 export { QuantityStepper } from "./QuantityStepper";
+export { StateCard } from "./StateCard";

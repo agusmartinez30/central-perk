@@ -1,0 +1,180 @@
+import { getProductById } from "@/mocks/menu";
+import { SEED_ORDERS, buildOrderLine, getTableTotal } from "@/mocks/table";
+import type { Ars, OrderStatus, TableOrder } from "@/mocks/types";
+
+export type TableStatus = "open" | "requested" | "attending" | "closed" | "reopened";
+
+/** How the table wants to pay the bill (screen 08). */
+export type PaymentPreference = "table" | "cashier" | "transfer";
+
+export type TableSessionState = {
+  orders: TableOrder[];
+  tableStatus: TableStatus;
+  paymentPreference: PaymentPreference | null;
+};
+
+export type TableSessionAction =
+  | { type: "addOrder"; order: TableOrder }
+  | { type: "setOrderStatus"; orderId: string; status: OrderStatus }
+  | { type: "setTableStatus"; status: TableStatus }
+  | { type: "setPaymentPreference"; preference: PaymentPreference | null }
+  | { type: "reset" }
+  | { type: "hydrate"; state: TableSessionState };
+
+/** A cart line as the order needs it; structurally compatible with `CartLine`. */
+export type OrderInputLine = {
+  productId: string;
+  choiceIds: readonly string[];
+  quantity: number;
+  note?: string;
+};
+
+export type PlaceOrderInput = {
+  customerName: string;
+  note?: string;
+  /** Local time shown on the order, e.g. "12:30". */
+  time: string;
+  lines: readonly OrderInputLine[];
+};
+
+export type BuildOrderResult =
+  | { ok: true; order: TableOrder }
+  | { ok: false; reason: "missing-name" | "empty" | "table-closed" };
+
+const TABLE_STATUSES: readonly TableStatus[] = ["open", "requested", "attending", "closed", "reopened"];
+const PAYMENT_PREFERENCES: readonly PaymentPreference[] = ["table", "cashier", "transfer"];
+const ORDER_STATUSES: readonly OrderStatus[] = ["sent", "preparing", "delivered", "cancelled"];
+const FIRST_ORDER_NUMBER = 1001;
+
+export const initialSession: TableSessionState = {
+  orders: SEED_ORDERS,
+  tableStatus: "open",
+  paymentPreference: null,
+};
+
+function trimmed(value: string | undefined): string | undefined {
+  const result = value?.trim();
+  return result ? result : undefined;
+}
+
+export function getNextOrderNumber(orders: readonly TableOrder[]): string {
+  const highest = orders.reduce((max, order) => Math.max(max, Number(order.number) || 0), 0);
+  return String(highest > 0 ? highest + 1 : FIRST_ORDER_NUMBER);
+}
+
+/** Validates the checkout input and turns cart lines into an order priced from the menu. */
+export function buildOrder(state: TableSessionState, input: PlaceOrderInput): BuildOrderResult {
+  if (state.tableStatus === "closed") return { ok: false, reason: "table-closed" };
+  const customerName = trimmed(input.customerName);
+  if (!customerName) return { ok: false, reason: "missing-name" };
+
+  const lines = input.lines
+    .filter((line) => line.quantity > 0 && getProductById(line.productId))
+    .map((line) =>
+      buildOrderLine({
+        productId: line.productId,
+        quantity: line.quantity,
+        choiceIds: [...line.choiceIds],
+        note: trimmed(line.note),
+      }),
+    );
+  if (lines.length === 0) return { ok: false, reason: "empty" };
+
+  const number = getNextOrderNumber(state.orders);
+  return {
+    ok: true,
+    order: {
+      id: `order-${number}`,
+      number,
+      customerName,
+      time: input.time,
+      status: "sent",
+      lines,
+      note: trimmed(input.note),
+    },
+  };
+}
+
+export function tableSessionReducer(
+  state: TableSessionState,
+  action: TableSessionAction,
+): TableSessionState {
+  switch (action.type) {
+    case "addOrder":
+      if (state.orders.some((order) => order.id === action.order.id)) return state;
+      return { ...state, orders: [...state.orders, action.order] };
+    case "setOrderStatus":
+      return {
+        ...state,
+        orders: state.orders.map((order) =>
+          order.id === action.orderId ? { ...order, status: action.status } : order,
+        ),
+      };
+    case "setTableStatus":
+      return { ...state, tableStatus: action.status };
+    case "setPaymentPreference":
+      return { ...state, paymentPreference: action.preference };
+    case "reset":
+      return initialSession;
+    case "hydrate":
+      return action.state;
+  }
+}
+
+export function selectOrderById(state: TableSessionState, orderId: string): TableOrder | undefined {
+  return state.orders.find((order) => order.id === orderId);
+}
+
+/** Shared account total, always computed from the order lines. */
+export function selectTableTotal(state: TableSessionState): Ars {
+  return getTableTotal(state.orders);
+}
+
+function isOrder(value: unknown): value is TableOrder {
+  if (typeof value !== "object" || value === null) return false;
+  const order = value as Record<string, unknown>;
+  return (
+    typeof order.id === "string" &&
+    typeof order.number === "string" &&
+    typeof order.customerName === "string" &&
+    typeof order.time === "string" &&
+    ORDER_STATUSES.includes(order.status as OrderStatus) &&
+    (order.note === undefined || typeof order.note === "string") &&
+    Array.isArray(order.lines) &&
+    order.lines.every((line: unknown) => {
+      const l = line as Record<string, unknown> | null;
+      return (
+        typeof l === "object" &&
+        l !== null &&
+        typeof l.productId === "string" &&
+        typeof l.name === "string" &&
+        typeof l.quantity === "number" &&
+        typeof l.unitPrice === "number"
+      );
+    })
+  );
+}
+
+/** Parses the persisted session, falling back to the initial session on any malformed data. */
+export function parseStoredSession(raw: string | null): TableSessionState {
+  if (!raw) return initialSession;
+  try {
+    const parsed = JSON.parse(raw) as Partial<Record<keyof TableSessionState, unknown>>;
+    const { orders, tableStatus, paymentPreference } = parsed ?? {};
+    if (!Array.isArray(orders) || !orders.every(isOrder)) return initialSession;
+    if (!TABLE_STATUSES.includes(tableStatus as TableStatus)) return initialSession;
+    if (
+      paymentPreference !== null &&
+      !PAYMENT_PREFERENCES.includes(paymentPreference as PaymentPreference)
+    ) {
+      return initialSession;
+    }
+    return {
+      orders,
+      tableStatus: tableStatus as TableStatus,
+      paymentPreference: paymentPreference as PaymentPreference | null,
+    };
+  } catch {
+    return initialSession;
+  }
+}
