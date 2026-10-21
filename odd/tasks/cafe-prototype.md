@@ -25,8 +25,8 @@ The screens exist only as static design exports. We need a navigable prototype t
 - [x] T2 Mocks, image extraction script and assets, formatPrice (+tests). Route: delegated (2+ non-trivial files, image tooling). Commit: c6f2152
 - [x] T3 Welcome, Menu (02), BottomNav, FloatingCartCta, CartProvider (+reducer tests; moved here from T5 because the menu "+" and the floating CTA need it). Route: delegated (2+ non-trivial files). Commit: 935c396
 - [x] T4 Explore landing and results (02B). Route: delegated (2+ non-trivial files). Commit: cac4222
-- [ ] T5 Product detail (03): options, price calc (+tests)
-- [ ] T6 Cart (04), Confirm (05), Order sent (06 + 06A–C)
+- [x] T5 Product detail (03): options, price calc (+tests). Route: delegated (2+ non-trivial files). Commit: f4744d2
+- [x] T6 Cart (04), Confirm (05), Order sent (06 + 06A–C), table-session store. Route: delegated (2+ non-trivial files). Commit: 028da87
 - [ ] T7 My table (07 + 07A–D)
 - [ ] T8 Request bill (08 + 08A–F), Bill status (09 + 09A–E)
 
@@ -54,5 +54,11 @@ lint, tsc, vitest, build, plus a manual walk-through with `npm run dev`.
 
 - RDD for T3+T4 (base e2709d8): assessed medium, `slice_budget_reached`; the user declined review for this candidate. Next review boundary: 800d51f.
 
+- T5 done (f4744d2, +532 lines): `/product/[id]` (`generateStaticParams` over all products, `notFound()` for unknown ids) with `ProductDetail`, `OptionGroupField` (radio for single, checkbox for multiple, OBLIGATORIO/OPCIONAL tag, absolute or delta prices with "Incluida") and the pure `product-options` module (`initSelection`, `toggleChoice`, `getSelectedChoiceIds`, `getMissingRequiredGroups`, `formatChoicePrice`, `getFromPrice` for "Desde $3.800"). Shared prop-only `QuantityStepper` (`lg` and `sm`). The sticky footer shows `getUnitPrice` × qty, adds to the cart and goes to `/menu`. RED observed for `product-options.test.ts` (module missing), then GREEN (13 tests).
+- T6 done (028da87, +1642 lines; larger than the heuristic because it holds three screens, four variants and the store): `src/features/table-session` (pure `table-session-reducer`: `buildOrder` validates name/lines/closed table and prices lines from the menu, `getNextOrderNumber`, actions `addOrder`, `setOrderStatus`, `setTableStatus`, `setPaymentPreference`, `reset`, `hydrate`; `selectOrderById`, `selectTableTotal`; `parseStoredSession`) and `TableSessionProvider`/`useTableSession` (hydration-safe localStorage, mounted in the layout around `CartProvider`). `parseScreenState` + `useScreenState` in `src/shared/lib` for `?state=`. `/order` (04 plus an empty state in the 07C style), `/order/confirm` (05, 900ms simulated send, closed table shows 06C) and `/order/[orderId]` (06 receipt; `?state=pending|error|closed` for 06A–C; unknown ids show a "No encontramos este pedido" fallback). Shared prop-only `StateCard` (`state` and `empty` variants), `delay`/`formatClockTime`. RED observed for `screen-state.test.ts`, `table-session-reducer.test.ts` and `order-lines.test.ts` (missing modules), then GREEN.
+- T5+T6 checks: vitest 72/72 pass; `next typegen` + tsc pass; lint pass; build pass (`/product/[id]` and the seed `/order/[orderId]` pages prerendered). Dev server: `/product/cappuccino` 200 (renders "Desde $3.800", "Agregar al pedido · $4.500"), `/product/nope` 404, `/order` 200, `/order/confirm` 200, `/order/order-1042` 200 and with `?state=pending|error|closed` 200 (exact export copy rendered), `/order/order-9999` 200 (fallback).
+- Decisions: `OrderStatus` `pending` was renamed to `sent` ("Recibido"); `cancelled` stays for the table total. `TableOrder` gained an optional `note`. `PaymentPreference` is `table | cashier | transfer` (08: "En la mesa", "En caja", "Por transferencia"). `CartProvider` now exposes `hydrated`, so the cart screens do not flash the empty state. Placing an order validates against the latest session through a ref, so two quick submits never reuse an order number. The 06 illustration reuses the white line-art PNG (`LINE_ART_SRC`) with per-variant opacity instead of the ~80 inline SVG paths. Order numbers continue from the highest one (1049 next). In 06A/06B the primary action simulates a 900ms re-check and then shows the confirmed order; in 06C it shows an "Avisamos al personal" notice.
+- Gaps: the pencil (edit line) button in 04 is visual only. `/table` is linked from 06 but arrives in T7. The client-only flow (add → cart → confirm → order) is covered by unit tests and SSR checks, not by a browser walk-through.
+
 ## Next step
-T5 + T6 (delegated writer).
+T7 My table (07 + 07A–D), reusing `useTableSession`, `ORDER_STATUS_LABELS`, `StateCard` and `useScreenState`.
