@@ -6,3 +6,8 @@ export { StickyFooter } from "./StickyFooter";
 export { Notice, type NoticeTone } from "./Notice";
 export { StatusPill, type StatusPillTone } from "./StatusPill";
 export { ScreenHeader } from "./ScreenHeader";
+export { BottomNav, type BottomNavTab } from "./BottomNav";
+export { BottomDock } from "./BottomDock";
+export { FloatingCartCta, formatItemCount } from "./FloatingCartCta";
+export { FilterChips, type FilterChipItem } from "./FilterChips";
+export { AddButton } from "./AddButton";

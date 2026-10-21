@@ -51,6 +51,14 @@
   --font-clock: var(--font-inter), system-ui, sans-serif;
 }
 
+/* Horizontal carousels scroll without a visible scrollbar, as in the designs. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 body {
   background-color: var(--color-cream);
   color: var(--color-ink);
