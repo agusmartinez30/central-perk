@@ -45,5 +45,7 @@ lint, tsc, vitest, build, plus a manual walk-through with `npm run dev`.
 - T2 done: `scripts/extract-images.mjs` writes 13 WebP files (16-45KB) to `public/images/{products,moments}`; typed mocks in `src/mocks` (`types`, `menu`, `moments`, `table`); `formatPrice` in `src/shared/lib`. RED observed for `format-price.test.ts` (module missing), then GREEN. Seed order totals are computed from menu prices (13.000 + 6.900 = 19.900), covered by `src/mocks/table.test.ts`. Checks: vitest 9/9 pass, tsc pass, lint pass, build pass.
 - Pricing model: `Product.price` is the default-configuration price (menu cards show it as is); option deltas are relative to it (Cappuccino Chico -700 / Grande +700); `OptionGroup.priceDisplay` says whether the detail screen shows absolute prices or +deltas.
 
+- RDD for T1+T2 (base 6864dc8, committed-only): assessed medium, `slice_budget_reached`; the user declined review for this candidate. Next review boundary: e2709d8. `.atl/` (tool cache) is excluded locally via `.git/info/exclude`.
+
 ## Next step
-T3.
+T3 + T4 (delegated writer).
