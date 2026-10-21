@@ -11,3 +11,4 @@ export { BottomDock } from "./BottomDock";
 export { FloatingCartCta, formatItemCount } from "./FloatingCartCta";
 export { FilterChips, type FilterChipItem } from "./FilterChips";
 export { AddButton } from "./AddButton";
+export { QuantityStepper } from "./QuantityStepper";
