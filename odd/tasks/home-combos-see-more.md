@@ -21,7 +21,7 @@ Strategy `ask-on-risk`, with commits on `feat/cafe-prototype`. Forecast: about 3
 
 ## Tasks
 - [x] T1 Pure helpers and tests: `HOME_SECTION_LIMIT`, `getComboProducts`, `limitSection` (menu-sections), `getCategoryProducts` (new category-products), `resolveFilterId` (moment-products). Route: delegated (2+ non-trivial files).
-- [ ] T2 Category results page `/explore/categoria/[category]`: extract `ProductResults` from `ExploreResults`, and add `CategoryResults`. Route: delegated.
+- [x] T2 Category results page `/explore/categoria/[category]`: extract `ProductResults` from `ExploreResults`, and add `CategoryResults`. Route: delegated.
 - [ ] T3 Home: capped sections with "Ver más", and the Combos section. Route: delegated.
 - [ ] T4 Explore `?filter=` sets the initial sub-filter. Route: delegated.
 
@@ -42,5 +42,7 @@ vitest, lint, `tsc --noEmit`, build, and curl against `next start`.
 ## Progress / Evidence
 - T1 (delegated writer). RED: `npx vitest run` on the 3 helper test files → 3 files failed, 8 tests failed (`limitSection is not a function`, `resolveFilterId is not a function`, `Cannot find module './category-products'`). GREEN: same command → 3 files, 18 tests passed. Commit: see `git log` (`feat(menu): add home section helpers`).
 
+- T2 (delegated writer). `npx tsc --noEmit` clean, `npx eslint src` clean, `npm run build` lists `/explore/categoria/[category]` with cafes, desayunos and "+3 more paths" (5 prerendered). No runnable RED: the change is a component extraction plus a route. Commit: `feat(explore): add category results page`.
+
 ## Next step
-T2.
+T3.
