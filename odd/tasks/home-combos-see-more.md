@@ -22,7 +22,7 @@ Strategy `ask-on-risk`, with commits on `feat/cafe-prototype`. Forecast: about 3
 ## Tasks
 - [x] T1 Pure helpers and tests: `HOME_SECTION_LIMIT`, `getComboProducts`, `limitSection` (menu-sections), `getCategoryProducts` (new category-products), `resolveFilterId` (moment-products). Route: delegated (2+ non-trivial files).
 - [x] T2 Category results page `/explore/categoria/[category]`: extract `ProductResults` from `ExploreResults`, and add `CategoryResults`. Route: delegated.
-- [ ] T3 Home: capped sections with "Ver más", and the Combos section. Route: delegated.
+- [x] T3 Home: capped sections with "Ver más", and the Combos section. Route: delegated.
 - [ ] T4 Explore `?filter=` sets the initial sub-filter. Route: delegated.
 
 ## Acceptance criteria
@@ -44,5 +44,7 @@ vitest, lint, `tsc --noEmit`, build, and curl against `next start`.
 
 - T2 (delegated writer). `npx tsc --noEmit` clean, `npx eslint src` clean, `npm run build` lists `/explore/categoria/[category]` with cafes, desayunos and "+3 more paths" (5 prerendered). No runnable RED: the change is a component extraction plus a route. Commit: `feat(explore): add category results page`.
 
+- T3 (delegated writer). `npx tsc --noEmit` and `npx eslint src` clean; `npx vitest run` → 113 passed. Logic is covered by the T1 helper tests; the screen wiring is checked with curl on `/menu` at closure. Commit: `feat(menu): cap home sections and add combos`.
+
 ## Next step
-T3.
+T4.

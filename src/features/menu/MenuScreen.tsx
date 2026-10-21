@@ -5,17 +5,26 @@ import { CATEGORIES } from "@/mocks/menu";
 import { TABLE } from "@/mocks/table";
 import type { CategoryId } from "@/mocks/types";
 import { CartFloatingCta } from "@/features/cart";
-import { BottomDock, BottomNav, FilterChips } from "@/shared/ui";
+import { BottomDock, BottomNav, FilterChips, SecondaryButton } from "@/shared/ui";
 import { MenuHeader } from "./MenuHeader";
 import { PromoBanner } from "./PromoBanner";
 import { ProductCard, ProductRow } from "./ProductCard";
-import { formatOptionCount, getFeaturedProducts, getMenuSections } from "./menu-sections";
+import {
+  HOME_SECTION_LIMIT,
+  formatOptionCount,
+  getComboProducts,
+  getFeaturedProducts,
+  getMenuSections,
+  limitSection,
+} from "./menu-sections";
 
 /** Screen 02 · Inicio del menú. Holds the selected category and renders the menu. */
 export function MenuScreen() {
   const [category, setCategory] = useState<CategoryId>("todos");
   const sections = getMenuSections(category);
-  const featured = category === "todos" ? getFeaturedProducts() : [];
+  const isHome = category === "todos";
+  const featured = isHome ? getFeaturedProducts() : [];
+  const combos = isHome ? getComboProducts() : [];
 
   return (
     <>
@@ -49,21 +58,46 @@ export function MenuScreen() {
             </section>
           ) : null}
 
-          {sections.map(({ category: section, products }) => (
-            <section key={section.id} className="flex flex-col gap-2 pt-1">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display text-[26px] leading-tight font-bold text-ink">
-                  {section.label}
-                </h2>
-                <span className="text-[10px] font-bold text-muted">
-                  {formatOptionCount(products.length)}
-                </span>
+          {combos.length > 0 ? (
+            <section className="flex flex-col gap-3">
+              <h2 className="text-[19px] font-bold tracking-[-0.4px] text-ink">Combos</h2>
+              <div className="flex gap-3">
+                {combos.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
               </div>
-              {products.map((product) => (
-                <ProductRow key={product.id} product={product} />
-              ))}
+              <SecondaryButton size="md" href="/explore/para-desayunar?filter=combos">
+                Ver más
+              </SecondaryButton>
             </section>
-          ))}
+          ) : null}
+
+          {sections.map(({ category: section, products }) => {
+            // Todos caps each section; a selected category chip shows it whole.
+            const { visible, hasMore } = isHome
+              ? limitSection(products, HOME_SECTION_LIMIT)
+              : { visible: products, hasMore: false };
+            return (
+              <section key={section.id} className="flex flex-col gap-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-display text-[26px] leading-tight font-bold text-ink">
+                    {section.label}
+                  </h2>
+                  <span className="text-[10px] font-bold text-muted">
+                    {formatOptionCount(products.length)}
+                  </span>
+                </div>
+                {visible.map((product) => (
+                  <ProductRow key={product.id} product={product} />
+                ))}
+                {hasMore ? (
+                  <SecondaryButton size="md" href={`/explore/categoria/${section.id}`}>
+                    Ver más
+                  </SecondaryButton>
+                ) : null}
+              </section>
+            );
+          })}
         </div>
       </main>
       <BottomDock>
