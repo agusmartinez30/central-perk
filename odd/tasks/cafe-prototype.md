@@ -22,7 +22,7 @@ The screens exist only as static design exports. We need a navigable prototype t
 ## Tasks
 - [x] T0 Bootstrap: git init, create-next-app, deps (lucide-react, clsx, vitest, sharp). Route: inline. Commits: 353417f, 6864dc8
 - [x] T1 Tokens, fonts, MobileFrame, StatusBar, base shared/ui components. Route: delegated (2+ non-trivial files). Commit: cf2ba56
-- [x] T2 Mocks, image extraction script and assets, formatPrice (+tests). Route: delegated (2+ non-trivial files, image tooling). Commit: see Progress
+- [x] T2 Mocks, image extraction script and assets, formatPrice (+tests). Route: delegated (2+ non-trivial files, image tooling). Commit: c6f2152
 - [ ] T3 Welcome, Menu (02), BottomNav, FloatingCartCta
 - [ ] T4 Explore landing and results (02B)
 - [ ] T5 Product detail (03): options, price calc (+tests), CartProvider (+reducer tests)
