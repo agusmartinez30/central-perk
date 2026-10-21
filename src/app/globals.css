@@ -1,26 +1,57 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Surfaces and text */
+  --color-cream: #f5f3ee;
+  --color-surface: #ffffff;
+  --color-ink: #101010;
+  --color-ink-2: #5d5d5d;
+  --color-muted: #696969;
+  --color-muted-2: #777570;
+  --color-faint: #aaa7a0;
+
+  /* Brand */
+  --color-brand: #2f45ad;
+  --color-brand-2: #2d3bb8;
+  --color-brand-tint: #e4e8ff;
+  --color-brand-soft: #f3f5ff;
+  --color-brand-mist: #eef0fa;
+
+  /* Lines and disabled states */
+  --color-line: #d9d6cf;
+  --color-line-2: #d8d6d1;
+  --color-line-3: #cecece;
+  --color-disabled: #c9c7c2;
+
+  /* Feedback tones */
+  --color-success: #287a45;
+  --color-success-bg: #e8f4eb;
+  --color-warning: #7a4a00;
+  --color-warning-bg: #fff1d6;
+  --color-danger: #8a2635;
+  --color-danger-2: #a13a31;
+  --color-danger-bg: #fde8e8;
+
+  /* Radii */
+  --radius-field: 11px;
+  --radius-card: 14px;
+  --radius-panel: 18px;
+  --radius-button: 28px;
+
+  /* Shadows */
+  --shadow-float: 0 8px 20px #00000024;
+  --shadow-nav: 0 4px 12px #2f45ad14;
+  --shadow-bar: 0 -5px 18px #00000014;
 }
 
+/* Font families resolve next/font CSS variables set on <html>. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-dm-sans), system-ui, sans-serif;
+  --font-display: var(--font-caveat), cursive;
+  --font-clock: var(--font-inter), system-ui, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-cream);
+  color: var(--color-ink);
 }
