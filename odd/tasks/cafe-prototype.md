@@ -52,5 +52,7 @@ lint, tsc, vitest, build, plus a manual walk-through with `npm run dev`.
 - T3+T4 checks: vitest 34/34 pass; tsc pass (after `next typegen` generates the `PageProps` route types); lint pass; build pass (`/explore/[moment]` prerendered per moment). Dev server: `/`, `/menu`, `/explore`, `/explore/para-desayunar` and `/explore/para-tomar` return 200; `/explore/no-existe` returns 404.
 - Notes: each page passes the active tab to `BottomNav` explicitly (no `usePathname`, which avoids Cache Components Suspense requirements). `next/image` `priority` is deprecated in Next 16, so `loading="eager"` is used. The banner and welcome art reuse the white line-art PNG instead of the inline SVG paths in the exports. Product links point to `/product/[id]`, which T5 adds. The search, info, sort and filter buttons are visual only.
 
+- RDD for T3+T4 (base e2709d8): assessed medium, `slice_budget_reached`; the user declined review for this candidate. Next review boundary: 800d51f.
+
 ## Next step
-RDD assessment for the T3+T4 slice (base e2709d8), then T5 (product detail).
+T5 + T6 (delegated writer).
