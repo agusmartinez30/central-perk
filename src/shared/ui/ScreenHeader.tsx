@@ -15,6 +15,8 @@ type ScreenHeaderProps = {
   /** Custom trailing content, rendered instead of the table badge. */
   trailing?: ReactNode;
   className?: string;
+  /** Overrides the title styles, e.g. a smaller size for longer titles. */
+  titleClassName?: string;
 };
 
 const backClasses =
@@ -28,6 +30,7 @@ export function ScreenHeader({
   table,
   trailing,
   className,
+  titleClassName,
 }: ScreenHeaderProps) {
   const backIcon = <ArrowLeft size={19} aria-hidden="true" />;
   const back = backHref ? (
@@ -44,7 +47,12 @@ export function ScreenHeader({
     <header className={clsx("flex h-12 w-full items-center justify-between px-4", className)}>
       <div className="flex min-w-0 items-center gap-[11px]">
         {back}
-        <h1 className="truncate font-display text-[31px] leading-none font-bold text-ink">
+        <h1
+          className={clsx(
+            "truncate font-display text-[31px] leading-none font-bold text-ink",
+            titleClassName,
+          )}
+        >
           {title}
         </h1>
       </div>
