@@ -81,6 +81,7 @@ lint, tsc, vitest, build, plus a manual walk-through with `npm run dev`.
   - Nothing in the prototype moves the table to `attending`, `closed` or `reopened` (staff actions), so 09A–C and 07B are reachable only via `?state=`.
   - Placing an order while the bill is requested is not blocked yet (`buildOrder` only blocks `closed`); 07A only disables its CTAs.
   - No browser walk-through yet. The client interactions (radio/checkbox gating, 08B → 09 navigation, order card toggling) are covered only by unit tests of the pure logic and by SSR checks.
+- RDD for T7+T8 (base 739548b): assessed medium, `slice_budget_reached`; the user declined review for this candidate.
 
 ## Next step
 Final verification: a full flow walk-through at 390px with `npm run dev` (welcome → menu → product → cart → confirm → order sent → my table → request bill → status), plus every `?state=` variant compared against its export.
