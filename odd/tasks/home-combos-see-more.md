@@ -46,12 +46,14 @@ vitest, lint, `tsc --noEmit`, build, and curl against `next start`.
 
 - T3 (delegated writer). `npx tsc --noEmit` and `npx eslint src` clean; `npx vitest run` → 113 passed. Logic is covered by the T1 helper tests; the screen wiring is checked with curl on `/menu` at closure. Commit: `8a38397 feat(menu): cap home sections and add combos`.
 
-- T4 (delegated writer). The page awaits `params` for the static shell and reads `searchParams` in a suspended child; the fallback is `ExploreResults` with the default filter. `npm run build`: the moment pages are now Partial Prerender (◐), and the category pages are still prerendered. Commit: `feat(explore): open a moment with the ?filter= sub-filter`.
+- T4 (delegated writer). The page awaits `params` for the static shell and reads `searchParams` in a suspended child; the fallback is `ExploreResults` with the default filter. `npm run build`: the moment pages are now Partial Prerender (◐), and the category pages are still prerendered. Commit: `57f9815 feat(explore): open a moment with the ?filter= sub-filter`.
 - Closure checks: `npx vitest run` → 113 passed; `npm run lint` → exit 0; `npx tsc --noEmit` → exit 0; `npm run build` → OK, 5 category paths listed. `next start` on port 3917 with curl:
   - `/menu` → 200, "Combos" present, 3 "Ver más" (Cafés, Desayunos, Combos), and links to `/explore/categoria/{cafes,desayunos}` and `/explore/para-desayunar?filter=combos`.
   - `/explore/categoria/cafes` → 200, 8 product links, title "Cafés · Café Central".
   - `/explore/categoria/zzz` → 200 on the first request (the known prerender quirk), then 404.
   - `/explore/para-desayunar?filter=combos` → 200. The streamed segment has the Combos chip `aria-selected="true"` and "2 productos". The HTML also holds the static fallback (Todos, 8 productos), which React replaces.
 
+- RDD for T1–T4 (base 2414718): assessed medium, `slice_budget_reached` (425 changed lines); the user declined review for this candidate.
+
 ## Next step
-Manual look at 390px with `npm run dev`; then run review assess per commit, as the parent decides.
+Manual look at 390px with `npm run dev`.
