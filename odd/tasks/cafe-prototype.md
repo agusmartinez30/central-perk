@@ -82,6 +82,11 @@ lint, tsc, vitest, build, plus a manual walk-through with `npm run dev`.
   - Placing an order while the bill is requested is not blocked yet (`buildOrder` only blocks `closed`); 07A only disables its CTAs.
   - No browser walk-through yet. The client interactions (radio/checkbox gating, 08B → 09 navigation, order card toggling) are covered only by unit tests of the pure logic and by SSR checks.
 - RDD for T7+T8 (base 739548b): assessed medium, `slice_budget_reached`; the user declined review for this candidate.
+- Final verification (2026-10-21, on 044dff6):
+  - lint, `tsc --noEmit`, vitest (102/102 tests in 14 files) and build (42 static pages) all pass.
+  - `next start`: every flow route and every `?state=` variant returns 200 with no error markers.
+  - Finding: on `/product/[id]` and `/explore/[moment]`, an unknown param returns 200 with the 404 page on the first request and 404 only after that (likely partial prerendering). A fully unmatched path returns 404 straight away.
+  - Pending: the visual comparison at 390px. Headless Chrome on Windows ignores the 390px width and crops the screenshots, and Playwright is not installed. Spot checks (02, 09A) match in copy and layout, but the 09A illustration and some button and pill icons differ from the exports.
 
 ## Next step
 Final verification: a full flow walk-through at 390px with `npm run dev` (welcome → menu → product → cart → confirm → order sent → my table → request bill → status), plus every `?state=` variant compared against its export.
