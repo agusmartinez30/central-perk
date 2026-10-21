@@ -48,7 +48,7 @@ export function WelcomeScreen() {
             width={340}
             height={230}
             unoptimized
-            priority
+            loading="eager"
             className="h-[230px] w-[340px] max-w-full object-contain"
           />
         </div>
