@@ -68,12 +68,4 @@ export const SEED_ORDERS: TableOrder[] = [
       }),
     ],
   },
-  {
-    id: "order-1048",
-    number: "1048",
-    customerName: "Martina",
-    time: "12:10",
-    status: "preparing",
-    lines: [buildOrderLine({ productId: "tostado-jamon-queso", quantity: 1, choiceIds: ["campo"] })],
-  },
 ];

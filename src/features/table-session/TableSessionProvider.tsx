@@ -23,7 +23,7 @@ import {
 } from "./table-session-reducer";
 
 // Bump the version when the seed data changes, so stale sessions saved in browsers are dropped.
-const STORAGE_KEY = "cafe-central:table-session:v2";
+const STORAGE_KEY = "cafe-central:table-session:v3";
 
 export type TableSessionContextValue = {
   orders: TableOrder[];

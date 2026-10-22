@@ -31,7 +31,7 @@ describe("initialSession", () => {
 
 describe("getNextOrderNumber", () => {
   it("continues after the highest order number", () => {
-    expect(getNextOrderNumber(SEED_ORDERS)).toBe("1049");
+    expect(getNextOrderNumber(SEED_ORDERS)).toBe("1043");
   });
 
   it("starts at 1001 without orders", () => {
@@ -45,8 +45,8 @@ describe("buildOrder", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.order).toMatchObject({
-      id: "order-1049",
-      number: "1049",
+      id: "order-1043",
+      number: "1043",
       customerName: "Sofía",
       note: "Todo junto, por favor.",
       time: "12:30",
@@ -107,9 +107,9 @@ describe("tableSessionReducer", () => {
     const result = buildOrder(initialSession, input);
     if (!result.ok) throw new Error("expected a valid order");
     const state = tableSessionReducer(initialSession, { type: "addOrder", order: result.order });
-    expect(state.orders).toHaveLength(3);
-    expect(selectOrderById(state, "order-1049")?.customerName).toBe("Sofía");
-    expect(selectTableTotal(state)).toBe(19900 + 5400 + 7600);
+    expect(state.orders).toHaveLength(2);
+    expect(selectOrderById(state, "order-1043")?.customerName).toBe("Sofía");
+    expect(selectTableTotal(state)).toBe(13000 + 5400 + 7600);
   });
 
   it("ignores an order whose id already exists", () => {
@@ -120,10 +120,10 @@ describe("tableSessionReducer", () => {
   it("updates an order status", () => {
     const state = tableSessionReducer(initialSession, {
       type: "setOrderStatus",
-      orderId: "order-1048",
-      status: "delivered",
+      orderId: "order-1042",
+      status: "cancelled",
     });
-    expect(selectOrderById(state, "order-1048")?.status).toBe("delivered");
+    expect(selectOrderById(state, "order-1042")?.status).toBe("cancelled");
   });
 
   it("sets the table status and the payment preference", () => {

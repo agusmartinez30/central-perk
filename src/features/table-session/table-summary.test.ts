@@ -3,18 +3,18 @@ import { SEED_ORDERS } from "@/mocks/table";
 import type { TableOrder } from "@/mocks/types";
 import { formatOrderCount, formatUnitCount, getTableSummary } from "./table-summary";
 
-const cancelled: TableOrder = { ...SEED_ORDERS[1], id: "order-1050", number: "1050", status: "cancelled" };
+const cancelled: TableOrder = { ...SEED_ORDERS[0], id: "order-1050", number: "1050", status: "cancelled" };
 
 describe("getTableSummary", () => {
   it("computes total, orders and units from the seed orders", () => {
-    expect(getTableSummary(SEED_ORDERS)).toEqual({ total: 19_900, orderCount: 2, itemCount: 4 });
+    expect(getTableSummary(SEED_ORDERS)).toEqual({ total: 13_000, orderCount: 1, itemCount: 3 });
   });
 
   it("leaves cancelled orders out of every figure", () => {
     expect(getTableSummary([...SEED_ORDERS, cancelled])).toEqual({
-      total: 19_900,
-      orderCount: 2,
-      itemCount: 4,
+      total: 13_000,
+      orderCount: 1,
+      itemCount: 3,
     });
   });
 
