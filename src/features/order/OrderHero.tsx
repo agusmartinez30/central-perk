@@ -33,7 +33,8 @@ export function OrderHero({
   sparkles = false,
 }: OrderHeroProps) {
   return (
-    <section className="relative h-[300px] w-full shrink-0 overflow-hidden bg-brand text-white">
+    // Same full-bleed technique as BillStatusHero: the shadow paints past the 390px column, the clip stops it at the bottom edge.
+    <section className="relative h-[300px] w-full shrink-0 overflow-hidden bg-brand text-white shadow-[0_0_0_100vmax_var(--color-brand)] [clip-path:inset(-100vmax_-100vmax_0)]">
       <div className="absolute inset-x-5 top-3 flex h-9 items-center justify-between">
         <span className="text-[11px] font-bold tracking-[1.4px]">{cafeName.toUpperCase()}</span>
         <span className="flex h-[30px] items-center gap-1.5 rounded-[15px] bg-surface px-2.5 text-brand">
