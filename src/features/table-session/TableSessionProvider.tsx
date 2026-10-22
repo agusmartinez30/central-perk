@@ -24,6 +24,7 @@ import {
 
 // Bump the version when the seed data changes, so stale sessions saved in browsers are dropped.
 const STORAGE_KEY = "cafe-central:table-session:v3";
+const PAYMENT_CONFIRMATION_DELAY_MS = 5000;
 
 export type TableSessionContextValue = {
   orders: TableOrder[];
@@ -90,6 +91,17 @@ export function TableSessionProvider({ children }: { children: ReactNode }) {
     }
     writeStoredSession(JSON.stringify(state));
   }, [state]);
+
+  useEffect(() => {
+    // Simulates staff registering the payment from the admin panel shortly after the
+    // bill is requested; it runs on any screen, as a real backend update would.
+    if (state.tableStatus !== "requested") return;
+    const timer = window.setTimeout(
+      () => dispatch({ type: "setTableStatus", status: "closed" }),
+      PAYMENT_CONFIRMATION_DELAY_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [state.tableStatus]);
 
   const value = useMemo<TableSessionContextValue>(
     () => ({
