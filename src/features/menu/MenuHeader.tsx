@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Coffee, Info, MapPin, Search } from "lucide-react";
 
 type MenuHeaderProps = {
@@ -29,13 +30,13 @@ export function MenuHeader({ cafeName, table }: MenuHeaderProps) {
           <MapPin size={13} className="text-brand" aria-hidden="true" />
           <span className="text-[10px] font-bold text-ink">Mesa {table}</span>
         </span>
-        {/* Search and info are visual only in this prototype. */}
+        {/* Search is visual only in this prototype. */}
         <button type="button" aria-label="Buscar" className={roundAction}>
           <Search size={16} aria-hidden="true" />
         </button>
-        <button type="button" aria-label="Información del café" className={roundAction}>
+        <Link href="/info" aria-label="Información del café" className={roundAction}>
           <Info size={16} aria-hidden="true" />
-        </button>
+        </Link>
       </div>
     </header>
   );

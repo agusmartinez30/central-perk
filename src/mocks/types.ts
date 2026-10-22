@@ -98,3 +98,28 @@ export type TableInfo = {
   cafeName: string;
   sharedAccount: boolean;
 };
+
+export type SocialNetwork = "instagram" | "facebook" | "whatsapp" | "website";
+
+export type SocialLink = {
+  network: SocialNetwork;
+  /** Visible handle or short label, e.g. "@cafecentral". */
+  label: string;
+  url: string;
+};
+
+export type OpeningHours = {
+  days: string;
+  hours: string;
+};
+
+export type CafeInfo = {
+  name: string;
+  tagline: string;
+  address: string;
+  /** Neighbourhood / city line shown under the address. */
+  area: string;
+  mapsUrl: string;
+  openingHours: OpeningHours[];
+  socials: SocialLink[];
+};
