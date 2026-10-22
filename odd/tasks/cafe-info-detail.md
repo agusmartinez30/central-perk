@@ -21,7 +21,7 @@ Strategy `ask-on-risk`, commits on `feat/cafe-prototype`. Forecast: about 350 au
 
 ## Tasks
 - [x] T1 Data model (`CafeDetail` + three samples, one per export) and pure helpers (`getCafeDetail`, `getCafeInfoView`: section/link/channel availability, `?state=unavailable|empty`) with tests. Route: delegated (writer; preparation reading of exports).
-- [ ] T2 "Detalle completo" screen matching the export. Route: delegated.
+- [x] T2 "Detalle completo" screen matching the export (centered header, cover with status chip, identity, Dónde estamos, Contacto, También online, Horarios). Route: delegated.
 - [ ] T3 "Enlaces no disponibles" and "Secciones vacías" variants. Route: delegated.
 
 ## Acceptance criteria
@@ -41,5 +41,12 @@ vitest, lint, `tsc --noEmit`, build, and curl against `next start` for the three
 - `npx tsc --noEmit`: exit 0. `npm run lint`: exit 0. `npm test`: 125 passed. `npm run build`: success.
 - Commit: see git log (`feat(cafe-info): add business detail data model and view helpers`).
 
+### T2 (delegated)
+- Cover photo extracted from the exports to `public/assets/cafe-cover.webp` (800x1200, 113 KB) with sharp.
+- Added `ScreenHeader` `variant="centered"` (44px back button, 16px centered title, balance spacer), tokens `brand-wash` (#e9ecfa) and `sand` (#ece9e2), local lucide-style Instagram/Facebook SVGs, and cafe-info components (`CafeCover`, `CafeSection`, `CafeActionButton`, `CafeLinkRow`, `HoursTable`, `cafe-info-copy.ts`). Removed the old `CafeInfo` model and `CAFE_INFO`.
+- Test-first exception: markup only; the logic it uses is covered by T1 tests.
+- `npx tsc --noEmit`: exit 0. `npm run lint`: exit 0. `npm test`: 125 passed. `npm run build`: success, `/info` static.
+- Commit: see git log (`feat(cafe-info): rebuild business detail screen from the Detalle completo design`).
+
 ## Next step
-T2.
+T3.
