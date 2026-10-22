@@ -36,13 +36,15 @@ export function BillStatusScreen() {
   const forced = useScreenState(BILL_STATUS_FORCED_STATES);
   const { orders, tableStatus, paymentPreference, hydrated, reset } = useTableSession();
   const [retrying, setRetrying] = useState(false);
+  // Set by "Finalizar": the reset reopens the table, which must not trigger the 08 redirect.
+  const [finishing, setFinishing] = useState(false);
 
   const view = getBillStatusView(tableStatus, forced);
   const notRequested = hydrated && view === "not-requested";
 
   useEffect(() => {
-    if (notRequested) router.replace("/table/bill");
-  }, [notRequested, router]);
+    if (notRequested && !finishing) router.replace("/table/bill");
+  }, [notRequested, finishing, router]);
 
   if ((!hydrated && !forced) || view === "not-requested") return null;
 
@@ -61,8 +63,9 @@ export function BillStatusScreen() {
 
   function handleFinish() {
     // Ending the real session clears it; a forced preview only leaves the screen.
-    if (tableStatus === "closed") reset();
+    setFinishing(true);
     router.push("/");
+    if (tableStatus === "closed") reset();
   }
 
   function actionProps(action: BillStatusAction): Partial<ButtonProps> {
