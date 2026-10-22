@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Coffee, Info, MapPin, Search } from "lucide-react";
+import { NAV_FORWARD } from "@/shared/ui";
 
 type MenuHeaderProps = {
   cafeName: string;
@@ -34,7 +35,12 @@ export function MenuHeader({ cafeName, table }: MenuHeaderProps) {
         <button type="button" aria-label="Buscar" className={roundAction}>
           <Search size={16} aria-hidden="true" />
         </button>
-        <Link href="/info" aria-label="Información del café" className={roundAction}>
+        <Link
+          href="/info"
+          aria-label="Información del café"
+          transitionTypes={NAV_FORWARD}
+          className={roundAction}
+        >
           <Info size={16} aria-hidden="true" />
         </Link>
       </div>

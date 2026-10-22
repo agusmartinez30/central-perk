@@ -12,3 +12,4 @@ export { FilterChips, type FilterChipItem } from "./FilterChips";
 export { AddButton } from "./AddButton";
 export { QuantityStepper } from "./QuantityStepper";
 export { StateCard } from "./StateCard";
+export { SlideTransition, NAV_FORWARD, NAV_BACK } from "./SlideTransition";

@@ -13,7 +13,7 @@ import {
   PhoneOff,
 } from "lucide-react";
 import { useScreenState } from "@/shared/lib/use-screen-state";
-import { ScreenHeader, StateCard, StatusPill } from "@/shared/ui";
+import { NAV_BACK, ScreenHeader, StateCard, StatusPill } from "@/shared/ui";
 import { CafeActionButton } from "./CafeActionButton";
 import { CafeCover } from "./CafeCover";
 import { CafeLinkRow } from "./CafeLinkRow";
@@ -39,7 +39,12 @@ export function CafeInfoScreen() {
 
   return (
     <>
-      <ScreenHeader variant="centered" title={copy.title} backHref="/menu" />
+      <ScreenHeader
+        variant="centered"
+        title={copy.title}
+        backHref="/menu"
+        backTransitionTypes={NAV_BACK}
+      />
       <CafeCover
         src={detail.coverImage}
         statusLabel={detail.openStatus.open ? copy.openNow : copy.closedNow}

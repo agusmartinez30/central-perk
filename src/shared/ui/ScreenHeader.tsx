@@ -10,6 +10,8 @@ type ScreenHeaderProps = {
   backHref?: string;
   onBack?: () => void;
   backLabel?: string;
+  /** View transition types for the back link, e.g. `NAV_BACK` to slide back. */
+  backTransitionTypes?: string[];
   /** Table number for the trailing badge; omit to hide it. */
   table?: string;
   /** Custom trailing content, rendered instead of the table badge. */
@@ -29,6 +31,7 @@ export function ScreenHeader({
   backHref,
   onBack,
   backLabel = "Volver",
+  backTransitionTypes,
   table,
   trailing,
   className,
@@ -39,7 +42,12 @@ export function ScreenHeader({
   const backClasses = clsx(backBase, centered ? "size-11" : "size-10");
   const backIcon = <ArrowLeft size={centered ? 20 : 19} aria-hidden="true" />;
   const back = backHref ? (
-    <Link href={backHref} aria-label={backLabel} className={backClasses}>
+    <Link
+      href={backHref}
+      aria-label={backLabel}
+      transitionTypes={backTransitionTypes}
+      className={backClasses}
+    >
       {backIcon}
     </Link>
   ) : onBack ? (
