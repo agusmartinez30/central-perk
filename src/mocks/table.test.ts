@@ -3,11 +3,11 @@ import { getOrderTotal, getTableTotal, SEED_ORDERS } from "@/mocks/table";
 
 describe("table seed orders", () => {
   it("computes each order total from menu prices", () => {
-    const [agustin, lucia] = SEED_ORDERS;
+    const [agustin, martina] = SEED_ORDERS;
     expect(agustin.lines.map((line) => line.unitPrice)).toEqual([5400, 3800]);
     expect(agustin.lines[0].customization).toBe("Mediano · Leche de almendras");
     expect(getOrderTotal(agustin)).toBe(13000);
-    expect(getOrderTotal(lucia)).toBe(6900);
+    expect(getOrderTotal(martina)).toBe(6900);
   });
 
   it("sums the shared account total as in the designs", () => {
@@ -15,7 +15,7 @@ describe("table seed orders", () => {
   });
 
   it("excludes cancelled orders from the shared total", () => {
-    const [agustin, lucia] = SEED_ORDERS;
-    expect(getTableTotal([agustin, { ...lucia, status: "cancelled" }])).toBe(13000);
+    const [agustin, martina] = SEED_ORDERS;
+    expect(getTableTotal([agustin, { ...martina, status: "cancelled" }])).toBe(13000);
   });
 });
