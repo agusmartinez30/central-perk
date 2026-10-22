@@ -23,7 +23,8 @@ export function BillStatusHero({
   artOpacity = 1,
 }: BillStatusHeroProps) {
   return (
-    <section className="flex min-h-[310px] w-full shrink-0 flex-col items-center bg-brand px-5 pt-2.5 pb-4 text-white">
+    // The shadow paints brand blue past the 390px column (and up into the safe area); the clip keeps it off the content below.
+    <section className="flex min-h-[310px] w-full shrink-0 flex-col items-center bg-brand px-5 pt-2.5 pb-4 text-white shadow-[0_0_0_100vmax_var(--color-brand)] [clip-path:inset(-100vmax_-100vmax_0)]">
       <div className="flex h-9 w-full items-center justify-between">
         <span className="text-[11px] font-bold tracking-[1.4px]">{cafeName.toUpperCase()}</span>
         <span className="flex h-[30px] items-center gap-1.5 rounded-[15px] bg-surface px-2.5 text-brand">
