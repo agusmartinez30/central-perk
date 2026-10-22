@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Caveat, DM_Sans, Inter } from "next/font/google";
 import { CartProvider } from "@/features/cart";
 import { TableSessionProvider } from "@/features/table-session";
-import { MobileFrame } from "@/shared/ui";
+import { MobileFrame, SplashScreen } from "@/shared/ui";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -39,6 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${dmSans.variable} ${caveat.variable} ${inter.variable} antialiased`}
     >
       <body className="bg-cream font-sans text-ink">
+        <SplashScreen />
         <TableSessionProvider>
           <CartProvider>
             <MobileFrame>{children}</MobileFrame>
