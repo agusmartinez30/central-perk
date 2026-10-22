@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildMapsUrl, CAFE_INFO } from "@/mocks/cafe-info";
+import {
+  buildMapsUrl,
+  buildPhoneUrl,
+  buildWhatsAppUrl,
+  CAFE_DETAIL,
+  CAFE_DETAIL_EMPTY,
+  CAFE_DETAIL_LINKS_UNAVAILABLE,
+} from "@/mocks/cafe-info";
 import { TABLE } from "@/mocks/table";
 
 describe("cafe info", () => {
@@ -9,7 +16,14 @@ describe("cafe info", () => {
     );
   });
 
-  it("reuses the café name from the table mock", () => {
-    expect(CAFE_INFO.name).toBe(TABLE.cafeName);
+  it("builds WhatsApp and phone links from a formatted number", () => {
+    expect(buildWhatsAppUrl("+54 9 3547 55-5124")).toBe("https://wa.me/5493547555124");
+    expect(buildPhoneUrl("+54 9 3547 55-5124")).toBe("tel:+5493547555124");
+  });
+
+  it("reuses the café name from the table mock in every sample", () => {
+    for (const detail of [CAFE_DETAIL, CAFE_DETAIL_LINKS_UNAVAILABLE, CAFE_DETAIL_EMPTY]) {
+      expect(detail.name).toBe(TABLE.cafeName);
+    }
   });
 });

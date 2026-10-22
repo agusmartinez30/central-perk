@@ -123,3 +123,50 @@ export type CafeInfo = {
   openingHours: OpeningHours[];
   socials: SocialLink[];
 };
+
+export type CafeLinkNetwork = "instagram" | "facebook" | "website";
+
+export type CafeLink = {
+  network: CafeLinkNetwork;
+  /** Visible handle or short label, e.g. "@cafecentral.demo". */
+  handle: string;
+  /** `null` while the profile is not available. */
+  url: string | null;
+};
+
+export type CafeAddress = {
+  street: string;
+  /** City line shown under the street. */
+  city: string;
+  /** `null` when the location has no map link. */
+  mapsUrl: string | null;
+};
+
+/** Published phone numbers; `null` when the channel is not available. */
+export type CafeContact = {
+  whatsapp: string | null;
+  phone: string | null;
+};
+
+export type CafeScheduleRow = {
+  days: string;
+  /** Opening range such as "08:00 – 20:00"; `null` for a closed day. */
+  hours: string | null;
+};
+
+/** Opening status right now, as reported by the café. */
+export type CafeOpenStatus =
+  | { open: true; closesAt: string }
+  | { open: false; reopens: string };
+
+/** Business detail screen ("Detalle del negocio"). Empty values hide their section. */
+export type CafeDetail = {
+  name: string;
+  description: string | null;
+  coverImage: string;
+  address: CafeAddress | null;
+  contact: CafeContact;
+  links: CafeLink[];
+  schedule: CafeScheduleRow[];
+  openStatus: CafeOpenStatus;
+};
