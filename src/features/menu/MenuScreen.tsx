@@ -32,7 +32,7 @@ export function MenuScreen() {
       <main className="flex flex-1 flex-col pt-1.5 pb-[164px]">
         <PromoBanner />
 
-        <div className="sticky top-[62px] z-10 mt-2.5 flex flex-col gap-2.5 bg-cream px-4 pt-2 pb-2.5">
+        <div className="sticky top-[62px] z-20 mt-2.5 flex flex-col gap-2.5 bg-cream px-4 pt-2 pb-2.5">
           <h2 className="font-display text-[25px] leading-none font-bold text-ink">
             ¿Qué se te antoja?
           </h2>
