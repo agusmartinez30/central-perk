@@ -6,8 +6,11 @@ type StateCardProps = {
   icon: LucideIcon;
   title: string;
   children?: ReactNode;
-  /** `state`: compact status card (06A–C). `empty`: larger empty state with a display title (07C). */
-  variant?: "state" | "empty";
+  /**
+   * `state`: compact status card (06A–C). `empty`: larger empty state with a display title (07C).
+   * `section`: small sand placeholder for an empty section inside a screen (business detail).
+   */
+  variant?: "state" | "empty" | "section";
   /** Spins the icon, for pending states. */
   spinIcon?: boolean;
   className?: string;
@@ -23,6 +26,18 @@ export function StateCard({
   className,
 }: StateCardProps) {
   const isEmpty = variant === "empty";
+  if (variant === "section") {
+    return (
+      <div className={clsx("flex w-full flex-col items-center gap-[7px] rounded-2xl bg-sand p-[18px] text-center", className)}>
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-muted">
+          <Icon size={19} aria-hidden="true" />
+        </span>
+        <h3 className="text-[13px] font-bold text-ink">{title}</h3>
+        {children ? <p className="text-[11px] leading-[15px] text-muted">{children}</p> : null}
+      </div>
+    );
+  }
+
   return (
     <div
       className={clsx(

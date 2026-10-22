@@ -22,11 +22,11 @@ Strategy `ask-on-risk`, commits on `feat/cafe-prototype`. Forecast: about 350 au
 ## Tasks
 - [x] T1 Data model (`CafeDetail` + three samples, one per export) and pure helpers (`getCafeDetail`, `getCafeInfoView`: section/link/channel availability, `?state=unavailable|empty`) with tests. Route: delegated (writer; preparation reading of exports).
 - [x] T2 "Detalle completo" screen matching the export (centered header, cover with status chip, identity, Dónde estamos, Contacto, También online, Horarios). Route: delegated.
-- [ ] T3 "Enlaces no disponibles" and "Secciones vacías" variants. Route: delegated.
+- [x] T3 "Enlaces no disponibles" and "Secciones vacías" variants, data-driven and forceable with `?state=unavailable|empty`. Route: delegated.
 
 ## Acceptance criteria
 - `/info` matches "Detalle completo" at 390px.
-- `/info?state=<links-variant>` and `/info?state=<empty-variant>` match their exports.
+- `/info?state=unavailable` and `/info?state=empty` match their exports.
 - The header Info button still opens `/info`; back returns to `/menu`.
 
 ## Checks
@@ -48,5 +48,14 @@ vitest, lint, `tsc --noEmit`, build, and curl against `next start` for the three
 - `npx tsc --noEmit`: exit 0. `npm run lint`: exit 0. `npm test`: 125 passed. `npm run build`: success, `/info` static.
 - Commit: see git log (`feat(cafe-info): rebuild business detail screen from the Detalle completo design`).
 
+### T3 (delegated)
+- `CafeInfoScreen` is now a Client Component reading `?state=` via `useScreenState`; `/info` wraps it in `<Suspense>`. Unknown states fall back to the full detail.
+- Added `StateCard` `variant="section"` (sand placeholder used by every empty section), dimmed inactive link rows, disabled maps/contact buttons ("Google Maps no disponible", "No disponible"), and the "Cerrado hoy / Abre mañana a las 08:00" card.
+- Deviations: the cover chip reads "Cerrado" (undesigned) when the café is closed, so the unavailable variant shows "Cerrado" instead of the export's "Abierto ahora" next to "Cerrado hoy"; the unavailable export's single-line address ("Av. del Libertador 124 · Alta Gracia") keeps the two-line layout of the full design; section spacing uses the full design's 24px/12px gaps instead of 22px/10px in the degraded exports.
+- Test-first exception: markup only; behavior is covered by the T1 view tests.
+- `npx tsc --noEmit`: exit 0. `npm run lint`: exit 0. `npm test`: 125 passed. `npm run build`: success.
+- `next start -p 3921`: `/info`, `?state=unavailable`, `?state=empty`, `?state=bogus` all HTTP 200. The server HTML is the Suspense shell (client-rendered, like `/table`), so copy was checked with headless Edge `--dump-dom`: full shows "Abierto ahora", "Ver en Google Maps", "Elegí cómo querés comunicarte.", "@cafecentral.demo", "Abierto hasta las 20:00"; unavailable shows "Google Maps no disponible", "No disponible", "Los enlaces inactivos se muestran sin acción.", "Cerrado hoy", "Abre mañana a las 08:00"; empty shows all five empty-state titles. Screenshots compared visually against the exports.
+- Commit: see git log (`feat(cafe-info): add unavailable links and empty sections variants`).
+
 ## Next step
-T3.
+Feature complete; push / PR are the user's decision.
