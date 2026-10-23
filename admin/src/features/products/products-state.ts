@@ -16,6 +16,12 @@ import {
   type ProductMetrics,
   type ProductStatus,
 } from "./product-catalog";
+import { editorReducer, type EditorAction, type EditorState } from "./product-editor-state";
+
+export { getEditorView, type EditorView, type EditorState, type SaveTone } from "./product-editor-state";
+
+/** `list`: 07A. `editor`: 07B. `preview`: 07C, of the product open in the editor. */
+export type ProductsScreenId = "list" | "editor" | "preview";
 
 export type ProductsState = {
   /** The catalogue as edited in this session (in memory only). */
@@ -25,6 +31,9 @@ export type ProductsState = {
   version: number;
   /** Last action outcome, announced to screen readers. */
   notice: string | null;
+  screen: ProductsScreenId;
+  /** Set on the editor and preview screens. */
+  editor: EditorState | null;
 };
 
 /** The four selects of "Product Filter Selects". */
@@ -37,7 +46,8 @@ export type ProductsAction =
   | { type: "set-availability"; id: string; available: boolean }
   | { type: "duplicate"; id: string }
   | { type: "archive"; id: string }
-  | { type: "restore"; id: string };
+  | { type: "restore"; id: string }
+  | EditorAction;
 
 /** `set-filter` action for any select; TypeScript cannot narrow the generic pair by itself. */
 export function setFilter<K extends FilterKey>(filter: K, value: ProductFilters[K]): ProductsAction {
@@ -48,7 +58,15 @@ export function createProductsState(
   products: Product[],
   overrides: Partial<Omit<ProductsState, "products">> = {},
 ): ProductsState {
-  return { products, filters: DEFAULT_PRODUCT_FILTERS, version: CATALOG_VERSION, notice: null, ...overrides };
+  return {
+    products,
+    filters: DEFAULT_PRODUCT_FILTERS,
+    version: CATALOG_VERSION,
+    notice: null,
+    screen: "list",
+    editor: null,
+    ...overrides,
+  };
 }
 
 function findProduct(state: ProductsState, id: string): Product | undefined {
@@ -95,6 +113,8 @@ export function productsReducer(state: ProductsState, action: ProductsAction): P
         notice: `${product.name} volvió a la carta como borrador.`,
       };
     }
+    default:
+      return editorReducer(state, action);
   }
 }
 

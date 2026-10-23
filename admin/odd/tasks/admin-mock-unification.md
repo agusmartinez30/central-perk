@@ -55,5 +55,7 @@ Common: one clock for every live screen, 21/10/2026 at 14:42 (sync "14:42:18"); 
 - T4 done (1b5f230): per-screen mocks removed, README and previous feature docs point here. Checks: tsc OK, lint OK, vitest 236/236, build OK (20 static routes).
 - RDD for T1–T4 (committed-only vs feat/admin-payments): assessed high (`high_risk`); the user declined review for this candidate. Parent spot check: vitest 236/236.
 
+- Extended by admin-products: `Product` now also carries the 07 menu data (category, description, image, moments, publication, availability, archived, customer notes, sizes and extras) and the catalogue gains Hamburguesa clásica and Cheesecake (never sold today); names and prices of the 11 products the live screens sell are unchanged. See `odd/tasks/admin-products.md`.
+
 ## Next step
 Monorepo layout (see the root `odd/tasks/monorepo-layout.md` in central-perk).
