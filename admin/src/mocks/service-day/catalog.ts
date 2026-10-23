@@ -12,24 +12,74 @@ import type {
 /** "Carta publicada · Versión 42" of the 07 exports. */
 export const CATALOG_VERSION = 42;
 
-/** Categories of the 07A rows plus "Sándwiches" for the Sándwich de pollo the 03 orders sell. */
+/**
+ * Categories of the 07A rows plus "Sándwiches" for the Sándwich de pollo the 03 orders sell and
+ * the empty "Licuados" of 08C. The array keeps the 07 order (selects and chips); `order` is the
+ * 08C display order, following the export where a category exists (its Combos, Tortas,
+ * Ensaladas, Infusiones and Jugos are not in the menu: "Postres" takes the Tortas slot and
+ * "Bebidas" the Jugos one). Only the Cafés description comes from 08D; the others are invented.
+ */
 export const PRODUCT_CATEGORIES: ProductCategoryInfo[] = [
-  { id: "cafes", label: "Cafés" },
-  { id: "bebidas", label: "Bebidas" },
-  { id: "panaderia", label: "Panadería" },
-  { id: "tostadas", label: "Tostadas" },
-  { id: "tostados", label: "Tostados" },
-  { id: "sandwiches", label: "Sándwiches" },
-  { id: "hamburguesas", label: "Hamburguesas" },
-  { id: "postres", label: "Postres" },
+  { id: "cafes", label: "Cafés", description: "Espresso, filtrados y especialidades de la casa.", visible: true, order: 1 },
+  { id: "bebidas", label: "Bebidas", description: "Jugos exprimidos y bebidas frías.", visible: true, order: 8 },
+  { id: "panaderia", label: "Panadería", description: "Medialunas y facturas recién horneadas.", visible: true, order: 3 },
+  { id: "tostadas", label: "Tostadas", description: "Panes de masa madre con toppings.", visible: true, order: 2 },
+  { id: "tostados", label: "Tostados", description: "Tostados en pan de miga o de campo.", visible: true, order: 5 },
+  { id: "sandwiches", label: "Sándwiches", description: "Sándwiches calientes y fríos.", visible: true, order: 6 },
+  { id: "hamburguesas", label: "Hamburguesas", description: "Hamburguesas de la casa con papas.", visible: true, order: 7 },
+  { id: "postres", label: "Postres", description: "Tortas y postres del día.", visible: true, order: 4 },
+  { id: "licuados", label: "Licuados", description: "Licuados de fruta con agua o leche.", visible: true, order: 9 },
 ];
 
-/** "Momentos de consumo" chips of 07B. */
+const momentPhoto = (file: string) => `/images/moments/${file}.webp`;
+
+/**
+ * "Momentos de consumo": 07B chips and 08A collections, with the 08A titles and descriptions
+ * and the customer app's photos (the 08A covers are the same pictures). The associated
+ * categories follow 08A where the category exists ("Combos", "Tortas", "Ensaladas",
+ * "Infusiones" and "Jugos" do not: Tortas → Postres, Jugos → Bebidas, Ensaladas → Tostados).
+ */
 export const CONSUMPTION_MOMENTS: ConsumptionMomentInfo[] = [
-  { id: "desayunar", label: "Desayunar" },
-  { id: "merendar", label: "Merendar" },
-  { id: "cenar", label: "Cenar" },
-  { id: "tomar", label: "Tomar" },
+  {
+    id: "desayunar",
+    label: "Desayunar",
+    title: "Para desayunar",
+    description: "Empezá el día con algo rico.",
+    image: momentPhoto("para-desayunar"),
+    visible: true,
+    order: 1,
+    categoryIds: ["cafes", "tostadas", "panaderia", "bebidas"],
+  },
+  {
+    id: "merendar",
+    label: "Merendar",
+    title: "Para merendar",
+    description: "Una pausa que se disfruta.",
+    image: momentPhoto("para-merendar"),
+    visible: true,
+    order: 2,
+    categoryIds: ["cafes", "postres", "panaderia", "tostados"],
+  },
+  {
+    id: "cenar",
+    label: "Cenar",
+    title: "Para cenar",
+    description: "Opciones para disfrutar sin apuro.",
+    image: momentPhoto("para-cenar"),
+    visible: true,
+    order: 3,
+    categoryIds: ["sandwiches", "hamburguesas", "tostados"],
+  },
+  {
+    id: "tomar",
+    label: "Tomar",
+    title: "Para tomar",
+    description: "Elegí tu bebida favorita.",
+    image: momentPhoto("para-tomar"),
+    visible: true,
+    order: 4,
+    categoryIds: ["cafes", "bebidas", "licuados"],
+  },
 ];
 
 const photo = (file: string) => `/images/products/${file}.webp`;

@@ -117,7 +117,97 @@ describe("product catalogue", () => {
       "Sándwiches",
       "Hamburguesas",
       "Postres",
+      "Licuados",
     ]);
     expect(CONSUMPTION_MOMENTS.map((moment) => moment.label)).toEqual(["Desayunar", "Merendar", "Cenar", "Tomar"]);
+  });
+});
+
+describe("menu organization (08)", () => {
+  it("titles, describes and illustrates the moments as 08A does, in display order", () => {
+    expect(
+      CONSUMPTION_MOMENTS.map(({ title, description, image, visible, order }) => ({
+        title,
+        description,
+        image,
+        visible,
+        order,
+      })),
+    ).toEqual([
+      {
+        title: "Para desayunar",
+        description: "Empezá el día con algo rico.",
+        image: "/images/moments/para-desayunar.webp",
+        visible: true,
+        order: 1,
+      },
+      {
+        title: "Para merendar",
+        description: "Una pausa que se disfruta.",
+        image: "/images/moments/para-merendar.webp",
+        visible: true,
+        order: 2,
+      },
+      {
+        title: "Para cenar",
+        description: "Opciones para disfrutar sin apuro.",
+        image: "/images/moments/para-cenar.webp",
+        visible: true,
+        order: 3,
+      },
+      {
+        title: "Para tomar",
+        description: "Elegí tu bebida favorita.",
+        image: "/images/moments/para-tomar.webp",
+        visible: true,
+        order: 4,
+      },
+    ]);
+  });
+
+  it("ships every moment photo under public/", () => {
+    for (const moment of CONSUMPTION_MOMENTS) {
+      expect(moment.image).toBeDefined();
+      expect(existsSync(path.join(process.cwd(), "public", moment.image ?? "")), moment.image).toBe(true);
+    }
+  });
+
+  it("associates every moment with existing categories only, without product counts", () => {
+    const categories = new Set(PRODUCT_CATEGORIES.map((category) => category.id));
+    for (const moment of CONSUMPTION_MOMENTS) {
+      expect(moment.categoryIds.length).toBeGreaterThan(0);
+      for (const id of moment.categoryIds) expect(categories.has(id)).toBe(true);
+      expect(moment).not.toHaveProperty("productCount");
+    }
+    expect(CONSUMPTION_MOMENTS.find((moment) => moment.id === "desayunar")?.categoryIds).toEqual([
+      "cafes",
+      "tostadas",
+      "panaderia",
+      "bebidas",
+    ]);
+  });
+
+  it("orders the categories as 08C does, with the 08D description of Cafés and one empty category", () => {
+    const byOrder = [...PRODUCT_CATEGORIES].sort((a, b) => a.order - b.order);
+    expect(byOrder.map((category) => category.label)).toEqual([
+      "Cafés",
+      "Tostadas",
+      "Panadería",
+      "Postres",
+      "Tostados",
+      "Sándwiches",
+      "Hamburguesas",
+      "Bebidas",
+      "Licuados",
+    ]);
+    expect(byOrder.map((category) => category.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(PRODUCT_CATEGORIES.every((category) => category.visible && category.description.length > 0)).toBe(true);
+    expect(PRODUCT_CATEGORIES.find((category) => category.id === "cafes")?.description).toBe(
+      "Espresso, filtrados y especialidades de la casa.",
+    );
+    const used = new Set(PRODUCTS.map((product) => product.categoryId));
+    expect(PRODUCT_CATEGORIES.filter((category) => !used.has(category.id)).map((category) => category.id)).toEqual([
+      "licuados",
+    ]);
   });
 });

@@ -18,7 +18,8 @@ export type ProductCategoryId =
   | "tostados"
   | "sandwiches"
   | "hamburguesas"
-  | "postres";
+  | "postres"
+  | "licuados";
 
 /** "Momentos de consumo" of 07B. */
 export type ConsumptionMomentId = "desayunar" | "merendar" | "cenar" | "tomar";
@@ -59,9 +60,45 @@ export type Product = {
   extras: ProductOption[];
 };
 
-export type ProductCategoryInfo = { id: ProductCategoryId; label: string };
+/**
+ * A product category: the 07 taxonomy and an 08C filter of the customer "Explore" screen.
+ * Product counts are never stored: they are derived from `Product.categoryId`.
+ */
+export type ProductCategoryInfo = {
+  id: ProductCategoryId;
+  label: string;
+  /** 08D "Descripción opcional". */
+  description: string;
+  /** 08D "Imagen opcional"; unset shows the upload area. */
+  image?: string;
+  /** "Visible en la carta". */
+  visible: boolean;
+  /** 08C "Orden" (1-based display order of the filters). */
+  order: number;
+};
 
-export type ConsumptionMomentInfo = { id: ConsumptionMomentId; label: string };
+/**
+ * A consumption moment: the 07B chip and an 08A editorial collection. Its products are the
+ * products whose `Product.moments` include it (never a stored count); `categoryIds` are the
+ * filters it offers ("Las categorías no agregan productos automáticamente").
+ */
+export type ConsumptionMomentInfo = {
+  id: ConsumptionMomentId;
+  /** Short chip label of 07 ("Desayunar"). */
+  label: string;
+  /** 08A card and customer title ("Para desayunar"). */
+  title: string;
+  /** 08B "Descripción breve". */
+  description: string;
+  /** 08B "Fotografía de portada"; unset shows a placeholder. */
+  image?: string;
+  /** "Visible en la carta". */
+  visible: boolean;
+  /** 08A "Orden" (1-based). */
+  order: number;
+  /** 08B "Categorías asociadas", in the order they were associated. */
+  categoryIds: ProductCategoryId[];
+};
 
 /** Seated period of a table: from the first customer to the payment that frees it. */
 export type TableSession = {
