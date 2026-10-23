@@ -1,5 +1,5 @@
 export * from "./payment-settings";
-export { PaymentSettingsScreen } from "./PaymentSettingsScreen";
+export { PaymentSettingsScreen, PAYMENTS_FORCED_STATES } from "./PaymentSettingsScreen";
 export {
   createPaymentsState,
   getPaymentsView,

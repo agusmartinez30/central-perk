@@ -2,20 +2,70 @@
 
 import { useReducer } from "react";
 import { PAYMENT_SETTINGS } from "@/mocks/payments";
-import { createPaymentsState, getPaymentsView, paymentsReducer } from "./payments-state";
+import { useScreenState } from "@/shared/lib/use-screen-state";
+import { BankAccountForm } from "./BankAccountForm";
+import { createPaymentsState, getPaymentsView, paymentsReducer, type PaymentsState } from "./payments-state";
 import { PaymentSettingsForm } from "./PaymentSettingsForm";
 import { PaymentSettingsHeader } from "./PaymentSettingsHeader";
 import { PaymentSettingsNavigation } from "./PaymentSettingsNavigation";
 import { PaymentSettingsSaveBar } from "./PaymentSettingsSaveBar";
+import { SaveConfirmationDialog } from "./SaveConfirmationDialog";
 import { SettingsPreviewColumn } from "./SettingsPreviewColumn";
 
 /**
- * 06 · Configuración de pagos. Container: owns the saved settings and the draft (pure
- * `paymentsReducer`), fed by `PAYMENT_SETTINGS`. Nothing persists beyond the session.
+ * Forced variants: `bank` ("Datos bancarios" export), `bank-errors` (invalid alias and CBU after a
+ * save attempt; not in the exports) and `confirm` ("Confirmar cambios" export, with a pending
+ * change to the staff instructions so there is something to save).
+ */
+export const PAYMENTS_FORCED_STATES = ["bank", "bank-errors", "confirm"] as const;
+
+type ForcedState = (typeof PAYMENTS_FORCED_STATES)[number];
+
+function initPaymentsState(forcedState: ForcedState | null): PaymentsState {
+  const state = createPaymentsState(PAYMENT_SETTINGS);
+  const { bankAccount } = state.draft;
+  switch (forcedState) {
+    case "bank":
+      return { ...state, tab: "bank" };
+    case "bank-errors":
+      return {
+        ...state,
+        tab: "bank",
+        showErrors: true,
+        draft: { ...state.draft, bankAccount: { ...bankAccount, alias: "CAFE", cbu: "0000000000000000000001" } },
+      };
+    case "confirm":
+      return {
+        ...state,
+        confirmOpen: true,
+        draft: {
+          ...state.draft,
+          bankAccount: {
+            ...bankAccount,
+            staffInstructions: "Verificar la acreditación en el banco antes de confirmar el pago.",
+          },
+        },
+      };
+    default:
+      return state;
+  }
+}
+
+/** Local "HH:MM" of `date`, for "actualizada hoy 10:15". */
+function formatClock(date: Date): string {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+/**
+ * 06 · Configuración de pagos. Container: owns the saved settings, the draft, the active tab and
+ * the save confirmation (pure `paymentsReducer`), fed by `PAYMENT_SETTINGS`. Saving only applies
+ * the draft in memory after "Confirmar y guardar"; nothing persists beyond the session.
  */
 export function PaymentSettingsScreen() {
-  const [state, dispatch] = useReducer(paymentsReducer, PAYMENT_SETTINGS, createPaymentsState);
+  const forcedState = useScreenState(PAYMENTS_FORCED_STATES);
+  const [state, dispatch] = useReducer(paymentsReducer, forcedState, initPaymentsState);
   const view = getPaymentsView(state);
+  const transferModeBlocked = view.issues.some((issue) => issue.id === "transfer-mode-requirements");
 
   return (
     // The workspace fills the viewport under the 72px top bar, as in the 1440×900 export.
@@ -23,24 +73,38 @@ export function PaymentSettingsScreen() {
       <PaymentSettingsHeader />
       <div className="flex min-h-0 w-full flex-1 items-start gap-3">
         <PaymentSettingsNavigation tab={state.tab} onTabChange={(tab) => dispatch({ type: "select-tab", tab })} />
-        <PaymentSettingsForm
-          draft={state.draft}
-          lockedMethods={view.lockedMethods}
-          transferModeBlocked={view.issues.some((issue) => issue.id === "transfer-mode-requirements")}
-          onToggleMethod={(method) => dispatch({ type: "toggle-method", method })}
-          onToggleRequestMode={(mode) => dispatch({ type: "toggle-request-mode", mode })}
-        />
+        {state.tab === "bank" ? (
+          <BankAccountForm
+            account={state.draft.bankAccount}
+            errors={view.bankErrors}
+            transferModeBlocked={transferModeBlocked}
+            onFieldChange={(field, value) => dispatch({ type: "set-bank-field", field, value })}
+          />
+        ) : (
+          <PaymentSettingsForm
+            draft={state.draft}
+            lockedMethods={view.lockedMethods}
+            transferModeBlocked={transferModeBlocked}
+            onToggleMethod={(method) => dispatch({ type: "toggle-method", method })}
+            onToggleRequestMode={(mode) => dispatch({ type: "toggle-request-mode", mode })}
+          />
+        )}
         <SettingsPreviewColumn modes={view.previewModes} />
       </div>
       <PaymentSettingsSaveBar
-        title={view.title}
+        title={state.showErrors && view.issues.length > 0 ? view.issues[0].message : view.title}
         meta={view.meta}
         dirty={view.dirty}
+        invalid={state.showErrors && view.issues.length > 0}
         onDiscard={() => dispatch({ type: "discard" })}
-        onSave={() => {
-          // Saving goes through the confirmation dialog (T3).
-        }}
+        onSave={() => dispatch({ type: "request-save" })}
       />
+      {state.confirmOpen && (
+        <SaveConfirmationDialog
+          onCancel={() => dispatch({ type: "cancel-save" })}
+          onConfirm={() => dispatch({ type: "confirm-save", now: formatClock(new Date()) })}
+        />
+      )}
     </div>
   );
 }

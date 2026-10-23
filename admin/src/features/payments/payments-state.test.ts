@@ -72,3 +72,91 @@ describe("getPaymentsView", () => {
     expect(getPaymentsView(state).issues.map((issue) => issue.id)).toEqual(["transfer-mode-requirements"]);
   });
 });
+
+describe("bank details", () => {
+  const bank = paymentsReducer(initial, { type: "select-tab", tab: "bank" });
+
+  it("edits bank fields in the draft and marks them dirty", () => {
+    const edited = paymentsReducer(bank, { type: "set-bank-field", field: "bank", value: "Banco Prueba" });
+    expect(edited.draft.bankAccount.bank).toBe("Banco Prueba");
+    expect(edited.saved.settings.bankAccount.bank).toBe("Banco Demo");
+    expect(getPaymentsView(edited).changes.map((change) => change.id)).toEqual(["bankAccount.bank"]);
+  });
+
+  it("shows errors only for edited fields until saving is attempted", () => {
+    const edited = paymentsReducer(
+      paymentsReducer(bank, { type: "set-bank-field", field: "alias", value: "CAFE" }),
+      { type: "set-bank-field", field: "holder", value: "Café Central SRL · FICTICIO" },
+    );
+    expect(getPaymentsView(edited).bankErrors).toEqual({
+      alias: "El alias debe tener entre 6 y 20 caracteres: letras, números, puntos o guiones.",
+    });
+  });
+});
+
+describe("saving", () => {
+  const changed = paymentsReducer(initial, { type: "toggle-method", method: "other" });
+
+  it("does nothing without changes", () => {
+    expect(paymentsReducer(initial, { type: "request-save" })).toBe(initial);
+  });
+
+  it("asks for confirmation before saving a valid draft", () => {
+    const confirming = paymentsReducer(changed, { type: "request-save" });
+    expect(confirming.confirmOpen).toBe(true);
+    expect(confirming.saved).toBe(PAYMENT_SETTINGS);
+  });
+
+  it("keeps the draft and the saved settings when the confirmation is cancelled", () => {
+    const cancelled = paymentsReducer(paymentsReducer(changed, { type: "request-save" }), { type: "cancel-save" });
+    expect(cancelled.confirmOpen).toBe(false);
+    expect(cancelled.saved).toBe(PAYMENT_SETTINGS);
+    expect(cancelled.draft.methods.other).toBe(true);
+  });
+
+  it("applies the draft as the next version after confirming", () => {
+    const saved = paymentsReducer(paymentsReducer(changed, { type: "request-save" }), {
+      type: "confirm-save",
+      now: "10:15",
+    });
+    expect(saved.confirmOpen).toBe(false);
+    expect(saved.saved.version).toBe(19);
+    expect(saved.saved.settings.methods.other).toBe(true);
+    expect(getPaymentsView(saved)).toMatchObject({
+      dirty: false,
+      title: "Configuración sin cambios",
+      meta: "Versión 19 · actualizada hoy 10:15",
+    });
+    expect(PAYMENT_SETTINGS.settings.methods.other).toBe(false);
+  });
+
+  it("blocks invalid drafts, reveals every bank error and opens the bank tab", () => {
+    const invalid = paymentsReducer(
+      paymentsReducer(initial, { type: "set-bank-field", field: "cbu", value: "" }),
+      { type: "set-bank-field", field: "holder", value: "" },
+    );
+    const attempted = paymentsReducer(invalid, { type: "request-save" });
+    expect(attempted).toMatchObject({ confirmOpen: false, showErrors: true, tab: "bank" });
+    expect(getPaymentsView(attempted).bankErrors).toEqual({
+      holder: "Ingresá el titular de la cuenta.",
+      cbu: "Ingresá el CBU / CVU.",
+    });
+  });
+
+  it("blocks the transfer mode without the transfer method and stays on the current tab", () => {
+    const blocked = paymentsReducer(paymentsReducer(initial, { type: "toggle-method", method: "transfer" }), {
+      type: "request-save",
+    });
+    expect(blocked).toMatchObject({ confirmOpen: false, showErrors: true, tab: "methods" });
+  });
+
+  it("hides the errors again after discarding", () => {
+    const invalid = paymentsReducer(
+      paymentsReducer(initial, { type: "set-bank-field", field: "cbu", value: "1" }),
+      { type: "request-save" },
+    );
+    const discarded = paymentsReducer(invalid, { type: "discard" });
+    expect(discarded.showErrors).toBe(false);
+    expect(getPaymentsView(discarded).bankErrors).toEqual({});
+  });
+});

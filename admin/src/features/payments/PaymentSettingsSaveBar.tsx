@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { Save } from "lucide-react";
 
 type PaymentSettingsSaveBarProps = {
@@ -6,6 +7,8 @@ type PaymentSettingsSaveBarProps = {
   /** "Versión 18 · actualizada hoy 09:42". */
   meta: string;
   dirty: boolean;
+  /** A save was blocked: `title` is the first broken rule, in the danger tone. */
+  invalid?: boolean;
   onDiscard: () => void;
   onSave: () => void;
 };
@@ -14,11 +17,11 @@ type PaymentSettingsSaveBarProps = {
  * "Payment Settings Save Bar". "Guardar cambios" keeps the export's look but is disabled while
  * there is nothing to save; "Descartar cambios" (not in the exports) appears with pending changes.
  */
-export function PaymentSettingsSaveBar({ title, meta, dirty, onDiscard, onSave }: PaymentSettingsSaveBarProps) {
+export function PaymentSettingsSaveBar({ title, meta, dirty, invalid, onDiscard, onSave }: PaymentSettingsSaveBarProps) {
   return (
     <div className="flex h-16 w-full shrink-0 items-center justify-between rounded-card bg-surface px-3.5 outline-1 -outline-offset-[0.5px] outline-line">
       <div className="flex flex-col gap-0.5" role="status">
-        <p className="text-[12px] font-bold whitespace-nowrap text-ink">{title}</p>
+        <p className={clsx("text-[12px] font-bold whitespace-nowrap", invalid ? "text-danger" : "text-ink")}>{title}</p>
         <p className="text-[11px] whitespace-nowrap text-muted">{meta}</p>
       </div>
       <div className="flex items-center gap-2">

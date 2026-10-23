@@ -39,7 +39,8 @@ clear the site storage.
 | `/orders` | 03 · Gestión de pedidos (kanban, order drawer, cancel confirmation) |
 | `/bill-requests` | 04 · Solicitudes de cuenta (requests table, quick-detail drawer) |
 | `/history` | 05 · Historial de cobros (collections table with period, filters and pagination; read-only collection drawer) |
-| `/tables/management`, `/tables/qr`, `/menu`, `/menu/products`, `/menu/categories`, `/settings`, `/payments`, `/staff` | "Próximamente" placeholder |
+| `/payments` | 06 · Configuración de pagos (methods, request modes and bank details tabs, live customer preview, in-memory save after confirming) |
+| `/tables/management`, `/tables/qr`, `/menu`, `/menu/products`, `/menu/categories`, `/settings`, `/staff` | "Próximamente" placeholder |
 
 ### Forced variants (`?state=`)
 
@@ -53,6 +54,7 @@ clear the site storage.
 | `/orders` | `detail` (drawer of #1051), `cancel` (cancel dialog of #1051), `empty` (no orders), `no-results` (search for "9999") |
 | `/bill-requests` | `selected` (drawer of Mesa 10), `empty` (no requests), `no-results` (search for "Mesa 99") |
 | `/history` | `selected` (drawer of COB-0026), `empty` (no collections), `no-results` (search for "Mesa 99") |
+| `/payments` | `bank` ("Datos bancarios" tab), `bank-errors` (invalid alias and CBU after a save attempt), `confirm` (save confirmation with a pending change) |
 
 ## Structure
 
