@@ -214,3 +214,8 @@ const HISTORY_LABELS: Record<OrderHistoryKind, string> = {
 export function getHistoryLabel(kind: OrderHistoryKind): string {
   return HISTORY_LABELS[kind];
 }
+
+/** Dot of a history entry: the export paints "Pedido confirmado" in brand, like "Recibido". */
+export function getHistoryTone(kind: OrderHistoryKind): OrderTone {
+  return kind === "confirmed" ? "brand" : STATUS_BADGES[kind].tone;
+}

@@ -1,16 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useReducer, useState } from "react";
 import { ClipboardList } from "lucide-react";
-import type { ManagedOrder } from "@/mocks/types";
 import { ORDERS_BOARD } from "@/mocks/orders";
 import { TABLES_BOARD } from "@/mocks/tables";
 import { useScreenState } from "@/shared/lib/use-screen-state";
+import { CancelOrderDialog } from "./CancelOrderDialog";
 import { KanbanBoard, type BoardEmptyState } from "./KanbanBoard";
+import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { OrderFilters } from "./OrderFilters";
 import { OrderMetrics, OrdersHeader } from "./OrdersHeader";
 import {
-  advanceOrder,
+  createOrdersState,
+  formatClock,
+  getCancelTarget,
+  getSelectedOrder,
+  ordersReducer,
+  type OrdersState,
+} from "./orders-state";
+import {
   filterOrders,
   getBillRequestedTables,
   getOrderMetrics,
@@ -20,23 +28,40 @@ import {
 } from "./orders-view";
 
 /**
- * Forced variants: `empty` (no orders yet) and `no-results` (search with no match).
- * Their copy is not in the 03 export.
+ * Forced variants: `detail` (drawer of #1051, as in the "Pedido seleccionado" export),
+ * `cancel` (cancellation dialog of #1051), `empty` (no orders yet) and `no-results`
+ * (search with no match). The empty and no-results copy is not in the 03 exports.
  */
-export const ORDERS_FORCED_STATES = ["empty", "no-results"] as const;
+export const ORDERS_FORCED_STATES = ["detail", "cancel", "empty", "no-results"] as const;
+
+type ForcedState = (typeof ORDERS_FORCED_STATES)[number];
+
+/** Order the `detail` and `cancel` variants open, as in the exports. */
+const FORCED_ORDER_ID = 1051;
 
 /** Query that `?state=no-results` pre-fills: no order has that number. */
 const NO_RESULTS_QUERY = "9999";
 
+function initOrdersState(forcedState: ForcedState | null): OrdersState {
+  if (forcedState === "empty") return createOrdersState([]);
+  return createOrdersState(ORDERS_BOARD.orders, {
+    selectedId: forcedState === "detail" ? FORCED_ORDER_ID : null,
+    cancelTargetId: forcedState === "cancel" ? FORCED_ORDER_ID : null,
+  });
+}
+
+const now = () => formatClock(new Date());
+
 /**
- * 03 · Gestión de pedidos. Container: owns the in-memory orders, filters and toggles, and
- * feeds the presentational pieces from the `ORDERS_BOARD` mock.
+ * 03 · Gestión de pedidos. Container: owns the in-memory orders (pure `ordersReducer`: drawer,
+ * status changes and two-step cancellation), filters and toggles, fed by `ORDERS_BOARD`.
  */
 export function OrdersScreen() {
   const forcedState = useScreenState(ORDERS_FORCED_STATES);
-  const [orders, setOrders] = useState<ManagedOrder[]>(() =>
-    forcedState === "empty" ? [] : ORDERS_BOARD.orders,
-  );
+  const [state, dispatch] = useReducer(ordersReducer, forcedState, initOrdersState);
+  const { orders } = state;
+  const selectedOrder = getSelectedOrder(state);
+  const cancelTarget = getCancelTarget(state);
   const [table, setTable] = useState<OrderQuery["table"]>("all");
   const [query, setQuery] = useState(() => (forcedState === "no-results" ? NO_RESULTS_QUERY : ""));
   const [showDelivered, setShowDelivered] = useState(true);
@@ -47,10 +72,7 @@ export function OrdersScreen() {
   const columns = groupOrdersByColumn(visibleOrders, { showDelivered });
   const hasVisibleOrders = columns.some((column) => column.orders.length > 0);
 
-  const advance = (id: number) => {
-    const at = new Date().toTimeString().slice(0, 5);
-    setOrders((current) => current.map((order) => (order.id === id ? advanceOrder(order, at) : order)));
-  };
+  const advance = (id: number) => dispatch({ type: "advance", id, at: now() });
 
   const clearFilters = () => {
     setTable("all");
@@ -91,9 +113,25 @@ export function OrdersScreen() {
         columns={columns}
         emptyState={emptyState}
         billRequestedTables={billRequestedTables}
-        onOpen={() => {}}
+        onOpen={(id) => dispatch({ type: "open-detail", id })}
         onAdvance={advance}
       />
+      {selectedOrder && (
+        <OrderDetailDrawer
+          order={selectedOrder}
+          onClose={() => dispatch({ type: "close-detail" })}
+          onAdvance={advance}
+          onRequestCancel={(id) => dispatch({ type: "request-cancel", id })}
+        />
+      )}
+      {cancelTarget && (
+        <CancelOrderDialog
+          key={cancelTarget.id}
+          order={cancelTarget}
+          onDismiss={() => dispatch({ type: "dismiss-cancel" })}
+          onConfirm={(reason) => dispatch({ type: "confirm-cancel", reason, at: now() })}
+        />
+      )}
     </div>
   );
 }

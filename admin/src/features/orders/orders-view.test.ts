@@ -15,6 +15,7 @@ import {
   getCardNotice,
   formatOrderTotal,
   getHistoryLabel,
+  getHistoryTone,
   getNextStatus,
   getOrderMetrics,
   getOrderTableOptions,
@@ -197,6 +198,14 @@ describe("copy helpers", () => {
   it("labels the history entries of the drawer", () => {
     expect(getHistoryLabel("confirmed")).toBe("Pedido confirmado");
     expect(getHistoryLabel("received")).toBe("Recibido en cocina");
+  });
+
+  it("colors history dots like the stage they reached", () => {
+    expect(getHistoryTone("confirmed")).toBe("brand");
+    expect(getHistoryTone("received")).toBe("brand");
+    expect(getHistoryTone("preparing")).toBe("warning");
+    expect(getHistoryTone("delivered")).toBe("success");
+    expect(getHistoryTone("cancelled")).toBe("danger");
   });
 });
 
