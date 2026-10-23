@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { COLLECTIONS_HISTORY } from "@/mocks/collections";
-import { collectionsReducer, createCollectionsState, getVisibleCollections } from "./collections-state";
+import {
+  collectionsReducer,
+  createCollectionsState,
+  getSelectedCollection,
+  getVisibleCollections,
+} from "./collections-state";
 
 const { collections, today } = COLLECTIONS_HISTORY;
 const initial = createCollectionsState(collections, today);
@@ -67,5 +72,30 @@ describe("collectionsReducer", () => {
       staff: "all",
       page: 1,
     });
+  });
+});
+
+describe("selected collection", () => {
+  it("starts without a selection unless one is given", () => {
+    expect(getSelectedCollection(initial)).toBeNull();
+    const selected = createCollectionsState(collections, today, { selectedId: "COB-0026" });
+    expect(getSelectedCollection(selected)?.id).toBe("COB-0026");
+  });
+
+  it("opens the detail of a known collection and ignores unknown ids", () => {
+    const opened = collectionsReducer(initial, { type: "open-detail", id: "COB-0024" });
+    expect(getSelectedCollection(opened)?.id).toBe("COB-0024");
+    expect(collectionsReducer(opened, { type: "open-detail", id: "COB-9999" })).toBe(opened);
+  });
+
+  it("closes the detail and keeps filters and page", () => {
+    const state = [
+      { type: "set-period", period: "last-7-days" },
+      { type: "set-page", page: 2 },
+      { type: "open-detail", id: "COB-0020" },
+      { type: "close-detail" },
+    ] as const;
+    const closed = state.reduce(collectionsReducer, initial);
+    expect(closed).toMatchObject({ selectedId: null, period: "last-7-days", page: 2 });
   });
 });

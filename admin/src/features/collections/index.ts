@@ -3,6 +3,7 @@ export { CollectionsScreen, COLLECTIONS_FORCED_STATES } from "./CollectionsScree
 export {
   collectionsReducer,
   createCollectionsState,
+  getSelectedCollection,
   getVisibleCollections,
   type CollectionsAction,
   type CollectionsState,

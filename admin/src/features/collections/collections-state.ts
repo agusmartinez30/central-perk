@@ -12,7 +12,7 @@ import {
   type StaffFilter,
 } from "./collections-view";
 
-/** In-memory state of 05: the loaded collections, filters, sort and page. */
+/** In-memory state of 05: the loaded collections, filters, sort, page and the open drawer. */
 export type CollectionsState = {
   collections: ManagedCollection[];
   /** ISO date "Hoy" refers to. */
@@ -23,6 +23,8 @@ export type CollectionsState = {
   staff: StaffFilter;
   sort: CollectionSort;
   page: number;
+  /** Collection open in the "Selected Payment Detail" drawer. */
+  selectedId: string | null;
 };
 
 export type CollectionsAction =
@@ -32,7 +34,9 @@ export type CollectionsAction =
   | { type: "set-staff"; staff: StaffFilter }
   | { type: "set-sort"; sort: CollectionSort }
   | { type: "set-page"; page: number }
-  | { type: "clear-filters" };
+  | { type: "clear-filters" }
+  | { type: "open-detail"; id: string }
+  | { type: "close-detail" };
 
 export function createCollectionsState(
   collections: ManagedCollection[],
@@ -48,13 +52,15 @@ export function createCollectionsState(
     staff: "all",
     sort: "recent",
     page: 1,
+    selectedId: null,
     ...overrides,
   };
 }
 
 /**
  * Pure transitions of the collections history. Every change to the period, search, selects or
- * sort goes back to the first page; "clear-filters" keeps the period.
+ * sort goes back to the first page; "clear-filters" keeps the period. The history is read-only, so
+ * the drawer only opens and closes.
  */
 export function collectionsReducer(state: CollectionsState, action: CollectionsAction): CollectionsState {
   switch (action.type) {
@@ -72,7 +78,19 @@ export function collectionsReducer(state: CollectionsState, action: CollectionsA
       return { ...state, page: action.page };
     case "clear-filters":
       return { ...state, query: "", method: "all", staff: "all", page: 1 };
+    case "open-detail":
+      return findCollection(state, action.id) ? { ...state, selectedId: action.id } : state;
+    case "close-detail":
+      return { ...state, selectedId: null };
   }
+}
+
+function findCollection(state: CollectionsState, id: string | null): ManagedCollection | null {
+  return id === null ? null : (state.collections.find((collection) => collection.id === id) ?? null);
+}
+
+export function getSelectedCollection(state: CollectionsState): ManagedCollection | null {
+  return findCollection(state, state.selectedId);
 }
 
 export type VisibleCollections = Page<ManagedCollection> & {

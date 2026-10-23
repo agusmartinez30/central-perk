@@ -38,7 +38,8 @@ clear the site storage.
 | `/tables` | 02 · Gestión de mesas |
 | `/orders` | 03 · Gestión de pedidos (kanban, order drawer, cancel confirmation) |
 | `/bill-requests` | 04 · Solicitudes de cuenta (requests table, quick-detail drawer) |
-| `/tables/management`, `/tables/qr`, `/history`, `/menu`, `/menu/products`, `/menu/categories`, `/settings`, `/payments`, `/staff` | "Próximamente" placeholder |
+| `/history` | 05 · Historial de cobros (collections table with period, filters and pagination; read-only collection drawer) |
+| `/tables/management`, `/tables/qr`, `/menu`, `/menu/products`, `/menu/categories`, `/settings`, `/payments`, `/staff` | "Próximamente" placeholder |
 
 ### Forced variants (`?state=`)
 
@@ -51,6 +52,7 @@ clear the site storage.
 | `/tables` | `empty` (no tables), `no-results` (search for "Mesa 99") |
 | `/orders` | `detail` (drawer of #1051), `cancel` (cancel dialog of #1051), `empty` (no orders), `no-results` (search for "9999") |
 | `/bill-requests` | `selected` (drawer of Mesa 10), `empty` (no requests), `no-results` (search for "Mesa 99") |
+| `/history` | `selected` (drawer of COB-0026), `empty` (no collections), `no-results` (search for "Mesa 99") |
 
 ## Structure
 

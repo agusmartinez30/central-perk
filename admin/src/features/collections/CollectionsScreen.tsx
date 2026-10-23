@@ -7,6 +7,7 @@ import { formatDateRange, formatResultCount, getCollectionMetrics, getStaffOptio
 import {
   collectionsReducer,
   createCollectionsState,
+  getSelectedCollection,
   getVisibleCollections,
   type CollectionsState,
 } from "./collections-state";
@@ -18,12 +19,14 @@ import {
   PaymentHistoryTable,
   type TableEmptyState,
 } from "./PaymentHistoryTable";
+import { SelectedPaymentDetail } from "./SelectedPaymentDetail";
 
 /**
- * Forced variants: `empty` (no collections in the period) and `no-results` (search with no
- * match). Their copy is not in the 05 exports.
+ * Forced variants: `selected` (drawer of COB-0026, as in the "Cobro seleccionado" export),
+ * `empty` (no collections in the period) and `no-results` (search with no match). The empty and
+ * no-results copy is not in the 05 exports.
  */
-export const COLLECTIONS_FORCED_STATES = ["empty", "no-results"] as const;
+export const COLLECTIONS_FORCED_STATES = ["selected", "empty", "no-results"] as const;
 
 type ForcedState = (typeof COLLECTIONS_FORCED_STATES)[number];
 
@@ -31,21 +34,23 @@ type ForcedState = (typeof COLLECTIONS_FORCED_STATES)[number];
 const NO_RESULTS_QUERY = "Mesa 99";
 
 function initCollectionsState(forcedState: ForcedState | null): CollectionsState {
-  const { collections, today } = COLLECTIONS_HISTORY;
+  const { collections, today, selectedId } = COLLECTIONS_HISTORY;
   if (forcedState === "empty") return createCollectionsState([], today);
   return createCollectionsState(collections, today, {
     query: forcedState === "no-results" ? NO_RESULTS_QUERY : "",
+    selectedId: forcedState === "selected" ? selectedId : null,
   });
 }
 
 /**
  * 05 · Historial de cobros. Container: owns the in-memory history (pure `collectionsReducer`:
- * period, search, selects, sort and page), fed by `COLLECTIONS_HISTORY`.
+ * period, search, selects, sort, page and the read-only detail drawer), fed by `COLLECTIONS_HISTORY`.
  */
 export function CollectionsScreen() {
   const forcedState = useScreenState(COLLECTIONS_FORCED_STATES);
   const [state, dispatch] = useReducer(collectionsReducer, forcedState, initCollectionsState);
   const visible = getVisibleCollections(state);
+  const selectedCollection = getSelectedCollection(state);
 
   let emptyState: TableEmptyState | null = null;
   if (visible.total === 0) {
@@ -90,9 +95,11 @@ export function CollectionsScreen() {
         page={visible.page}
         pageCount={visible.pageCount}
         onPageChange={(page) => dispatch({ type: "set-page", page })}
-        // The selected-collection drawer arrives with T3.
-        onViewDetail={() => {}}
+        onViewDetail={(id) => dispatch({ type: "open-detail", id })}
       />
+      {selectedCollection && (
+        <SelectedPaymentDetail collection={selectedCollection} onClose={() => dispatch({ type: "close-detail" })} />
+      )}
     </div>
   );
 }
