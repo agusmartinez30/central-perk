@@ -8,7 +8,17 @@ import {
 } from "./derive";
 
 export { SERVICE_DAY } from "./day";
-export { PAYMENT_METHODS, PRODUCTS, REQUEST_MODES, STAFF, getPaymentMethodLabel, getRequestModeShortLabel } from "./catalog";
+export {
+  CATALOG_VERSION,
+  CONSUMPTION_MOMENTS,
+  PAYMENT_METHODS,
+  PRODUCT_CATEGORIES,
+  PRODUCTS,
+  REQUEST_MODES,
+  STAFF,
+  getPaymentMethodLabel,
+  getRequestModeShortLabel,
+} from "./catalog";
 export {
   DELIVERED_BOARD_WINDOW_MINUTES,
   deriveTable,

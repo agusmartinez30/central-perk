@@ -9,6 +9,26 @@ import type {
   StaffMember,
 } from "../types";
 
+/** Menu categories of 07 · Productos ("Cafés", "Tostadas", …). */
+export type ProductCategoryId =
+  | "cafes"
+  | "bebidas"
+  | "panaderia"
+  | "tostadas"
+  | "tostados"
+  | "sandwiches"
+  | "hamburguesas"
+  | "postres";
+
+/** "Momentos de consumo" of 07B. */
+export type ConsumptionMomentId = "desayunar" | "merendar" | "cenar" | "tomar";
+
+/** Whether customers see the product: "Publicado" or "Borrador". */
+export type ProductPublication = "published" | "draft";
+
+/** One choice of a "Tamaño" or "Extras" group with its price adjustment in ARS (07B "+$800"). */
+export type ProductOption = { id: string; name: string; priceDelta: number };
+
 /** One product of the menu with its current price in ARS. */
 export type Product = {
   id: string;
@@ -16,8 +36,32 @@ export type Product = {
   name: string;
   /** Display name for quantities above one, when it differs, e.g. "Medialunas". */
   plural?: string;
+  /** "Precio base (ARS)". */
   price: number;
+  categoryId: ProductCategoryId;
+  /** One-line description customers read (07B "Descripción"). */
+  description: string;
+  /** Public path of the main photo ("Imagen principal"); unset shows a neutral placeholder. */
+  image?: string;
+  moments: ConsumptionMomentId[];
+  publication: ProductPublication;
+  /** Availability switch of 07A/07B: whether it can be ordered right now. */
+  available: boolean;
+  /** Archived products are kept (they have confirmed orders) but leave the menu. */
+  archived: boolean;
+  /** "Permitir observaciones del cliente". */
+  allowCustomerNotes: boolean;
+  /** "Tamaño": single choice, required when there are sizes. */
+  sizes: ProductOption[];
+  /** Size preselected for the customer; set exactly when there are sizes. */
+  defaultSizeId?: string;
+  /** "Extras": multiple choice, optional. */
+  extras: ProductOption[];
 };
+
+export type ProductCategoryInfo = { id: ProductCategoryId; label: string };
+
+export type ConsumptionMomentInfo = { id: ConsumptionMomentId; label: string };
 
 /** Seated period of a table: from the first customer to the payment that frees it. */
 export type TableSession = {
