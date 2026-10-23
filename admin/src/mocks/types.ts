@@ -142,3 +142,34 @@ export type ManagedOrder = {
 export type OrdersBoard = {
   orders: ManagedOrder[];
 };
+
+/** Stage of a bill request in 04 · Solicitudes de cuenta; finalized requests are paid and closed. */
+export type BillRequestStatus = "pending" | "attending" | "finalized";
+
+export type ManagedBillRequest = {
+  /** Request code shown as "#SC-010". */
+  id: string;
+  tableNumber: number;
+  /** Customer who asked for the bill. */
+  customer: string;
+  /** Local "HH:MM" time the bill was requested. */
+  requestedAt: string;
+  /** Minutes since the bill was requested. */
+  waitMinutes: number;
+  paymentPreference: BillPaymentMethod;
+  /** Shared account total in ARS. */
+  total: number;
+  /** Orders confirmed for the table's shared account. */
+  confirmedOrders: number;
+  /** Confirmed orders the kitchen has not finished yet. */
+  ordersInPreparation: number;
+  status: BillRequestStatus;
+  /** Staff member attending the request ("Responsable"); unset while pending. */
+  assignee?: string;
+};
+
+export type BillRequestsBoard = {
+  requests: ManagedBillRequest[];
+  /** Request open in the quick-detail drawer of the "Solicitud seleccionada" export. */
+  selectedId: string;
+};
