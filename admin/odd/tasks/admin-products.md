@@ -26,7 +26,7 @@ The sidebar "Productos" entry shows the "Próximamente" placeholder. Staff need 
 ## Tasks
 - [x] T1 Extend the canonical catalogue (categories, descriptions, availability, images, options) + product images + pure helpers test-first. Route: delegated (writer; preparation + 2+ non-trivial files). Commit: b478de9
 - [x] T2 Products management screen (07A) with filters, search and Duplicar/Archivar actions. Route: delegated (writer; 2+ non-trivial files). Commit: ed2e330
-- [x] T3 Edit/create product form (07B) and customer preview (07C) with in-memory save. Route: delegated (writer; 2+ non-trivial files). Commit: see the `feat(products): add the 07B product editor and 07C customer preview` commit (hash recorded by the parent after review).
+- [x] T3 Edit/create product form (07B) and customer preview (07C) with in-memory save. Route: delegated (writer; 2+ non-trivial files). Commit: 5df766d
 
 ## Acceptance criteria
 - Screens visually match the three 07 exports at 1440×900.
@@ -49,6 +49,8 @@ lint, tsc, vitest, build.
 - T3 notes: "Guardar borrador" sets the product to Borrador (it leaves the published menu, the notice says so) and "Publicar producto" publishes; a clean published product has both disabled, a clean draft can be published. Archived products open in the editor and stay archived when saved. Leaving the editor discards unsaved changes without asking (no design for a guard).
 - RDD: not run by the writer (parent-owned).
 - T1 notes: the 07A prices of Cappuccino ($3.800), Tostón de palta ($7.900), Medialunas ($1.900), Tostado clásico ($6.900) and Limonada ($4.200) lose against the canonical prices; "Medialunas" is listed by its singular catalogue name "Medialuna". "Sándwiches" is a category not in the exports. Invented copy: all descriptions except the Cappuccino's, every validation message, the draft/publish rules (publishing needs a description and an image), "Borrador"/"Archivado" labels and "Sin productos para estos filtros".
+
+- RDD for T1–T3 (committed-only vs main): assessed medium, `slice_budget_reached`; the user declined review for this candidate. Parent spot check: vitest 313/313.
 
 ## Next step
 Parent review of the branch (native review decision), then the chain strategy before opening PRs; next module 08 Categorías y momentos.
