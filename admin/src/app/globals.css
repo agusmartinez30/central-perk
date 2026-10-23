@@ -47,4 +47,6 @@
 body {
   background-color: var(--color-cream);
   color: var(--color-ink);
+  /* The exports set `line-height: normal` on almost every text layer. */
+  line-height: normal;
 }
