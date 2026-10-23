@@ -52,5 +52,8 @@ Common: one clock for every live screen, 21/10/2026 at 14:42 (sync "14:42:18"); 
 - 06: no visible change; method and request-mode names now come from the shared catalogue.
 - Not done: in-memory actions (advance/cancel orders, mark attending, save settings) stay local to each screen; no cross-screen live propagation.
 
+- T4 done (1b5f230): per-screen mocks removed, README and previous feature docs point here. Checks: tsc OK, lint OK, vitest 236/236, build OK (20 static routes).
+- RDD for T1–T4 (committed-only vs feat/admin-payments): assessed high (`high_risk`); the user declined review for this candidate. Parent spot check: vitest 236/236.
+
 ## Next step
-Parent: review the feature branch; push / PR are human decisions.
+Monorepo layout (see the root `odd/tasks/monorepo-layout.md` in central-perk).
