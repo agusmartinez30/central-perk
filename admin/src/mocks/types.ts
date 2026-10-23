@@ -70,3 +70,30 @@ export type OverviewSnapshot = {
   confirmedOrders: number;
   bestSellers: BestSeller[];
 };
+
+/** Service state of a table in 02 · Gestión de mesas. */
+export type TableServiceStatus = "available" | "occupied" | "bill-requested";
+
+export type ManagedTable = {
+  id: string;
+  number: number;
+  status: TableServiceStatus;
+  /** Orders confirmed for the table's shared account. */
+  confirmedOrders: number;
+  /** Confirmed orders the kitchen has not finished yet. */
+  pendingKitchenOrders: number;
+  /** Shared account total in ARS; 0 for available tables. */
+  accountTotal: number;
+  /** How the customers want to pay; only set once the bill was requested. */
+  paymentPreference?: BillPaymentMethod;
+  /** Minutes since the bill was requested; only set once the bill was requested. */
+  billRequestedMinutesAgo?: number;
+};
+
+export type TablesBoard = {
+  /** "HH:MM:SS" of the last realtime update. */
+  syncedAt: string;
+  tables: ManagedTable[];
+  /** Table open in the quick-detail panel when the screen loads. */
+  selectedTableId: string | null;
+};

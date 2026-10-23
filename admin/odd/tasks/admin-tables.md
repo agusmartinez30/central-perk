@@ -19,7 +19,7 @@ The sidebar entry for tables currently shows the "Próximamente" placeholder. St
 `ask-on-risk` (inherited).
 
 ## Tasks
-- [ ] T1 Tables mock data + pure helpers (status counts, summary metrics, filter by status/search) test-first. Route: delegated (preparation + 2+ non-trivial files).
+- [x] T1 Tables mock data + pure helpers (status counts, summary metrics, filter by status/search) test-first. Route: delegated (preparation + 2+ non-trivial files).
 - [ ] T2 Tables management screen (metrics, chips, search, grid/list toggle, table cards, side panel) wired to the sidebar route. Route: delegated (2+ non-trivial files).
 
 ## Acceptance criteria
@@ -31,7 +31,7 @@ The sidebar entry for tables currently shows the "Próximamente" placeholder. St
 lint, tsc, vitest, build.
 
 ## Progress / Evidence
-- (pending)
+- T1 done: `ManagedTable`/`TablesBoard` types and `TABLES_BOARD` mock (12 tables of 02, Mesa 05 selected, synced 10:42:18) in `src/mocks`; pure helpers in `src/features/tables/tables-view.ts` (activity partition available/occupied/preparing/bill-requested, summary metrics, chip filters and counts, search by label or unpadded number, card copy, payment preference, quick-detail stats). Decision: "En preparación" = occupied tables with kitchen orders and a bill request wins over the kitchen, which is the only partition that reproduces 4/3/2/3 with the cards. Test-first: RED (missing `@/mocks/tables`), GREEN 24/24 on first implementation. Checks: tsc OK, lint OK, vitest 72/72.
 
 ## Next step
-T1.
+T2.
