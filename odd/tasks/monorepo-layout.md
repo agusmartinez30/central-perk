@@ -17,8 +17,8 @@ User decision (2026-10-23): one repository, sibling folders `web/` and `admin/` 
 - [x] T1 Local clone + `chore/monorepo-layout` branch: web moved to `web/`, root README/.gitignore, this doc. Route: delegated.
 - [x] T2 Admin history rewritten under `admin/` and merged into the layout branch; admin module branches rebased as a chain. Route: delegated.
 - [x] T3 Verify lint/tsc/tests/build for `web/` and `admin/` on the chain tip. Route: delegated.
-- [ ] T4 Add `feat/admin-mock-unification` to the chain once it is finished. Route: delegated.
-- [ ] T5 Push branches and open chained PRs (needs user approval and `gh`). Route: inline.
+- [x] T4 Add `feat/admin-mock-unification` to the chain once it is finished. Route: delegated.
+- [x] T5 Push branches and open chained PRs (needs user approval and `gh`). Route: inline.
 
 ## Chain
 main ← chore/monorepo-layout ← feat/admin-foundation ← feat/admin-tables ← feat/admin-orders ← feat/admin-bill-requests ← feat/admin-collections ← feat/admin-payments ← feat/admin-mock-unification
@@ -82,3 +82,4 @@ Branch tips before this document commit: `chore/monorepo-layout` d3dc806, `feat/
 | `f73b2e5` | `c27cb13` | refactor(orders,bill-requests,collections): derive from the service day and share 06 payment names |
 | `1b5f230` | `51f8042` | chore(mocks): remove per-screen mocks and document the service day |
 | `17ff2d1` | `c03d778` | docs(odd): record admin-mock-unification T4 and review outcome |
+- T4/T5 (2026-10-23): `feat/admin-mock-unification` is part of the chain. User decision: no PRs; `main` fast-forwarded to the chain tip (1696744..589c08e) and pushed to origin together with all eight branches. The user changes the Vercel web project Root Directory to `web`.
