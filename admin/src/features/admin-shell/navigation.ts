@@ -29,7 +29,8 @@ export type NavItem = {
 /**
  * `section`: 10A top bar ("Café Central · Resumen", connection pill, compact profile).
  * `location`: 02 top bar (branch and shift, round notifications button, larger profile).
- * `live-location`: 03 top bar (branch and shift plus an "En vivo" pill and 12/10px profile copy).
+ * `live-location`: 03 top bar (branch and shift plus an "En vivo" pill and 12/10px profile copy),
+ *   reused by 04, whose 11/9px profile copy maps to the same 12/10px scale.
  */
 export type TopbarVariant = "section" | "location" | "live-location";
 
@@ -46,7 +47,13 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: "table-management", label: "Gestión de mesas", href: "/tables/management", icon: LayoutGrid },
   { id: "table-qr", label: "Mesas y códigos QR", href: "/tables/qr", icon: QrCode },
   { id: "orders", label: "Pedidos", href: "/orders", icon: ClipboardList, topbar: "live-location" },
-  { id: "bill-requests", label: "Solicitudes de cuenta", href: "/bill-requests", icon: ReceiptText },
+  {
+    id: "bill-requests",
+    label: "Solicitudes de cuenta",
+    href: "/bill-requests",
+    icon: ReceiptText,
+    topbar: "live-location",
+  },
   { id: "history", label: "Historial", href: "/history", icon: History },
   { id: "menu", label: "Carta digital", href: "/menu", icon: BookOpen },
   { id: "products", label: "Productos", href: "/menu/products", icon: Package },
