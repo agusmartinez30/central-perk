@@ -33,11 +33,16 @@ export type NavItem = {
  *   reused by 04, whose 11/9px profile copy maps to the same 12/10px scale.
  * `verified-location`: 05 top bar, like `live-location` but with a "Datos verificados" pill and a
  *   notifications button without the unread dot.
+ * `admin-location`: 06 top bar, the branch without the shift plus an "Administrador" pill and the
+ *   dot-less bell of 05.
  */
-export type TopbarVariant = "section" | "location" | "live-location" | "verified-location";
+export type TopbarVariant = "section" | "location" | "live-location" | "verified-location" | "admin-location";
 
 /** Branch and shift shown by the `location` top bar. */
 export const TOPBAR_LOCATION = `${BRAND_NAME} · Sede Centro · Turno mañana`;
+
+/** Branch alone, as the `admin-location` top bar shows it. */
+export const TOPBAR_BRANCH = `${BRAND_NAME} · Sede Centro`;
 
 /**
  * Sidebar modules in the order of the 10A export, plus "Personal y permisos" (from 12A),
@@ -61,7 +66,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: "products", label: "Productos", href: "/menu/products", icon: Package },
   { id: "categories", label: "Categorías y momentos", href: "/menu/categories", icon: Tags },
   { id: "settings", label: "Configuración", href: "/settings", icon: Settings },
-  { id: "payments", label: "Pagos", href: "/payments", icon: CreditCard },
+  { id: "payments", label: "Pagos", href: "/payments", icon: CreditCard, topbar: "admin-location" },
   { id: "staff", label: "Personal y permisos", href: "/staff", icon: UsersRound },
 ];
 
@@ -104,5 +109,6 @@ export type TopbarConfig = { variant: TopbarVariant; title: string };
 
 export function getTopbarConfig(pathname: string): TopbarConfig {
   const variant = findActiveNavItem(pathname)?.topbar ?? "section";
-  return { variant, title: variant === "section" ? getSectionTitle(pathname) : TOPBAR_LOCATION };
+  if (variant === "section") return { variant, title: getSectionTitle(pathname) };
+  return { variant, title: variant === "admin-location" ? TOPBAR_BRANCH : TOPBAR_LOCATION };
 }

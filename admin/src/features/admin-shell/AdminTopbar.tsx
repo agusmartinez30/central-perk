@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Bell } from "lucide-react";
+import { Bell, ShieldCheck } from "lucide-react";
 import { ConnectionBadge } from "./ConnectionBadge";
 import { StaffProfile } from "./StaffProfile";
 import { getTopbarConfig } from "./navigation";
@@ -49,8 +49,9 @@ function NotificationsButton({ dot = "outlined" }: { dot?: "outlined" | "small" 
 
 /**
  * White top bar ("AdminTopbar" / "Topbar · Desktop"). Modules pick the layout of their
- * export through `NavItem.topbar`: the 10A section title, the 02 branch and shift, or the 03
- * branch and shift with the "En vivo" pill.
+ * export through `NavItem.topbar`: the 10A section title, the 02 branch and shift, the 03
+ * branch and shift with the "En vivo" pill (or 05 "Datos verificados"), or the 06 branch with the
+ * "Administrador" pill.
  */
 export function AdminTopbar({ staffName, staffRole }: AdminTopbarProps) {
   const pathname = usePathname();
@@ -75,6 +76,16 @@ export function AdminTopbar({ staffName, staffRole }: AdminTopbarProps) {
       {variant === "verified-location" && (
         <div className="flex items-center gap-4">
           <ConnectionBadge variant="verified" />
+          <NotificationsButton dot="none" />
+          <StaffProfile name={staffName} role={staffRole} compact />
+        </div>
+      )}
+      {variant === "admin-location" && (
+        <div className="flex items-center gap-4">
+          <p className="flex h-8 items-center gap-[7px] rounded-nav bg-brand-wash px-[11px] text-brand">
+            <ShieldCheck size={13} aria-hidden="true" className="shrink-0" />
+            <span className="text-[11px] font-bold whitespace-nowrap">Administrador</span>
+          </p>
           <NotificationsButton dot="none" />
           <StaffProfile name={staffName} role={staffRole} compact />
         </div>

@@ -58,9 +58,16 @@ describe("getSectionTitle", () => {
 describe("getTopbarConfig", () => {
   it("keeps the section title of 10A by default", () => {
     expect(getTopbarConfig("/")).toEqual({ variant: "section", title: "Café Central · Resumen" });
-    expect(getTopbarConfig("/payments")).toEqual({
+    expect(getTopbarConfig("/settings")).toEqual({
       variant: "section",
-      title: "Café Central · Pagos",
+      title: "Café Central · Configuración",
+    });
+  });
+
+  it("shows the branch without the shift and the administrator pill on the 06 payment settings", () => {
+    expect(getTopbarConfig("/payments")).toEqual({
+      variant: "admin-location",
+      title: "Café Central · Sede Centro",
     });
   });
 
