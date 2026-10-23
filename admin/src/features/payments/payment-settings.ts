@@ -5,16 +5,27 @@ import type {
   PaymentSettings,
   SavedPaymentSettings,
 } from "@/mocks/types";
+import { PAYMENT_METHODS, REQUEST_MODES } from "@/mocks/service-day/catalog";
+
+/** 06 name of a request mode, from the service-day catalogue. */
+const requestModeLabel = (id: BillPaymentMethod) => REQUEST_MODES.find((mode) => mode.id === id)?.label ?? id;
 
 export type PaymentMethodOption = { id: AcceptedPaymentMethod; label: string; description: string };
 
 /** "Medios de cobro aceptados", in the order of the 06 export. */
-export const PAYMENT_METHOD_OPTIONS: readonly PaymentMethodOption[] = [
-  { id: "cash", label: "Efectivo", description: "Cobros en efectivo registrados por el personal." },
-  { id: "card", label: "Tarjeta", description: "Pagos con terminal física o dispositivo externo." },
-  { id: "transfer", label: "Transferencia", description: "Transferencias bancarias verificadas manualmente." },
-  { id: "other", label: "Otro", description: "Otros medios registrados con una descripción." },
-];
+const METHOD_DESCRIPTIONS: Record<AcceptedPaymentMethod, string> = {
+  cash: "Cobros en efectivo registrados por el personal.",
+  card: "Pagos con terminal física o dispositivo externo.",
+  transfer: "Transferencias bancarias verificadas manualmente.",
+  other: "Otros medios registrados con una descripción.",
+};
+
+/** Names come from the service-day catalogue, which 05 uses for "Medio real" too. */
+export const PAYMENT_METHOD_OPTIONS: readonly PaymentMethodOption[] = PAYMENT_METHODS.map(({ id, label }) => ({
+  id,
+  label,
+  description: METHOD_DESCRIPTIONS[id],
+}));
 
 export type RequestModeOption = {
   id: BillPaymentMethod;
@@ -29,19 +40,19 @@ export type RequestModeOption = {
 export const REQUEST_MODE_OPTIONS: readonly RequestModeOption[] = [
   {
     id: "table",
-    label: "En mesa",
+    label: requestModeLabel("table"),
     description: "El personal se acerca a cobrar.",
     customerDescription: "Nos acercamos a cobrarte.",
   },
   {
     id: "register",
-    label: "En caja",
+    label: requestModeLabel("register"),
     description: "El cliente se acerca al mostrador.",
     customerDescription: "Pagá en el mostrador.",
   },
   {
     id: "transfer",
-    label: "Por transferencia",
+    label: requestModeLabel("transfer"),
     description: "El personal indica cómo realizar el pago.",
     customerDescription: "Te indicamos cómo realizarla.",
   },

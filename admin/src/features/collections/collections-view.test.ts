@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ManagedCollection } from "@/mocks/types";
-import { BILL_REQUESTS_BOARD } from "@/mocks/bill-requests";
-import { COLLECTIONS_HISTORY } from "@/mocks/collections";
-import { ORDERS_BOARD } from "@/mocks/orders";
-import { OVERVIEW_SNAPSHOT } from "@/mocks/overview";
+import { BILL_REQUESTS_BOARD, COLLECTIONS_HISTORY, OVERVIEW_SNAPSHOT } from "@/mocks/service-day";
 import {
   METHOD_FILTERS,
   PERIOD_FILTERS,
@@ -52,14 +49,15 @@ const collection = (overrides: Partial<ManagedCollection> & Pick<ManagedCollecti
   ...overrides,
 });
 
-describe("COLLECTIONS_HISTORY", () => {
-  it("lists today's five collections of 05 in the export order", () => {
-    expect(sortCollections(todays, "recent").map((item) => [item.id, formatTableLabel(item), item.amount])).toEqual([
-      ["COB-0026", "Mesa 07", 19900],
-      ["COB-0025", "Mesa 03", 28400],
-      ["COB-0024", "Mesa 05", 21500],
-      ["COB-0023", "Mesa 02", 16800],
-      ["COB-0022", "Mesa 11", 14300],
+/** Full cross-screen agreement lives in `src/mocks/service-day/service-day.test.ts`. */
+describe("COLLECTIONS_HISTORY of the service day", () => {
+  it("lists today's five collections, newest first", () => {
+    expect(sortCollections(todays, "recent").map((item) => [item.id, formatTableLabel(item), item.time, item.amount])).toEqual([
+      ["COB-0026", "Mesa 09", "14:35", 19900],
+      ["COB-0025", "Mesa 01", "14:12", 28400],
+      ["COB-0024", "Mesa 04", "13:48", 21500],
+      ["COB-0023", "Mesa 01", "13:15", 16800],
+      ["COB-0022", "Mesa 09", "12:24", 14300],
     ]);
   });
 
@@ -69,24 +67,14 @@ describe("COLLECTIONS_HISTORY", () => {
     expect(todays).toHaveLength(OVERVIEW_SNAPSHOT.payments.length);
   });
 
-  it("closes the 04 requests of Mesa 07 and Mesa 05 with their totals and payment preferences", () => {
-    for (const [collectionId, table] of [
-      ["COB-0026", 7],
-      ["COB-0024", 5],
-    ] as const) {
-      const request = BILL_REQUESTS_BOARD.requests.find((item) => item.tableNumber === table);
-      const closed = byId(collectionId);
-      expect(closed.amount).toBe(request?.total);
-      expect(closed.customerPreference).toBe(request?.paymentPreference);
-      expect(closed.orders).toHaveLength(request?.confirmedOrders ?? -1);
-    }
-  });
-
-  it("reuses order #1048 of 03 in the Mesa 07 account", () => {
-    const order = ORDERS_BOARD.orders.find((item) => item.id === 1048);
-    const summary = byId("COB-0026").orders.find((item) => item.id === 1048);
-    expect(summary?.customer).toBe(order?.customer);
-    expect(summary?.total).toBe(order?.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0));
+  it("closes the finalized 04 request of Mesa 09 with its total, preference, orders and staff member", () => {
+    const request = BILL_REQUESTS_BOARD.requests.find((item) => item.status === "finalized");
+    const closed = byId("COB-0022");
+    expect(request?.tableNumber).toBe(closed.tableNumber);
+    expect(closed.amount).toBe(request?.total);
+    expect(closed.customerPreference).toBe(request?.paymentPreference);
+    expect(closed.orders).toHaveLength(request?.confirmedOrders ?? -1);
+    expect(closed.confirmedBy).toBe(request?.assignee);
   });
 
   it("settles every account: amount equals its orders plus adjustments", () => {
@@ -118,7 +106,7 @@ describe("getPeriodRange / formatDateRange", () => {
 });
 
 describe("getCollectionMetrics", () => {
-  it("reproduces the four 05 tiles for today", () => {
+  it("keeps the four 05 tiles for today", () => {
     expect(getCollectionMetrics(todays).map((metric) => [metric.label, metric.value])).toEqual([
       ["Total cobrado", "$100.900"],
       ["Cuentas cerradas", "5"],
@@ -157,9 +145,9 @@ describe("filterCollections", () => {
   });
 
   it("searches by table, account or operation ignoring case, padding and the '#' sign", () => {
-    expect(ids(filterCollections(collections, { ...base, query: "mesa 7" }))).toEqual(["COB-0026"]);
-    expect(ids(filterCollections(collections, { ...base, query: "Mesa 07" }))).toEqual(["COB-0026"]);
-    expect(ids(filterCollections(collections, { ...base, query: "11" }))).toEqual(["COB-0022"]);
+    expect(ids(filterCollections(collections, { ...base, query: "mesa 9" }))).toEqual(["COB-0026", "COB-0022"]);
+    expect(ids(filterCollections(collections, { ...base, query: "Mesa 04" }))).toEqual(["COB-0024"]);
+    expect(ids(filterCollections(collections, { ...base, query: "1" }))).toEqual(["COB-0025", "COB-0023"]);
     expect(ids(filterCollections(collections, { ...base, query: "cta-025" }))).toEqual(["COB-0025"]);
     expect(ids(filterCollections(collections, { ...base, query: "#cob-0024" }))).toEqual(["COB-0024"]);
     expect(ids(filterCollections(collections, { ...base, query: "26" }))).toEqual(["COB-0026"]);
@@ -220,6 +208,7 @@ describe("filter options", () => {
     expect(getStaffOptions(todays)).toEqual([
       { id: "all", label: "Todo el personal" },
       { id: "Lucas", label: "Lucas" },
+      { id: "María G.", label: "María G." },
       { id: "Mariana", label: "Mariana" },
     ]);
   });
@@ -252,8 +241,8 @@ describe("selected collection detail", () => {
 
   it("summarizes each order of the account", () => {
     expect(selected.orders.map((order) => [formatOrderTitle(order), formatOrderProducts(order)])).toEqual([
-      ["Pedido #1042 · Agustín", "1 Cappuccino · 2 Medialunas"],
-      ["Pedido #1048 · Lucía", "1 Tostado"],
+      ["Pedido #1027 · Ignacio", "1 Cappuccino · 1 Café latte"],
+      ["Pedido #1036 · Rocío", "1 Tostón de palta · 1 Limonada"],
     ]);
   });
 

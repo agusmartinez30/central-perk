@@ -2,8 +2,7 @@
 
 import { useMemo, useReducer, useState } from "react";
 import { ClipboardList } from "lucide-react";
-import { ORDERS_BOARD } from "@/mocks/orders";
-import { TABLES_BOARD } from "@/mocks/tables";
+import { ORDERS_BOARD, TABLES_BOARD } from "@/mocks/service-day";
 import { useScreenState } from "@/shared/lib/use-screen-state";
 import { CancelOrderDialog } from "./CancelOrderDialog";
 import { KanbanBoard, type BoardEmptyState } from "./KanbanBoard";

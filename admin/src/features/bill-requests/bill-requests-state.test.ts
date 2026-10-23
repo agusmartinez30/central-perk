@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BILL_REQUESTS_BOARD } from "@/mocks/bill-requests";
+import { BILL_REQUESTS_BOARD } from "@/mocks/service-day";
 import { billRequestsReducer, createBillRequestsState, getSelectedRequest } from "./bill-requests-state";
 import { getRequestMetrics } from "./bill-requests-view";
 

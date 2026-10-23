@@ -1,7 +1,7 @@
 "use client";
 
 import { useReducer, useState } from "react";
-import { BILL_REQUESTS_BOARD } from "@/mocks/bill-requests";
+import { BILL_REQUESTS_BOARD } from "@/mocks/service-day";
 import { DEMO_STAFF } from "@/mocks/staff";
 import { useScreenState } from "@/shared/lib/use-screen-state";
 import {

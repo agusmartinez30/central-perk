@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ManagedBillRequest } from "@/mocks/types";
-import { BILL_REQUESTS_BOARD } from "@/mocks/bill-requests";
-import { OVERVIEW_SNAPSHOT } from "@/mocks/overview";
-import { TABLES_BOARD } from "@/mocks/tables";
+import { BILL_REQUESTS_BOARD, OVERVIEW_SNAPSHOT, TABLES_BOARD } from "@/mocks/service-day";
 import {
   PAYMENT_FILTERS,
   SORT_OPTIONS,
@@ -44,7 +42,8 @@ const request = (overrides: Partial<ManagedBillRequest> & Pick<ManagedBillReques
 const { requests } = BILL_REQUESTS_BOARD;
 const byTable = (number: number) => requests.find((item) => item.tableNumber === number);
 
-describe("BILL_REQUESTS_BOARD", () => {
+/** Full cross-screen agreement lives in `src/mocks/service-day/service-day.test.ts`. */
+describe("BILL_REQUESTS_BOARD of the service day", () => {
   it("lists the five active requests of 04 in the export order plus one finalized today", () => {
     expect(requests.filter(isActiveRequest).map(formatTableLabel)).toEqual([
       "Mesa 10",
@@ -56,7 +55,7 @@ describe("BILL_REQUESTS_BOARD", () => {
     expect(requests.filter((item) => item.status === "finalized")).toHaveLength(1);
   });
 
-  it("matches the 10A bill requests (total, payment, wait and kitchen) for Mesa 10, 05 and 07", () => {
+  it("matches the 10A bill requests (total, payment, wait and kitchen) of the pending ones", () => {
     for (const bill of OVERVIEW_SNAPSHOT.billRequests) {
       const match = byTable(Number(bill.table));
       expect(match).toMatchObject({
@@ -69,7 +68,7 @@ describe("BILL_REQUESTS_BOARD", () => {
     }
   });
 
-  it("keeps the 02 account totals and payment preferences of the tables that requested the bill", () => {
+  it("shares the 02 account totals and payment preferences of the tables that requested the bill", () => {
     for (const table of TABLES_BOARD.tables.filter((item) => item.status === "bill-requested")) {
       expect(byTable(table.number)).toMatchObject({
         total: table.accountTotal,
@@ -78,11 +77,11 @@ describe("BILL_REQUESTS_BOARD", () => {
     }
   });
 
-  it("reproduces the selected-request drawer of Mesa 10", () => {
+  it("opens Mesa 10 in the selected-request drawer", () => {
     expect(byTable(10)).toMatchObject({
       id: "SC-010",
       customer: "Lucía",
-      requestedAt: "12:42",
+      requestedAt: "14:24",
       confirmedOrders: 3,
     });
     expect(byTable(10)?.assignee).toBeUndefined();
@@ -142,7 +141,7 @@ describe("filters", () => {
     expect(tables(filterRequests(requests, { ...all, query: "mesa 5" }))).toEqual([5]);
     expect(tables(filterRequests(requests, { ...all, query: "Mesa 07" }))).toEqual([7]);
     expect(tables(filterRequests(requests, { ...all, query: "10" }))).toEqual([10]);
-    expect(tables(filterRequests(requests, { ...all, query: "lucia" }))).toEqual([10, 7]);
+    expect(tables(filterRequests(requests, { ...all, query: "lucia" }))).toEqual([10]);
     expect(tables(filterRequests(requests, { ...all, query: "#sc-012" }))).toEqual([12]);
     expect(tables(filterRequests(requests, { ...all, query: "  " }))).toHaveLength(6);
     expect(filterRequests(requests, { ...all, query: "zzz" })).toEqual([]);
@@ -220,7 +219,7 @@ describe("copy", () => {
   it("lists the drawer information rows of 04", () => {
     expect(getDetailInfo(byTable(10)!)).toEqual([
       { label: "Cliente", value: "Lucía" },
-      { label: "Solicitada", value: "Hoy, 12:42" },
+      { label: "Solicitada", value: "Hoy, 14:24" },
       { label: "Total compartido", value: "$31.200" },
       { label: "Pedidos", value: "3 confirmados" },
       { label: "Preferencia", value: "Transferencia" },

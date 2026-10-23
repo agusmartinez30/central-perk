@@ -1,3 +1,4 @@
+import { REQUEST_MODES, getRequestModeShortLabel } from "@/mocks/service-day/catalog";
 import type { BillPaymentMethod, BillRequestStatus, ManagedBillRequest } from "@/mocks/types";
 import { formatPrice } from "@/shared/lib/format-price";
 
@@ -43,12 +44,10 @@ export const STATUS_FILTERS: readonly { id: StatusFilter; label: string }[] = [
   { id: "all", label: "Todas" },
 ];
 
-/** "Payment Filters" chips. */
+/** "Payment Filters" chips: the request modes of 06 with their short chip labels. */
 export const PAYMENT_FILTERS: readonly { id: PaymentFilter; label: string }[] = [
   { id: "all", label: "Todas" },
-  { id: "table", label: "En mesa" },
-  { id: "register", label: "En caja" },
-  { id: "transfer", label: "Transferencia" },
+  ...REQUEST_MODES.map((mode) => ({ id: mode.id, label: mode.shortLabel })),
 ];
 
 /** "Sort Control" options; the export only shows "Mayor espera", "Mayor total" is ours. */
@@ -138,14 +137,8 @@ export function formatRequestTotal(request: Pick<ManagedBillRequest, "total">): 
   return formatPrice(request.total);
 }
 
-const PAYMENT_LABELS: Record<BillPaymentMethod, string> = {
-  table: "En mesa",
-  register: "En caja",
-  transfer: "Transferencia",
-};
-
 export function getPaymentLabel(method: BillPaymentMethod): string {
-  return PAYMENT_LABELS[method];
+  return getRequestModeShortLabel(method);
 }
 
 const STATUS_BADGES: Record<BillRequestStatus, { label: string; tone: RequestTone }> = {

@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ManagedOrder } from "@/mocks/types";
-import { ORDERS_BOARD } from "@/mocks/orders";
-import { OVERVIEW_SNAPSHOT } from "@/mocks/overview";
-import { TABLES_BOARD } from "@/mocks/tables";
+import { ORDERS_BOARD, OVERVIEW_SNAPSHOT, TABLES_BOARD } from "@/mocks/service-day";
 import {
   CANCELLATION_REASONS,
   advanceOrder,
@@ -44,8 +42,10 @@ const delivered = order({ id: 3, tableNumber: 6, status: "delivered" });
 const cancelled = order({ id: 4, tableNumber: 2, status: "cancelled", cancellationReason: "order-error" });
 const ALL = [received, preparing, delivered, cancelled];
 
-describe("ORDERS_BOARD mock", () => {
-  it("reproduces the 03 board: 2 received, 2 preparing, 1 delivered", () => {
+/** Full cross-screen agreement lives in `src/mocks/service-day/service-day.test.ts`. */
+describe("ORDERS_BOARD of the service day", () => {
+  it("keeps the 03 board: 2 received, 2 preparing, 1 delivered, oldest first", () => {
+    expect(ORDERS_BOARD.orders.map((o) => o.id)).toEqual([1047, 1048, 1050, 1051, 1052]);
     expect(countOrdersByColumn(ORDERS_BOARD.orders)).toEqual({ received: 2, preparing: 2, delivered: 1 });
   });
 
@@ -54,7 +54,7 @@ describe("ORDERS_BOARD mock", () => {
     expect(totals).toEqual({ 1051: 13000, 1052: 18000, 1050: 11700, 1048: 6900, 1047: 8900 });
   });
 
-  it("only uses tables that are seated in the 02 tables board", () => {
+  it("only uses tables that are seated in the 02 board", () => {
     for (const o of ORDERS_BOARD.orders) {
       const table = TABLES_BOARD.tables.find((t) => t.number === o.tableNumber);
       expect(table, `Mesa ${o.tableNumber}`).toBeDefined();
@@ -106,7 +106,7 @@ describe("filterOrders", () => {
   it("searches by order number, with or without #", () => {
     const orders = ORDERS_BOARD.orders;
     expect(filterOrders(orders, { table: "all", query: "1051" }).map((o) => o.id)).toEqual([1051]);
-    expect(filterOrders(orders, { table: "all", query: " #105 " }).map((o) => o.id)).toEqual([1051, 1052, 1050]);
+    expect(filterOrders(orders, { table: "all", query: " #105 " }).map((o) => o.id)).toEqual([1050, 1051, 1052]);
   });
 
   it("searches by table number", () => {
@@ -183,7 +183,7 @@ describe("status transitions", () => {
 
 describe("copy helpers", () => {
   it("formats the card meta line and total", () => {
-    const [first] = ORDERS_BOARD.orders;
+    const first = ORDERS_BOARD.orders.find((o) => o.id === 1051)!;
     expect(formatOrderMeta(first)).toBe("Mesa 03 · Martina");
     expect(formatOrderTotal(first)).toBe("$13.000");
   });
@@ -243,6 +243,6 @@ describe("getCardNotice", () => {
 
 describe("getBillRequestedTables", () => {
   it("collects the 02 tables that requested the bill", () => {
-    expect([...getBillRequestedTables(TABLES_BOARD.tables)].sort((a, b) => a - b)).toEqual([5, 7, 10]);
+    expect([...getBillRequestedTables(TABLES_BOARD.tables)].sort((a, b) => a - b)).toEqual([4, 5, 7, 10, 12]);
   });
 });

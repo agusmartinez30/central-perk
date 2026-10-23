@@ -6,6 +6,7 @@ import type {
   CollectionStatus,
   ManagedCollection,
 } from "@/mocks/types";
+import { getPaymentMethodLabel, getRequestModeShortLabel } from "@/mocks/service-day/catalog";
 import { formatPrice } from "@/shared/lib/format-price";
 
 export type CollectionPeriod = "today" | "yesterday" | "last-7-days";
@@ -65,25 +66,14 @@ export function formatTableLabel(collection: Pick<ManagedCollection, "tableNumbe
   return `Mesa ${String(collection.tableNumber).padStart(2, "0")}`;
 }
 
-const METHOD_LABELS: Record<CollectionMethod, string> = {
-  cash: "Efectivo",
-  transfer: "Transferencia",
-  card: "Tarjeta",
-};
-
+/** Method names as 06 "Medios de cobro" calls them. */
 export function getMethodLabel(method: CollectionMethod): string {
-  return METHOD_LABELS[method];
+  return getPaymentMethodLabel(method);
 }
 
 /** Same wording as the 04 payment preference chips. */
-const PREFERENCE_LABELS: Record<BillPaymentMethod, string> = {
-  table: "En mesa",
-  register: "En caja",
-  transfer: "Transferencia",
-};
-
 export function getPreferenceLabel(preference: BillPaymentMethod): string {
-  return PREFERENCE_LABELS[preference];
+  return getRequestModeShortLabel(preference);
 }
 
 export type CollectionTone = "success";
@@ -129,9 +119,7 @@ export type CollectionSort = "recent" | "oldest" | "highest-amount";
 /** "Todos los medios" select. */
 export const METHOD_FILTERS: readonly { id: MethodFilter; label: string }[] = [
   { id: "all", label: "Todos los medios" },
-  { id: "cash", label: "Efectivo" },
-  { id: "transfer", label: "Transferencia" },
-  { id: "card", label: "Tarjeta" },
+  ...(["cash", "transfer", "card"] as const).map((id) => ({ id, label: getPaymentMethodLabel(id) })),
 ];
 
 /** "Más recientes" select; the export only shows the default, the other two are ours. */

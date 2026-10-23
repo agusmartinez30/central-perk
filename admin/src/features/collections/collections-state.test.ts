@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COLLECTIONS_HISTORY } from "@/mocks/collections";
+import { COLLECTIONS_HISTORY } from "@/mocks/service-day";
 import {
   collectionsReducer,
   createCollectionsState,

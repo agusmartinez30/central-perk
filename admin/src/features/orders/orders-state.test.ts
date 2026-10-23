@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ORDERS_BOARD } from "@/mocks/orders";
+import { ORDERS_BOARD } from "@/mocks/service-day";
 import { countOrdersByColumn } from "./orders-view";
 import {
   createOrdersState,
@@ -34,7 +34,7 @@ describe("ordersReducer", () => {
     const next = ordersReducer(open, { type: "advance", id: 1051, at: "12:50" });
     expect(getSelectedOrder(next)?.status).toBe("preparing");
     expect(countOrdersByColumn(next.orders)).toEqual({ received: 1, preparing: 3, delivered: 1 });
-    expect(initial.orders[0].status).toBe("received");
+    expect(initial.orders.find((o) => o.id === 1051)?.status).toBe("received");
   });
 
   it("only asks to cancel orders that can still be cancelled", () => {

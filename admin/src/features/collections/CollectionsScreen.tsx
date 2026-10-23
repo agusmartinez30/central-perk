@@ -1,7 +1,7 @@
 "use client";
 
 import { useReducer } from "react";
-import { COLLECTIONS_HISTORY } from "@/mocks/collections";
+import { COLLECTIONS_HISTORY } from "@/mocks/service-day";
 import { useScreenState } from "@/shared/lib/use-screen-state";
 import { formatDateRange, formatResultCount, getCollectionMetrics, getStaffOptions } from "./collections-view";
 import {
