@@ -47,12 +47,12 @@ export function OverviewScreen() {
         onRefresh={handleRefresh}
         refreshing={refreshing}
       />
-      <div className="flex h-[30px] items-center justify-between rounded-nav bg-brand-wash px-[11px]">
-        <p className="text-[8px] font-semibold text-brand">
+      <div className="flex h-[34px] items-center justify-between gap-4 rounded-nav bg-brand-wash px-3">
+        <p className="text-[11px] font-semibold text-brand">
           El período afecta métricas comerciales. Los paneles operativos siempre muestran la
           actividad actual.
         </p>
-        <p className="text-[8px] whitespace-nowrap text-muted" aria-live="polite">
+        <p className="text-[11px] whitespace-nowrap text-muted" aria-live="polite">
           Última sincronización: {lastSync}
         </p>
       </div>
@@ -61,7 +61,7 @@ export function OverviewScreen() {
           <KpiCard key={kpi.id} kpi={kpi} />
         ))}
       </div>
-      <div className="flex h-[250px] shrink-0 gap-2.5">
+      <div className="flex h-[270px] shrink-0 gap-2.5">
         <AttentionOrdersPanel orders={snapshot.orders} />
         <BillRequestsPanel requests={snapshot.billRequests} />
       </div>

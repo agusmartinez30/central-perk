@@ -10,8 +10,8 @@ type PanelHeaderProps = {
 export function PanelHeader({ title, linkLabel, href }: PanelHeaderProps) {
   return (
     <div className="flex items-center justify-between">
-      <h3 className="text-[12px] font-bold text-ink">{title}</h3>
-      <Link href={href} className="text-[9px] font-bold text-brand hover:underline">
+      <h3 className="text-[14px] font-bold text-ink">{title}</h3>
+      <Link href={href} className="text-[12px] font-bold text-brand hover:underline">
         {linkLabel}
       </Link>
     </div>

@@ -42,7 +42,7 @@ export function AdminTopbar({ staffName, staffRole }: AdminTopbarProps) {
       {variant === "location" ? (
         <div className="flex items-center gap-[18px]">
           <NotificationsButton />
-          <StaffProfile name={staffName} role={staffRole} size="large" />
+          <StaffProfile name={staffName} role={staffRole} />
         </div>
       ) : (
         <div className="flex items-center gap-3.5">

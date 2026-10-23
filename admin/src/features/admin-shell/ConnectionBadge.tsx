@@ -3,10 +3,10 @@ export function ConnectionBadge() {
   return (
     <div
       role="status"
-      className="flex h-[30px] items-center gap-1.5 rounded-[15px] bg-success-bg px-2.5"
+      className="flex h-8 items-center gap-[7px] rounded-[16px] bg-success-bg px-[11px]"
     >
-      <span aria-hidden="true" className="size-1.5 rounded-full bg-success" />
-      <span className="text-[9px] font-bold whitespace-nowrap text-success">En línea</span>
+      <span aria-hidden="true" className="size-[7px] rounded-full bg-success" />
+      <span className="text-[11px] font-bold whitespace-nowrap text-success">En línea</span>
     </div>
   );
 }

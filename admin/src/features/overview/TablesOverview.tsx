@@ -37,8 +37,8 @@ function TableTile({ table }: { table: TableSnapshot }) {
         style.tile,
       )}
     >
-      <span className={clsx("text-[10px] font-bold", style.number)}>{number}</span>
-      <span className={clsx("text-[7px] font-semibold", style.state)}>{style.label}</span>
+      <span className={clsx("text-[13px] font-bold", style.number)}>{number}</span>
+      <span className={clsx("text-[11px] font-semibold", style.state)}>{style.label}</span>
     </li>
   );
 }
@@ -53,7 +53,7 @@ export function TablesOverview({ tables }: { tables: TableSnapshot[] }) {
   return (
     <Card as="section" aria-label="Estado de las mesas" className="flex h-full flex-1 flex-col gap-2 p-3">
       <PanelHeader title="Estado de las mesas" linkLabel="Ver todas →" href="/tables" />
-      <p className="text-[8px] text-muted">{formatTablesSummary(summarizeTables(tables))}</p>
+      <p className="text-[11px] text-muted">{formatTablesSummary(summarizeTables(tables))}</p>
       <Card className="flex flex-1 flex-col gap-2.5 p-3.5">
         {rows.map((row, index) => (
           <ul key={index} className="flex flex-1 gap-[7px]">

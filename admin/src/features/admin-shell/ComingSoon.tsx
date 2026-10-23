@@ -18,13 +18,13 @@ export function ComingSoon({ moduleId }: ComingSoonProps) {
         <span className="flex size-12 items-center justify-center rounded-full bg-brand-wash text-brand">
           <Icon size={22} aria-hidden="true" />
         </span>
-        <p className="text-[10px] font-bold tracking-[0.5px] text-brand">PRÓXIMAMENTE</p>
+        <p className="text-[11px] font-bold tracking-[0.5px] text-brand">PRÓXIMAMENTE</p>
         <h2 className="text-[25px] font-bold text-ink">{item?.label ?? "Módulo"}</h2>
-        <p className="text-[12px]/[18px] text-muted">
+        <p className="text-[13px]/[19px] text-muted">
           Este módulo todavía no está disponible en el prototipo.
         </p>
         {moduleId !== "overview" && (
-          <Link href="/" className="text-[11px] font-bold text-brand hover:underline">
+          <Link href="/" className="text-[12px] font-bold text-brand hover:underline">
             Volver al resumen →
           </Link>
         )}

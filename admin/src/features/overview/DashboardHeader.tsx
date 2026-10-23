@@ -21,8 +21,8 @@ export function DashboardHeader({ period, onPeriodChange, onRefresh, refreshing 
   return (
     <div className="flex items-end justify-between">
       <div className="flex flex-col gap-1">
-        <h2 className="text-[25px] font-bold text-ink">Resumen general</h2>
-        <p className="text-[11px] text-muted">Toda la actividad de tu restaurante en un solo lugar.</p>
+        <h2 className="text-[28px]/[1.25] font-bold text-ink">Resumen general</h2>
+        <p className="text-[13px] text-muted">Toda la actividad de tu restaurante en un solo lugar.</p>
       </div>
       <div className="flex items-center gap-2">
         <div
@@ -40,7 +40,7 @@ export function DashboardHeader({ period, onPeriodChange, onRefresh, refreshing 
                 aria-checked={selected}
                 onClick={() => onPeriodChange(option.id)}
                 className={clsx(
-                  "flex h-full items-center rounded-chip px-2.5 text-[9px] whitespace-nowrap transition-colors",
+                  "flex h-full items-center rounded-chip px-3 text-[12px] whitespace-nowrap transition-colors",
                   selected ? "bg-brand font-bold text-white" : "font-semibold text-muted hover:text-ink",
                 )}
               >
@@ -55,7 +55,7 @@ export function DashboardHeader({ period, onPeriodChange, onRefresh, refreshing 
           aria-label="Actualizar datos"
           className="flex size-[38px] items-center justify-center rounded-field bg-surface text-brand outline-1 -outline-offset-[0.5px] outline-line hover:bg-brand-wash"
         >
-          <RefreshCw size={15} aria-hidden="true" className={clsx(refreshing && "animate-spin")} />
+          <RefreshCw size={16} aria-hidden="true" className={clsx(refreshing && "animate-spin")} />
         </button>
       </div>
     </div>
