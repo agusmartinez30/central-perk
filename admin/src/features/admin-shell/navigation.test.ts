@@ -58,7 +58,17 @@ describe("getSectionTitle", () => {
 describe("getTopbarConfig", () => {
   it("keeps the section title of 10A by default", () => {
     expect(getTopbarConfig("/")).toEqual({ variant: "section", title: "Café Central · Resumen" });
-    expect(getTopbarConfig("/orders")).toEqual({ variant: "section", title: "Café Central · Pedidos" });
+    expect(getTopbarConfig("/bill-requests")).toEqual({
+      variant: "section",
+      title: "Café Central · Solicitudes de cuenta",
+    });
+  });
+
+  it("adds the live pill and the compact profile on the 03 orders screen", () => {
+    expect(getTopbarConfig("/orders")).toEqual({
+      variant: "live-location",
+      title: "Café Central · Sede Centro · Turno mañana",
+    });
   });
 
   it("shows the branch and shift on the 02 tables screen", () => {

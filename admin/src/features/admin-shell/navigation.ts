@@ -29,8 +29,9 @@ export type NavItem = {
 /**
  * `section`: 10A top bar ("Café Central · Resumen", connection pill, compact profile).
  * `location`: 02 top bar (branch and shift, round notifications button, larger profile).
+ * `live-location`: 03 top bar (branch and shift plus an "En vivo" pill and 12/10px profile copy).
  */
-export type TopbarVariant = "section" | "location";
+export type TopbarVariant = "section" | "location" | "live-location";
 
 /** Branch and shift shown by the `location` top bar. */
 export const TOPBAR_LOCATION = `${BRAND_NAME} · Sede Centro · Turno mañana`;
@@ -44,7 +45,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: "tables", label: "Mesas", href: "/tables", icon: Armchair, topbar: "location" },
   { id: "table-management", label: "Gestión de mesas", href: "/tables/management", icon: LayoutGrid },
   { id: "table-qr", label: "Mesas y códigos QR", href: "/tables/qr", icon: QrCode },
-  { id: "orders", label: "Pedidos", href: "/orders", icon: ClipboardList },
+  { id: "orders", label: "Pedidos", href: "/orders", icon: ClipboardList, topbar: "live-location" },
   { id: "bill-requests", label: "Solicitudes de cuenta", href: "/bill-requests", icon: ReceiptText },
   { id: "history", label: "Historial", href: "/history", icon: History },
   { id: "menu", label: "Carta digital", href: "/menu", icon: BookOpen },
@@ -94,5 +95,5 @@ export type TopbarConfig = { variant: TopbarVariant; title: string };
 
 export function getTopbarConfig(pathname: string): TopbarConfig {
   const variant = findActiveNavItem(pathname)?.topbar ?? "section";
-  return { variant, title: variant === "location" ? TOPBAR_LOCATION : getSectionTitle(pathname) };
+  return { variant, title: variant === "section" ? getSectionTitle(pathname) : TOPBAR_LOCATION };
 }

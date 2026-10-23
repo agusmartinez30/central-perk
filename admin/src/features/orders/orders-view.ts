@@ -1,6 +1,7 @@
 import type {
   CancellationReason,
   ManagedOrder,
+  ManagedTable,
   ManagedOrderStatus,
   OrderHistoryKind,
 } from "@/mocks/types";
@@ -127,6 +128,24 @@ const STATUS_BADGES: Record<ManagedOrderStatus, { label: string; tone: OrderTone
 /** "Card Status" / "Drawer Status" pill. */
 export function getStatusBadge(status: ManagedOrderStatus): { label: string; tone: OrderTone } {
   return STATUS_BADGES[status];
+}
+
+export type CardNotice = { label: string; value: string; tone: OrderTone };
+
+/**
+ * "Card Customization" block: the first product customization. The export tints it green on
+ * delivered cards and red on the order of a table that requested the bill (#1048 · Mesa 07).
+ */
+export function getCardNotice(order: ManagedOrder, billRequested: boolean): CardNotice | null {
+  const value = order.items.find((item) => item.customization)?.customization;
+  if (!value) return null;
+  if (billRequested) return { label: "Personalización · Cuenta solicitada", value, tone: "danger" };
+  return { label: "Personalización", value, tone: order.status === "delivered" ? "success" : "warning" };
+}
+
+/** Numbers of the 02 tables waiting for their bill. */
+export function getBillRequestedTables(tables: readonly ManagedTable[]): ReadonlySet<number> {
+  return new Set(tables.filter((table) => table.status === "bill-requested").map((table) => table.number));
 }
 
 const NEXT_STATUS: Record<ManagedOrderStatus, ManagedOrderStatus | null> = {

@@ -11,6 +11,8 @@ import {
   countOrdersByColumn,
   filterOrders,
   formatOrderMeta,
+  getBillRequestedTables,
+  getCardNotice,
   formatOrderTotal,
   getHistoryLabel,
   getNextStatus,
@@ -195,5 +197,43 @@ describe("copy helpers", () => {
   it("labels the history entries of the drawer", () => {
     expect(getHistoryLabel("confirmed")).toBe("Pedido confirmado");
     expect(getHistoryLabel("received")).toBe("Recibido en cocina");
+  });
+});
+
+describe("getCardNotice", () => {
+  const withCustomization = order({
+    id: 9,
+    items: [
+      { id: "a", quantity: 1, name: "Té", unitPrice: 2000 },
+      { id: "b", quantity: 1, name: "Latte", unitPrice: 4000, customization: "Leche de almendras" },
+    ],
+    note: "Sin azúcar.",
+  });
+
+  it("shows the first product customization in the warning tone", () => {
+    expect(getCardNotice(withCustomization, false)).toEqual({
+      label: "Personalización",
+      value: "Leche de almendras",
+      tone: "warning",
+    });
+  });
+
+  it("turns green once delivered and red when the table asked for the bill", () => {
+    expect(getCardNotice({ ...withCustomization, status: "delivered" }, false)?.tone).toBe("success");
+    expect(getCardNotice(withCustomization, true)).toEqual({
+      label: "Personalización · Cuenta solicitada",
+      value: "Leche de almendras",
+      tone: "danger",
+    });
+  });
+
+  it("has nothing to show without customizations", () => {
+    expect(getCardNotice(received, false)).toBeNull();
+  });
+});
+
+describe("getBillRequestedTables", () => {
+  it("collects the 02 tables that requested the bill", () => {
+    expect([...getBillRequestedTables(TABLES_BOARD.tables)].sort((a, b) => a - b)).toEqual([5, 7, 10]);
   });
 });
