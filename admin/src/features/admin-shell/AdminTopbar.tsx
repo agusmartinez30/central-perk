@@ -11,8 +11,23 @@ type AdminTopbarProps = {
   staffRole: string;
 };
 
-/** Round "Notifications" button with the unread dot of the 02 (8px, outlined) or 03 (7px) top bar. */
-function NotificationsButton({ smallDot = false }: { smallDot?: boolean }) {
+/**
+ * Round "Notifications" button with the unread dot of the 02 (8px, outlined) or 03 (7px) top bar,
+ * or without a dot and with the 17px bell of 05.
+ */
+function NotificationsButton({ dot = "outlined" }: { dot?: "outlined" | "small" | "none" }) {
+  if (dot === "none") {
+    return (
+      <button
+        type="button"
+        aria-label="Notificaciones"
+        className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-ink"
+      >
+        <Bell size={17} aria-hidden="true" />
+      </button>
+    );
+  }
+  const smallDot = dot === "small";
   return (
     <button
       type="button"
@@ -53,7 +68,14 @@ export function AdminTopbar({ staffName, staffRole }: AdminTopbarProps) {
       {variant === "live-location" && (
         <div className="flex items-center gap-4">
           <ConnectionBadge variant="live" />
-          <NotificationsButton smallDot />
+          <NotificationsButton dot="small" />
+          <StaffProfile name={staffName} role={staffRole} compact />
+        </div>
+      )}
+      {variant === "verified-location" && (
+        <div className="flex items-center gap-4">
+          <ConnectionBadge variant="verified" />
+          <NotificationsButton dot="none" />
           <StaffProfile name={staffName} role={staffRole} compact />
         </div>
       )}

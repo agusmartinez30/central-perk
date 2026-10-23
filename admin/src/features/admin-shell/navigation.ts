@@ -31,8 +31,10 @@ export type NavItem = {
  * `location`: 02 top bar (branch and shift, round notifications button, larger profile).
  * `live-location`: 03 top bar (branch and shift plus an "En vivo" pill and 12/10px profile copy),
  *   reused by 04, whose 11/9px profile copy maps to the same 12/10px scale.
+ * `verified-location`: 05 top bar, like `live-location` but with a "Datos verificados" pill and a
+ *   notifications button without the unread dot.
  */
-export type TopbarVariant = "section" | "location" | "live-location";
+export type TopbarVariant = "section" | "location" | "live-location" | "verified-location";
 
 /** Branch and shift shown by the `location` top bar. */
 export const TOPBAR_LOCATION = `${BRAND_NAME} · Sede Centro · Turno mañana`;
@@ -54,7 +56,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     icon: ReceiptText,
     topbar: "live-location",
   },
-  { id: "history", label: "Historial", href: "/history", icon: History },
+  { id: "history", label: "Historial", href: "/history", icon: History, topbar: "verified-location" },
   { id: "menu", label: "Carta digital", href: "/menu", icon: BookOpen },
   { id: "products", label: "Productos", href: "/menu/products", icon: Package },
   { id: "categories", label: "Categorías y momentos", href: "/menu/categories", icon: Tags },

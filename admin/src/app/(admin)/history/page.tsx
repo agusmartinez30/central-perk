@@ -1,8 +1,14 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
-import { ComingSoon } from "@/features/admin-shell";
+import { CollectionsScreen } from "@/features/collections";
 
-export const metadata: Metadata = { title: "Historial · Café Central" };
+export const metadata: Metadata = { title: "Historial de cobros · Café Central" };
 
 export default function HistoryPage() {
-  return <ComingSoon moduleId="history" />;
+  return (
+    // `?state=` is read on the client, so the screen needs a Suspense boundary.
+    <Suspense fallback={null}>
+      <CollectionsScreen />
+    </Suspense>
+  );
 }

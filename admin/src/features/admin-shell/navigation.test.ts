@@ -58,9 +58,9 @@ describe("getSectionTitle", () => {
 describe("getTopbarConfig", () => {
   it("keeps the section title of 10A by default", () => {
     expect(getTopbarConfig("/")).toEqual({ variant: "section", title: "Café Central · Resumen" });
-    expect(getTopbarConfig("/history")).toEqual({
+    expect(getTopbarConfig("/payments")).toEqual({
       variant: "section",
-      title: "Café Central · Historial",
+      title: "Café Central · Pagos",
     });
   });
 
@@ -74,6 +74,13 @@ describe("getTopbarConfig", () => {
   it("reuses the 03 live top bar on the 04 bill requests screen", () => {
     expect(getTopbarConfig("/bill-requests")).toEqual({
       variant: "live-location",
+      title: "Café Central · Sede Centro · Turno mañana",
+    });
+  });
+
+  it("shows the verified-data pill on the 05 collections history screen", () => {
+    expect(getTopbarConfig("/history")).toEqual({
+      variant: "verified-location",
       title: "Café Central · Sede Centro · Turno mañana",
     });
   });
