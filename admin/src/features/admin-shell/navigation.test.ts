@@ -92,6 +92,15 @@ describe("getTopbarConfig", () => {
     });
   });
 
+  it("shows the catalogue title and the synced pill on the 07 products screen only", () => {
+    expect(getTopbarConfig("/menu/products")).toEqual({
+      variant: "catalog",
+      title: "Café Central · Carta digital",
+    });
+    expect(getTopbarConfig("/menu").variant).toBe("section");
+    expect(getTopbarConfig("/menu/categories").variant).toBe("section");
+  });
+
   it("shows the branch and shift on the 02 tables screen", () => {
     expect(getTopbarConfig("/tables")).toEqual({
       variant: "location",

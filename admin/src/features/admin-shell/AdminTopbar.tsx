@@ -50,8 +50,8 @@ function NotificationsButton({ dot = "outlined" }: { dot?: "outlined" | "small" 
 /**
  * White top bar ("AdminTopbar" / "Topbar · Desktop"). Modules pick the layout of their
  * export through `NavItem.topbar`: the 10A section title, the 02 branch and shift, the 03
- * branch and shift with the "En vivo" pill (or 05 "Datos verificados"), or the 06 branch with the
- * "Administrador" pill.
+ * branch and shift with the "En vivo" pill (or 05 "Datos verificados"), the 06 branch with the
+ * "Administrador" pill, or the 07 "Carta digital" title with the "Sincronizado" pill.
  */
 export function AdminTopbar({ staffName, staffRole }: AdminTopbarProps) {
   const pathname = usePathname();
@@ -76,6 +76,13 @@ export function AdminTopbar({ staffName, staffRole }: AdminTopbarProps) {
       {variant === "verified-location" && (
         <div className="flex items-center gap-4">
           <ConnectionBadge variant="verified" />
+          <NotificationsButton dot="none" />
+          <StaffProfile name={staffName} role={staffRole} compact />
+        </div>
+      )}
+      {variant === "catalog" && (
+        <div className="flex items-center gap-4">
+          <ConnectionBadge variant="synced" />
           <NotificationsButton dot="none" />
           <StaffProfile name={staffName} role={staffRole} compact />
         </div>

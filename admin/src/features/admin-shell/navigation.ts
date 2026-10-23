@@ -35,11 +35,22 @@ export type NavItem = {
  *   notifications button without the unread dot.
  * `admin-location`: 06 top bar, the branch without the shift plus an "Administrador" pill and the
  *   dot-less bell of 05.
+ * `catalog`: 07 top bar, "Café Central · Carta digital" with a "Sincronizado" pill and the dot-less
+ *   bell of 05.
  */
-export type TopbarVariant = "section" | "location" | "live-location" | "verified-location" | "admin-location";
+export type TopbarVariant =
+  | "section"
+  | "location"
+  | "live-location"
+  | "verified-location"
+  | "admin-location"
+  | "catalog";
 
 /** Branch and shift shown by the `location` top bar. */
 export const TOPBAR_LOCATION = `${BRAND_NAME} · Sede Centro · Turno mañana`;
+
+/** Title of the `catalog` top bar. */
+export const TOPBAR_CATALOG = `${BRAND_NAME} · Carta digital`;
 
 /** Branch alone, as the `admin-location` top bar shows it. */
 export const TOPBAR_BRANCH = `${BRAND_NAME} · Sede Centro`;
@@ -63,7 +74,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   },
   { id: "history", label: "Historial", href: "/history", icon: History, topbar: "verified-location" },
   { id: "menu", label: "Carta digital", href: "/menu", icon: BookOpen },
-  { id: "products", label: "Productos", href: "/menu/products", icon: Package },
+  { id: "products", label: "Productos", href: "/menu/products", icon: Package, topbar: "catalog" },
   { id: "categories", label: "Categorías y momentos", href: "/menu/categories", icon: Tags },
   { id: "settings", label: "Configuración", href: "/settings", icon: Settings },
   { id: "payments", label: "Pagos", href: "/payments", icon: CreditCard, topbar: "admin-location" },
@@ -110,5 +121,6 @@ export type TopbarConfig = { variant: TopbarVariant; title: string };
 export function getTopbarConfig(pathname: string): TopbarConfig {
   const variant = findActiveNavItem(pathname)?.topbar ?? "section";
   if (variant === "section") return { variant, title: getSectionTitle(pathname) };
+  if (variant === "catalog") return { variant, title: TOPBAR_CATALOG };
   return { variant, title: variant === "admin-location" ? TOPBAR_BRANCH : TOPBAR_LOCATION };
 }
