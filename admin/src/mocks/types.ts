@@ -231,3 +231,35 @@ export type CollectionsHistory = {
   /** Collection open in the drawer of the "Cobro seleccionado" export. */
   selectedId: string;
 };
+
+/** Payment methods staff can record when collecting an account (06 "Medios de cobro"). */
+export type AcceptedPaymentMethod = CollectionMethod | "other";
+
+/** Bank account customers transfer to (06 "Datos bancarios"). Mock values are fictional. */
+export type BankAccount = {
+  /** "Titular de la cuenta". */
+  holder: string;
+  /** "Banco o billetera". */
+  bank: string;
+  alias: string;
+  /** "CBU / CVU": 22 digits. */
+  cbu: string;
+  /** "Instrucciones para el personal". */
+  staffInstructions: string;
+};
+
+export type PaymentSettings = {
+  /** "Medios de cobro aceptados": methods staff can record. */
+  methods: Record<AcceptedPaymentMethod, boolean>;
+  /** "Modalidades para solicitar la cuenta" offered on the customer's 08 screen. */
+  requestModes: Record<BillPaymentMethod, boolean>;
+  bankAccount: BankAccount;
+};
+
+/** Saved configuration with the version the save bar shows ("Versión 18 · actualizada hoy 09:42"). */
+export type SavedPaymentSettings = {
+  settings: PaymentSettings;
+  version: number;
+  /** Local "HH:MM" time of today's last update. */
+  updatedAt: string;
+};
