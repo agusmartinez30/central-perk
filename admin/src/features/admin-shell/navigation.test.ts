@@ -98,7 +98,13 @@ describe("getTopbarConfig", () => {
       title: "Café Central · Carta digital",
     });
     expect(getTopbarConfig("/menu").variant).toBe("section");
-    expect(getTopbarConfig("/menu/categories").variant).toBe("section");
+  });
+
+  it("titles the 08 categories and moments screen as the menu organization", () => {
+    expect(getTopbarConfig("/menu/categories")).toEqual({
+      variant: "catalog",
+      title: "Café Central · Organización de la carta",
+    });
   });
 
   it("shows the branch and shift on the 02 tables screen", () => {
