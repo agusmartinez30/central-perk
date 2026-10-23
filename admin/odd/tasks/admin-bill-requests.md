@@ -21,7 +21,7 @@ The sidebar "Solicitudes de cuenta" entry shows the "Próximamente" placeholder.
 `ask-on-risk` (inherited).
 
 ## Tasks
-- [ ] T1 Bill requests mock + pure helpers test-first. Route: delegated (preparation + 2+ non-trivial files).
+- [x] T1 Bill requests mock + pure helpers test-first. Route: delegated (preparation + 2+ non-trivial files). Commit: 94d4172
 - [ ] T2 Bill requests screen at the sidebar "Solicitudes de cuenta" route. Route: delegated (2+ non-trivial files).
 - [ ] T3 Selected request view with in-memory actions updating list and metrics. Route: delegated (2+ non-trivial files).
 
@@ -34,7 +34,9 @@ The sidebar "Solicitudes de cuenta" entry shows the "Próximamente" placeholder.
 lint, tsc, vitest, build.
 
 ## Progress / Evidence
-- (pending)
+- Plan commit: e9a60a2.
+- T1 done (94d4172): `ManagedBillRequest`/`BillRequestsBoard` types and `BILL_REQUESTS_BOARD` mock (five active requests of 04 in the export order: Mesa 10/05/07 pending, Mesa 12/04 in attention, plus Mesa 09 finalized today; Mesa 10 selected). Mesa 10/05/07 keep the 10A totals, payment preferences, wait times (18/12/7 min) and kitchen counts and the 02 account totals; Mesa 10 customer "Lucía", "Hoy, 12:42" and "3 confirmados" from the 04 drawer; Mesa 07 customer from order #1048. Pure helpers in `src/features/bill-requests/bill-requests-view.ts`: metrics (Pendientes 3, En atención 2, Transferencias activas 2, Finalizadas hoy 1), status/payment chips, search by table (padded or not), customer or `#SC-NNN` ignoring case/accents, sort ("Mayor espera" / "Mayor total", finalized last), wait formatting and tone (danger from 20 min, neutral when finalized), status badges, kitchen note, footer count, drawer info rows, assignee, row actions and `markAttending` (pending → attending, assigns the staff member; no finalize transition because closing needs authorization). Test-first: RED (missing `@/mocks/bill-requests`), GREEN 25/25 after fixing one test assertion (`toMatchObject` with an `undefined` key). Checks: tsc OK, lint OK, vitest 136/136.
+- Known mock gaps: 02 shows Mesa 05 at 2 min with 1 kitchen order and Mesa 10 with 4 confirmed orders (10A/04 win here); 02 shows Mesa 12 and 04 available while 04 lists them in attention; the 04 rows repeat "18 min", "Transferencia" and "Pendiente" (copy-paste leftovers), so wait times, preferences, customers and assignees of Mesa 12/04 are illustrative and chosen to keep the 04 metrics and sort order; the 04 drawer shows "1 pedido en preparación" for Mesa 10 while the 04 list and 10A only flag Mesa 07, so the kitchen warning follows the data (leftover).
 
 ## Next step
-T1.
+T2.
