@@ -23,7 +23,7 @@ The sidebar "Pagos" entry shows the "Próximamente" placeholder. Admins need to 
 `ask-on-risk` (inherited).
 
 ## Tasks
-- [ ] T1 Payment settings mock + pure helpers (diff, validation, dirty state) test-first. Route: delegated (preparation + 2+ non-trivial files).
+- [x] T1 Payment settings mock + pure helpers (diff, validation, dirty state) test-first. Route: delegated (preparation + 2+ non-trivial files). Commit: 572996f
 - [ ] T2 Payment settings screen at the sidebar "Pagos" route. Route: delegated (2+ non-trivial files).
 - [ ] T3 Bank details view/form and confirm-changes dialog with in-memory save. Route: delegated (2+ non-trivial files).
 
@@ -36,7 +36,10 @@ The sidebar "Pagos" entry shows the "Próximamente" placeholder. Admins need to 
 lint, tsc, vitest, build.
 
 ## Progress / Evidence
-- (pending)
+- Plan commit: 9402252.
+- Export structure: "Datos bancarios" is a tab of the same settings workspace ("Payment Settings Navigation": Medios de cobro, Modalidades, Datos bancarios, Seguridad) that swaps the form column for "Editable Bank Account Form"; "Confirmar cambios" is an alertdialog ("Save Confirmation Dialog") over the main area opened from "Guardar cambios". One route, `/payments`, with in-page tabs.
+- T1 done (572996f): `AcceptedPaymentMethod` / `BankAccount` / `PaymentSettings` / `SavedPaymentSettings` types and `PAYMENT_SETTINGS` mock (`src/mocks/payments.ts`, version 18, "09:42"; methods Efectivo/Tarjeta/Transferencia on, Otro off; request modes En mesa/En caja/Por transferencia on). Pure helpers in `src/features/payments/payment-settings.ts`: method/mode/bank-field options, `isValidCbu` (22 digits + both check digits), `isValidAlias` (6–20 letters/digits/dots/hyphens), `validateBankAccount` (required holder/bank/alias/CBU, 120-char instructions), `getSettingsIssues` (at least one method; "Por transferencia" requires the Transferencia method; valid bank data), `canDisableMethod`, `getSettingsChanges` / `isDirty` (trim-insensitive), `applySettings` (next version; an unchanged draft keeps the saved object), save-bar copy. Test-first: RED (missing `@/mocks/payments`), GREEN 20/20. Checks: tsc OK, lint OK, vitest 195/195.
+- T1 notes: methods follow 06 (Efectivo, Tarjeta, Transferencia, Otro); "En mesa" / "En caja" / "Por transferencia" are request modes (`BillPaymentMethod`), not methods, so the export corrects the plan's method list; "Otro" is new to the mocks. Bank data kept from the export (holder "Café Central SRL · FICTICIO", "Banco Demo", alias "CAFE.CENTRAL.DEMO", CBU "0000000000000000000000"): obvious placeholders, and the all-zero CBU passes the check digits. The design has no CUIT field, so there is no CUIT validation. All validation error copy, the 120-character limit and "N cambios sin guardar" are invented.
 
 ## Next step
-T1.
+T2.
