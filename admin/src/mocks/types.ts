@@ -97,3 +97,48 @@ export type TablesBoard = {
   /** Table open in the quick-detail panel when the screen loads. */
   selectedTableId: string | null;
 };
+
+/** Kitchen stage of an order in 03 · Gestión de pedidos; cancelled orders leave the board. */
+export type ManagedOrderStatus = "received" | "preparing" | "delivered" | "cancelled";
+
+/** Entries of the drawer's "Historial de estado". */
+export type OrderHistoryKind = "confirmed" | ManagedOrderStatus;
+
+export type OrderHistoryEvent = {
+  kind: OrderHistoryKind;
+  /** Local "HH:MM" time. */
+  at: string;
+};
+
+export type CancellationReason = "product-unavailable" | "customer-request" | "order-error";
+
+export type ManagedOrderItem = {
+  id: string;
+  quantity: number;
+  name: string;
+  /** Size or temperature line under the product name, e.g. "Grande · caliente". */
+  variant?: string;
+  /** Unit price in ARS. */
+  unitPrice: number;
+  /** Product customization requested by the customer, e.g. "Leche deslactosada". */
+  customization?: string;
+};
+
+export type ManagedOrder = {
+  /** Order number shown as "Pedido #1051". */
+  id: number;
+  tableNumber: number;
+  customer: string;
+  /** Local "HH:MM" time the order was confirmed. */
+  receivedAt: string;
+  items: ManagedOrderItem[];
+  /** Free-text "Nota del cliente" for the whole order. */
+  note?: string;
+  status: ManagedOrderStatus;
+  history: OrderHistoryEvent[];
+  cancellationReason?: CancellationReason;
+};
+
+export type OrdersBoard = {
+  orders: ManagedOrder[];
+};
