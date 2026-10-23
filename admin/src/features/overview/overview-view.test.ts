@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AttentionOrder, BillRequest, ConfirmedPayment, TableSnapshot } from "@/mocks/types";
-import { OVERVIEW_SNAPSHOT } from "@/mocks/overview";
+import { OVERVIEW_SNAPSHOT } from "@/mocks/service-day";
 import {
   formatBillMeta,
   formatBillWarning,
@@ -141,19 +141,29 @@ describe("getBestSellerBars", () => {
   });
 });
 
-describe("getOverviewKpis with the 10A mock", () => {
-  it("reproduces the four primary KPIs of the design", () => {
+/** Cross-screen agreement lives in `src/mocks/service-day/service-day.test.ts`. */
+describe("getOverviewKpis with the service day", () => {
+  it("derives the four primary KPIs from the service day", () => {
     expect(getOverviewKpis(OVERVIEW_SNAPSHOT)).toEqual([
       { id: "new-orders", label: "Pedidos nuevos", value: "2", subtitle: "Esperan preparación", tone: "warning" },
       { id: "pending-bills", label: "Cuentas pendientes", value: "3", subtitle: "Esperan atención", tone: "danger" },
-      { id: "occupied-tables", label: "Mesas ocupadas", value: "8", subtitle: "De 12 mesas habilitadas", tone: "brand" },
+      { id: "occupied-tables", label: "Mesas ocupadas", value: "10", subtitle: "De 12 mesas habilitadas", tone: "brand" },
       { id: "collected", label: "Total cobrado", value: "$100.900", subtitle: "Cobros confirmados hoy", tone: "success" },
     ]);
   });
 
-  it("matches the panels of the design", () => {
+  it("feeds the panels of the design", () => {
+    expect(OVERVIEW_SNAPSHOT.orders.map(formatOrderIdentity)).toEqual([
+      "#1051 · Mesa 03 · Martina",
+      "#1052 · Mesa 08 · Tomás",
+    ]);
+    expect(OVERVIEW_SNAPSHOT.billRequests.map((bill) => [bill.table, formatBillMeta(bill), bill.waitMinutes])).toEqual([
+      ["10", "Transferencia · Total $31.200", 18],
+      ["05", "En mesa · Total $21.500", 12],
+      ["07", "En caja · Total $19.900", 7],
+    ]);
     expect(formatTablesSummary(summarizeTables(OVERVIEW_SNAPSHOT.tables))).toBe(
-      "12 habilitadas · 4 libres · 8 ocupadas · 3 con cuenta · 2 preparando",
+      "12 habilitadas · 2 libres · 10 ocupadas · 5 con cuenta · 4 preparando",
     );
     expect(groupSalesByHour(OVERVIEW_SNAPSHOT.payments).map((bar) => [bar.hour, bar.total])).toEqual([
       ["12:00", 14300],
@@ -164,7 +174,7 @@ describe("getOverviewKpis with the 10A mock", () => {
       total: 100900,
       closedBills: 5,
       averageTicket: 20180,
-      confirmedOrders: 12,
+      confirmedOrders: 36,
     });
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { OVERVIEW_SNAPSHOT } from "@/mocks/overview";
+import { OVERVIEW_SNAPSHOT } from "@/mocks/service-day";
 import type { OverviewPeriod } from "@/mocks/types";
 import { delay } from "@/shared/lib/delay";
 import { AttentionOrdersPanel, BillRequestsPanel } from "./AttentionPanels";

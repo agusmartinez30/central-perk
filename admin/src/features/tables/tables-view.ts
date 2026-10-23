@@ -1,9 +1,10 @@
-import type { BillPaymentMethod, ManagedTable } from "@/mocks/types";
+import { getRequestModeShortLabel } from "@/mocks/service-day/catalog";
+import type { ManagedTable } from "@/mocks/types";
 import { formatPrice } from "@/shared/lib/format-price";
 
 /**
  * What a table is doing right now. Occupied tables with kitchen orders count as "preparing";
- * a bill request wins over the kitchen, as in the 02 summary metrics (4 + 3 + 2 + 3 = 12).
+ * a bill request wins over the kitchen, so the four 02 summary metrics add up to every table.
  */
 export type TableActivity = "available" | "occupied" | "preparing" | "bill-requested";
 
@@ -115,15 +116,10 @@ export function getCardAlert(table: ManagedTable): string | null {
     : `${table.pendingKitchenOrders} en preparación`;
 }
 
-const PAYMENT_PREFERENCE_LABELS: Record<BillPaymentMethod, string> = {
-  table: "En mesa",
-  register: "En caja",
-  transfer: "Transferencia",
-};
-
+/** Short request-mode chip shared with 04, 05 and 10A ("Transferencia" for 06's "Por transferencia"). */
 export function getPaymentPreferenceLabel(table: ManagedTable): string | null {
   if (table.status !== "bill-requested" || !table.paymentPreference) return null;
-  return PAYMENT_PREFERENCE_LABELS[table.paymentPreference];
+  return getRequestModeShortLabel(table.paymentPreference);
 }
 
 /** "Realtime Status" pill of the page header. */

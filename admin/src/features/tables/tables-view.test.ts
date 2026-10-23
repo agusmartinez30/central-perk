@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ManagedTable } from "@/mocks/types";
-import { TABLES_BOARD } from "@/mocks/tables";
+import { TABLES_BOARD } from "@/mocks/service-day";
 import {
   TABLE_FILTERS,
   countTablesByFilter,
@@ -184,7 +184,8 @@ describe("getTableDetailStats", () => {
   });
 });
 
-describe("the 02 mock", () => {
+/** Agreement with 03, 04 and 10A lives in `src/mocks/service-day/service-day.test.ts`. */
+describe("the 02 board of the service day", () => {
   const { tables } = TABLES_BOARD;
 
   it("holds the twelve tables of the design", () => {
@@ -193,16 +194,16 @@ describe("the 02 mock", () => {
     );
   });
 
-  it("reproduces the summary metrics of the design", () => {
+  it("derives the summary metrics, which add up to every table", () => {
     expect(getSummaryMetrics(tables).map((metric) => [metric.label, metric.value])).toEqual([
-      ["Disponibles", 4],
-      ["Ocupadas", 3],
-      ["En preparación", 2],
-      ["Solicitan cuenta", 3],
+      ["Disponibles", 2],
+      ["Ocupadas", 2],
+      ["En preparación", 3],
+      ["Solicitan cuenta", 5],
     ]);
   });
 
-  it("reproduces the cards of the design", () => {
+  it("derives the cards from each table's orders and bill request", () => {
     expect(
       tables.map((item) => [
         formatTableLabel(item.number),
@@ -213,28 +214,28 @@ describe("the 02 mock", () => {
       ]),
     ).toEqual([
       ["Mesa 01", "Disponible", "Lista para asignar", "—", null],
-      ["Mesa 02", "Ocupada", "2 pedidos", "$16.800", null],
-      ["Mesa 03", "Ocupada", "3 pedidos", "$28.400", "2 en preparación"],
-      ["Mesa 04", "Disponible", "Lista para asignar", "—", null],
+      ["Mesa 02", "Ocupada", "2 pedidos", "$16.800", "En preparación"],
+      ["Mesa 03", "Ocupada", "3 pedidos", "$28.400", "En preparación"],
+      ["Mesa 04", "Cuenta solicitada", "2 pedidos", "$14.200", "En mesa"],
       ["Mesa 05", "Cuenta solicitada", "3 pedidos", "$21.500", "En mesa"],
       ["Mesa 06", "Ocupada", "1 pedido", "$8.900", null],
       ["Mesa 07", "Cuenta solicitada", "2 pedidos", "$19.900", "En caja"],
       ["Mesa 08", "Ocupada", "4 pedidos", "$36.700", "En preparación"],
       ["Mesa 09", "Disponible", "Lista para asignar", "—", null],
-      ["Mesa 10", "Cuenta solicitada", "4 pedidos", "$31.200", "Transferencia"],
+      ["Mesa 10", "Cuenta solicitada", "3 pedidos", "$31.200", "Transferencia"],
       ["Mesa 11", "Ocupada", "2 pedidos", "$14.300", null],
-      ["Mesa 12", "Disponible", "Lista para asignar", "—", null],
+      ["Mesa 12", "Cuenta solicitada", "3 pedidos", "$27.600", "Transferencia"],
     ]);
   });
 
-  it("reproduces the quick detail of Mesa 05", () => {
+  it("opens Mesa 05 in the quick detail, with the wait 04 shows", () => {
     const mesa05 = tables.find((item) => item.number === 5);
     expect(mesa05 && getTableDetailStats(mesa05)).toEqual([
       { label: "Pedidos confirmados", value: "3" },
-      { label: "Pendientes en cocina", value: "1" },
-      { label: "Solicitud recibida", value: "Hace 2 min" },
+      { label: "Pendientes en cocina", value: "0" },
+      { label: "Solicitud recibida", value: "Hace 12 min" },
     ]);
     expect(TABLES_BOARD.selectedTableId).toBe(mesa05?.id);
-    expect(formatRealtimeLabel(TABLES_BOARD.syncedAt)).toBe("En vivo · 10:42:18");
+    expect(formatRealtimeLabel(TABLES_BOARD.syncedAt)).toBe("En vivo · 14:42:18");
   });
 });

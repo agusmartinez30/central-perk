@@ -1,13 +1,13 @@
 import type {
   AttentionOrder,
   BestSeller,
-  BillPaymentMethod,
   BillRequest,
   ConfirmedPayment,
   OrderLine,
   OverviewSnapshot,
   TableSnapshot,
 } from "@/mocks/types";
+import { getRequestModeShortLabel } from "@/mocks/service-day/catalog";
 import { formatPrice } from "@/shared/lib/format-price";
 
 /** Pure aggregation and formatting for 10A · Resumen general. */
@@ -101,14 +101,8 @@ export function formatOrderItems(items: readonly OrderLine[]): string {
   return items.map((item) => `${item.quantity} ${item.name}`).join(" · ");
 }
 
-const PAYMENT_METHOD_LABELS: Record<BillPaymentMethod, string> = {
-  transfer: "Transferencia",
-  table: "En mesa",
-  register: "En caja",
-};
-
 export function formatBillMeta(bill: BillRequest): string {
-  return `${PAYMENT_METHOD_LABELS[bill.paymentMethod]} · Total ${formatPrice(bill.total)}`;
+  return `${getRequestModeShortLabel(bill.paymentMethod)} · Total ${formatPrice(bill.total)}`;
 }
 
 export function formatBillWarning(bill: BillRequest): { tone: "success" | "warning"; text: string } {

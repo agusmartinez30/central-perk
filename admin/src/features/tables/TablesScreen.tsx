@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import clsx from "clsx";
 import { Armchair } from "lucide-react";
-import { TABLES_BOARD } from "@/mocks/tables";
+import { TABLES_BOARD } from "@/mocks/service-day";
 import { useScreenState } from "@/shared/lib/use-screen-state";
 import { SearchAndFilters, type TablesView } from "./SearchAndFilters";
 import { TableBoard } from "./TableBoard";
@@ -22,7 +22,7 @@ const NO_RESULTS_QUERY = "Mesa 99";
 
 /**
  * 02 · Gestión de mesas. Container: owns filters, search, view mode and the selected table,
- * and feeds the presentational pieces from the `TABLES_BOARD` mock.
+ * and feeds the presentational pieces from the `TABLES_BOARD` derived from the service day.
  */
 export function TablesScreen() {
   const forcedState = useScreenState(TABLES_FORCED_STATES);
