@@ -14,7 +14,8 @@ export function AdminShell({ children }: AdminShellProps) {
       <AdminSidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <AdminTopbar staffName={DEMO_STAFF.name} staffRole={DEMO_STAFF.role} />
-        <main className="flex flex-1 flex-col px-6 py-3.5">{children}</main>
+        {/* Each screen owns its padding: the exports use different gutters per module. */}
+        <main className="flex flex-1 flex-col">{children}</main>
       </div>
     </div>
   );

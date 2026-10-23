@@ -19,3 +19,4 @@ export {
   type TableQuery,
   type TableTone,
 } from "./tables-view";
+export { TablesScreen, TABLES_FORCED_STATES } from "./TablesScreen";

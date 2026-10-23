@@ -13,7 +13,7 @@ export function ComingSoon({ moduleId }: ComingSoonProps) {
   const Icon = item?.icon ?? Clock3;
 
   return (
-    <section className="flex flex-1 items-center justify-center">
+    <section className="flex flex-1 items-center justify-center px-6 py-3.5">
       <div className="flex w-[420px] flex-col items-center gap-3 rounded-card bg-surface p-10 text-center outline-1 -outline-offset-[0.5px] outline-line">
         <span className="flex size-12 items-center justify-center rounded-full bg-brand-wash text-brand">
           <Icon size={22} aria-hidden="true" />

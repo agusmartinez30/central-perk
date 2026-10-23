@@ -35,7 +35,8 @@ clear the site storage.
 | `/reset-password` | 11C · Reset Password |
 | `/verify` | 11D · Multi-Factor Verification |
 | `/` | 10A · Resumen general |
-| `/tables`, `/tables/management`, `/tables/qr`, `/orders`, `/bill-requests`, `/history`, `/menu`, `/menu/products`, `/menu/categories`, `/settings`, `/payments`, `/staff` | "Próximamente" placeholder |
+| `/tables` | 02 · Gestión de mesas |
+| `/tables/management`, `/tables/qr`, `/orders`, `/bill-requests`, `/history`, `/menu`, `/menu/products`, `/menu/categories`, `/settings`, `/payments`, `/staff` | "Próximamente" placeholder |
 
 ### Forced variants (`?state=`)
 
@@ -45,6 +46,7 @@ clear the site storage.
 | `/forgot-password` | `sent` (generic confirmation) |
 | `/reset-password` | `mismatch`, `success` |
 | `/verify` | `error` (wrong code) |
+| `/tables` | `empty` (no tables), `no-results` (search for "Mesa 99") |
 
 ## Structure
 

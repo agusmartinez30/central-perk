@@ -40,7 +40,7 @@ export function OverviewScreen() {
   };
 
   return (
-    <div className="flex flex-1 flex-col gap-2">
+    <div className="flex flex-1 flex-col gap-2 px-6 py-3.5">
       <DashboardHeader
         period={period}
         onPeriodChange={setPeriod}

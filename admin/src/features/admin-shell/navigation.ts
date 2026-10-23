@@ -22,7 +22,18 @@ export type NavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
+  /** Top bar layout of the module's export; defaults to the 10A section title. */
+  topbar?: TopbarVariant;
 };
+
+/**
+ * `section`: 10A top bar ("Café Central · Resumen", connection pill, compact profile).
+ * `location`: 02 top bar (branch and shift, round notifications button, larger profile).
+ */
+export type TopbarVariant = "section" | "location";
+
+/** Branch and shift shown by the `location` top bar. */
+export const TOPBAR_LOCATION = `${BRAND_NAME} · Sede Centro · Turno mañana`;
 
 /**
  * Sidebar modules in the order of the 10A export, plus "Personal y permisos" (from 12A),
@@ -30,7 +41,7 @@ export type NavItem = {
  */
 export const NAV_ITEMS: readonly NavItem[] = [
   { id: "overview", label: "Resumen", href: "/", icon: LayoutDashboard },
-  { id: "tables", label: "Mesas", href: "/tables", icon: Armchair },
+  { id: "tables", label: "Mesas", href: "/tables", icon: Armchair, topbar: "location" },
   { id: "table-management", label: "Gestión de mesas", href: "/tables/management", icon: LayoutGrid },
   { id: "table-qr", label: "Mesas y códigos QR", href: "/tables/qr", icon: QrCode },
   { id: "orders", label: "Pedidos", href: "/orders", icon: ClipboardList },
@@ -77,4 +88,11 @@ export function getSectionTitle(pathname: string): string {
 
 export function getNavItem(id: string): NavItem | undefined {
   return NAV_ITEMS.find((item) => item.id === id);
+}
+
+export type TopbarConfig = { variant: TopbarVariant; title: string };
+
+export function getTopbarConfig(pathname: string): TopbarConfig {
+  const variant = findActiveNavItem(pathname)?.topbar ?? "section";
+  return { variant, title: variant === "location" ? TOPBAR_LOCATION : getSectionTitle(pathname) };
 }

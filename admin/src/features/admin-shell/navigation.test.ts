@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { NAV_ITEMS, findActiveNavItem, getSectionTitle } from "./navigation";
+import { NAV_ITEMS, findActiveNavItem, getSectionTitle, getTopbarConfig } from "./navigation";
 
 describe("NAV_ITEMS", () => {
   it("lists every admin module in the sidebar order of the designs", () => {
@@ -52,5 +52,20 @@ describe("getSectionTitle", () => {
 
   it("falls back to the brand name alone", () => {
     expect(getSectionTitle("/unknown")).toBe("Café Central");
+  });
+});
+
+describe("getTopbarConfig", () => {
+  it("keeps the section title of 10A by default", () => {
+    expect(getTopbarConfig("/")).toEqual({ variant: "section", title: "Café Central · Resumen" });
+    expect(getTopbarConfig("/orders")).toEqual({ variant: "section", title: "Café Central · Pedidos" });
+  });
+
+  it("shows the branch and shift on the 02 tables screen", () => {
+    expect(getTopbarConfig("/tables")).toEqual({
+      variant: "location",
+      title: "Café Central · Sede Centro · Turno mañana",
+    });
+    expect(getTopbarConfig("/tables/qr").variant).toBe("section");
   });
 });
