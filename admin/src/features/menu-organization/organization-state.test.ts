@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { getMomentProductIds } from "@/features/moments/moment-catalog";
 import {
   createOrganizationState,
+  getCategoriesListView,
+  getCategoryEditorView,
   getMomentEditorView,
   getMomentsListView,
   organizationReducer,
@@ -161,5 +163,133 @@ describe("moment editor (08B)", () => {
     ]);
     expect(state.momentEditor).toBeNull();
     expect(getMomentsListView(state).cards[2].title).toBe("Para cenar");
+  });
+});
+
+describe("categories list (08C)", () => {
+  const onCategories = () => run([{ type: "set-tab", tab: "categories" }]);
+
+  it("lists the categories with derived metrics", () => {
+    const view = getCategoriesListView(onCategories());
+    expect(view.metrics).toEqual({ active: 9, withProducts: 8, empty: 1 });
+    expect(view.rows).toHaveLength(9);
+    expect(view.rows[0]).toMatchObject({ label: "Cafés", productLabel: "4 productos", orderLabel: "01" });
+  });
+
+  it("searches categories", () => {
+    const state = run([{ type: "set-category-query", query: "pan" }], onCategories());
+    expect(getCategoriesListView(state).rows.map((row) => row.label)).toEqual(["Panadería"]);
+  });
+
+  it("reorders categories by drag and by keyboard", () => {
+    const dragged = run([{ type: "reorder-category", id: "licuados", toIndex: 1 }], onCategories());
+    expect(getCategoriesListView(dragged).rows.slice(0, 2).map((row) => row.label)).toEqual(["Cafés", "Licuados"]);
+    expect(dragged.notice).toBe("Licuados pasó al orden 02.");
+    const moved = run([{ type: "move-category", id: "cafes", step: 1 }], onCategories());
+    expect(getCategoriesListView(moved).rows.slice(0, 2).map((row) => row.label)).toEqual(["Tostadas", "Cafés"]);
+  });
+
+  it("shows the associated categories in the new category order", () => {
+    const moved = run([{ type: "move-category", id: "tostadas", step: -1 }], onCategories());
+    expect(getMomentsListView(moved).cards[0].categorySummary).toBe("Tostadas · Cafés · Panadería · Bebidas");
+  });
+});
+
+describe("category editor (08D)", () => {
+  it("opens a category with its derived associations", () => {
+    const state = run([{ type: "open-category", id: "cafes" }]);
+    expect(state.view).toBe("category-editor");
+    expect(getCategoryEditorView(state)).toMatchObject({
+      title: "Editar categoría",
+      statusLabel: "Sin cambios · control de versión activo",
+      dirty: false,
+      canSave: false,
+      canArchive: true,
+      settingsLabel: "Visible en la carta · Orden 01",
+      productCount: 4,
+      archiveTitle: "Archivar requiere confirmación",
+      archiveMessage:
+        "Esta categoría tiene 4 productos y 3 momentos activos. Archivarla no borra productos ni pedidos confirmados.",
+      confirmingArchive: false,
+      auditRules: [
+        "✓ Los cambios quedan registrados en auditoría.",
+        "✓ Los permisos se verifican en el servidor.",
+        "✓ Versión actual: 42 · evita sobrescrituras.",
+      ],
+    });
+  });
+
+  it("saves edits in memory and returns to the categories tab", () => {
+    const saved = run([
+      { type: "open-category", id: "cafes" },
+      { type: "category-set-field", field: "label", value: "Café de especialidad" },
+      { type: "category-set-visible", visible: false },
+      { type: "category-save" },
+    ]);
+    expect(getCategoryEditorView(saved)).toMatchObject({ dirty: false, settingsLabel: "Oculta en la carta · Orden 01" });
+    expect(saved.version).toBe(43);
+    expect(saved.notice).toBe("Café de especialidad se guardó.");
+    const back = organizationReducer(saved, { type: "close-editor" });
+    expect(back.view).toBe("categories");
+    expect(getCategoriesListView(back).rows[0]).toMatchObject({ label: "Café de especialidad", statusLabel: "Oculta" });
+  });
+
+  it("blocks a duplicate name", () => {
+    const blocked = run([
+      { type: "open-category", id: "cafes" },
+      { type: "category-set-field", field: "label", value: "Postres" },
+      { type: "category-save" },
+    ]);
+    expect(getCategoryEditorView(blocked)?.errors).toEqual({ label: "Ya existe una categoría con ese nombre." });
+    expect(blocked.version).toBe(42);
+  });
+
+  it("creates an empty category at the end", () => {
+    const opened = run([{ type: "open-new-category" }]);
+    expect(getCategoryEditorView(opened)).toMatchObject({
+      title: "Crear categoría",
+      statusLabel: "Categoría nueva sin guardar · control de versión activo",
+      canSave: true,
+      canArchive: false,
+      settingsLabel: "Visible en la carta · Orden 10",
+      productCount: 0,
+    });
+    const saved = run(
+      [
+        { type: "category-set-field", field: "label", value: "Té y tisanas" },
+        { type: "category-save" },
+        { type: "close-editor" },
+      ],
+      opened,
+    );
+    expect(getCategoriesListView(saved).rows.at(-1)).toMatchObject({ label: "Té y tisanas", status: "empty", orderLabel: "10" });
+  });
+
+  it("asks once before archiving a category in use, then archives it", () => {
+    const asked = run([{ type: "open-category", id: "cafes" }, { type: "category-archive" }]);
+    expect(getCategoryEditorView(asked)?.confirmingArchive).toBe(true);
+    expect(asked.categories.find((category) => category.id === "cafes")?.archived).toBe(false);
+
+    const cancelled = organizationReducer(asked, { type: "category-cancel-archive" });
+    expect(getCategoryEditorView(cancelled)?.confirmingArchive).toBe(false);
+
+    const archived = organizationReducer(asked, { type: "category-archive" });
+    expect(archived.view).toBe("categories");
+    expect(archived.categoryEditor).toBeNull();
+    expect(getCategoriesListView(archived).rows.map((row) => row.label)).not.toContain("Cafés");
+    expect(archived.products.filter((product) => product.categoryId === "cafes")).toHaveLength(4);
+    expect(getMomentsListView(archived).cards[0].categorySummary).toBe("Tostadas · Panadería · Bebidas");
+    expect(archived.notice).toBe("Cafés se archivó. Sus productos y pedidos no cambian.");
+  });
+
+  it("archives an unused category without asking", () => {
+    const state = run([
+      { type: "open-new-category" },
+      { type: "category-set-field", field: "label", value: "Té" },
+      { type: "category-save" },
+      { type: "category-archive" },
+    ]);
+    expect(state.view).toBe("categories");
+    expect(getCategoriesListView(state).rows.map((row) => row.label)).not.toContain("Té");
   });
 });

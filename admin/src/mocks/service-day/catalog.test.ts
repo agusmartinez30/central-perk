@@ -187,7 +187,7 @@ describe("menu organization (08)", () => {
     ]);
   });
 
-  it("orders the categories as 08C does, with the 08D description of Cafés and one empty category", () => {
+  it("orders the categories as 08C does, describes them and keeps one empty category", () => {
     const byOrder = [...PRODUCT_CATEGORIES].sort((a, b) => a.order - b.order);
     expect(byOrder.map((category) => category.label)).toEqual([
       "Cafés",
@@ -203,7 +203,7 @@ describe("menu organization (08)", () => {
     expect(byOrder.map((category) => category.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(PRODUCT_CATEGORIES.every((category) => category.visible && category.description.length > 0)).toBe(true);
     expect(PRODUCT_CATEGORIES.find((category) => category.id === "cafes")?.description).toBe(
-      "Espresso, filtrados y especialidades de la casa.",
+      "Espresso y filtrados de la casa.",
     );
     const used = new Set(PRODUCTS.map((product) => product.categoryId));
     expect(PRODUCT_CATEGORIES.filter((category) => !used.has(category.id)).map((category) => category.id)).toEqual([

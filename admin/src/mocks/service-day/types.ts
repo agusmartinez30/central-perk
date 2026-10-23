@@ -96,7 +96,7 @@ export type ConsumptionMomentInfo = {
   visible: boolean;
   /** 08A "Orden" (1-based). */
   order: number;
-  /** 08B "Categorías asociadas", in the order they were associated. */
+  /** 08B "Categorías asociadas"; shown in the categories' display order. */
   categoryIds: ProductCategoryId[];
 };
 

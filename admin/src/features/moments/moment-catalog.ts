@@ -30,10 +30,12 @@ export function getMomentProductIds(products: readonly CatalogProductRef[], mome
   return products.filter((product) => !product.archived && product.moments.includes(momentId)).map((product) => product.id);
 }
 
-/** Active categories among `categoryIds`, in association order. */
-function getAssociatedCategories(categoryIds: readonly string[], categories: readonly MenuCategory[]): MenuCategory[] {
-  const active = new Map(getActiveCategories(categories).map((category) => [category.id, category]));
-  return categoryIds.flatMap((id) => active.get(id) ?? []);
+/** Active categories among `categoryIds`, in the 08C display order (the customer filter order). */
+export function getAssociatedCategories(
+  categoryIds: readonly string[],
+  categories: readonly MenuCategory[],
+): MenuCategory[] {
+  return getActiveCategories(categories).filter((category) => categoryIds.includes(category.id));
 }
 
 export type MomentCard = {
@@ -283,7 +285,7 @@ export type ExplorePreview = {
 /**
  * Customer "Explore" screen of a moment (08B phone, 08E): published products of the moment,
  * "Todos" plus the visible associated categories that have at least one of them ("No mostrar
- * filtros de categorías vacías"), grouped by filter order and then by name. An unknown or
+ * filtros de categorías vacías") in the 08C order, products grouped by filter and then by name. An unknown or
  * hidden `filterId` falls back to "Todos".
  */
 export function getExplorePreview(

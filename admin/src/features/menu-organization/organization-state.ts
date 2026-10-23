@@ -1,8 +1,25 @@
 import { CATALOG_VERSION, PRODUCTS } from "@/mocks/service-day";
 import {
+  applyCategoryDraft,
+  archiveCategory,
+  countCategoryMoments,
+  countCategoryProducts,
+  createEmptyCategoryDraft,
   createMenuCategories,
   getActiveCategories,
+  getArchiveImpact,
+  getCategoryChanges,
+  getCategoryMetrics,
+  getCategoryRows,
+  moveCategory,
+  reorderCategories,
+  toCategoryDraft,
+  validateCategoryDraft,
   type CatalogProductRef,
+  type CategoryDraft,
+  type CategoryFormErrors,
+  type CategoryMetrics,
+  type CategoryRow,
   type MenuCategory,
 } from "@/features/categories/category-catalog";
 import {
@@ -12,6 +29,7 @@ import {
   applyMomentDraft,
   createEmptyMomentDraft,
   createMenuMoments,
+  getAssociatedCategories,
   getAssociatedProducts,
   getExplorePreview,
   getMomentCards,
@@ -34,11 +52,11 @@ import {
   type MomentFormErrors,
   type MomentMetrics,
 } from "@/features/moments/moment-catalog";
-import { nextOrder } from "@/shared/lib/ordering";
+import { formatOrderNumber, nextOrder } from "@/shared/lib/ordering";
 
 /** Lists are the two tabs of "Organización de la carta"; the editors are full pages. */
 export type OrganizationTab = "moments" | "categories";
-export type OrganizationView = OrganizationTab | "moment-editor";
+export type OrganizationView = OrganizationTab | "moment-editor" | "category-editor";
 
 export type MomentEditorState = {
   /** `null` while creating a moment. */
@@ -53,6 +71,16 @@ export type MomentEditorState = {
   previewFilter: string;
 };
 
+export type CategoryEditorState = {
+  /** `null` while creating a category. */
+  id: string | null;
+  saved: CategoryDraft;
+  draft: CategoryDraft;
+  submitted: boolean;
+  /** "Archivar" was pressed once on a category in use and waits for the confirmation. */
+  confirmingArchive: boolean;
+};
+
 export type OrganizationState = {
   view: OrganizationView;
   /** Tab the editors return to. */
@@ -64,6 +92,9 @@ export type OrganizationState = {
   /** "versión 42", bumped by every save. */
   version: number;
   momentEditor: MomentEditorState | null;
+  /** 08C "Buscar categoría…". */
+  categoryQuery: string;
+  categoryEditor: CategoryEditorState | null;
   /** Screen-reader announcement of the last action. */
   notice: string | null;
 };
@@ -86,7 +117,18 @@ export type OrganizationAction =
   | { type: "moment-remove-product"; id: string }
   | { type: "moment-discard" }
   | { type: "moment-save" }
-  | { type: "set-preview-filter"; filterId: string };
+  | { type: "set-preview-filter"; filterId: string }
+  | { type: "set-category-query"; query: string }
+  | { type: "reorder-category"; id: string; toIndex: number }
+  | { type: "move-category"; id: string; step: number }
+  | { type: "open-category"; id: string }
+  | { type: "open-new-category" }
+  | { type: "category-set-field"; field: "label" | "description"; value: string }
+  | { type: "category-set-visible"; visible: boolean }
+  | { type: "category-set-image"; image: string | undefined }
+  | { type: "category-save" }
+  | { type: "category-archive" }
+  | { type: "category-cancel-archive" };
 
 export function createOrganizationState(
   products: readonly CatalogProductRef[] = PRODUCTS,
@@ -99,6 +141,8 @@ export function createOrganizationState(
     products: [...products],
     version: CATALOG_VERSION,
     momentEditor: null,
+    categoryQuery: "",
+    categoryEditor: null,
     notice: null,
   };
 }
@@ -125,6 +169,70 @@ function updateMomentDraft(
 ): OrganizationState {
   if (!state.momentEditor) return state;
   return { ...state, momentEditor: { ...state.momentEditor, ...extra, draft: update(state.momentEditor.draft) } };
+}
+
+const labelOf = (state: OrganizationState, id: string) =>
+  state.categories.find((category) => category.id === id)?.label ?? "La categoría";
+
+function openCategoryEditor(id: string | null, draft: CategoryDraft): CategoryEditorState {
+  return { id, saved: draft, draft, submitted: false, confirmingArchive: false };
+}
+
+function updateCategoryDraft(state: OrganizationState, update: (draft: CategoryDraft) => CategoryDraft): OrganizationState {
+  if (!state.categoryEditor) return state;
+  return { ...state, categoryEditor: { ...state.categoryEditor, draft: update(state.categoryEditor.draft) } };
+}
+
+function saveCategory(state: OrganizationState): OrganizationState {
+  const editor = state.categoryEditor;
+  if (!editor) return state;
+  const errors = validateCategoryDraft(editor.draft, { categories: state.categories, editingId: editor.id });
+  if (Object.keys(errors).length > 0) {
+    return {
+      ...state,
+      categoryEditor: { ...editor, submitted: true },
+      notice: "Revisá los campos marcados antes de guardar.",
+    };
+  }
+  const saved = applyCategoryDraft(state.categories, editor.id, editor.draft);
+  const category = saved.categories.find((item) => item.id === saved.id);
+  const draft = category ? toCategoryDraft(category) : editor.draft;
+  return {
+    ...state,
+    categories: saved.categories,
+    version: state.version + 1,
+    categoryEditor: openCategoryEditor(saved.id, draft),
+    notice: `${draft.label} se guardó.`,
+  };
+}
+
+/**
+ * "Archivar": a category in use asks once (the 08D warning turns into a confirmation); an unused
+ * one, or the second press, archives it and returns to the list. Products and orders keep it.
+ */
+function archiveEditedCategory(state: OrganizationState): OrganizationState {
+  const editor = state.categoryEditor;
+  if (!editor?.id) return state;
+  const impact = getArchiveImpact(
+    countCategoryProducts(state.products, editor.id),
+    countCategoryMoments(state.moments, editor.id),
+  );
+  if (impact.requiresConfirmation && !editor.confirmingArchive) {
+    return {
+      ...state,
+      categoryEditor: { ...editor, confirmingArchive: true },
+      notice: "Confirmá el archivo de la categoría.",
+    };
+  }
+  return {
+    ...state,
+    view: "categories",
+    tab: "categories",
+    categories: archiveCategory(state.categories, editor.id),
+    version: state.version + 1,
+    categoryEditor: null,
+    notice: `${labelOf(state, editor.id)} se archivó. Sus productos y pedidos no cambian.`,
+  };
 }
 
 function saveMoment(state: OrganizationState): OrganizationState {
@@ -192,7 +300,7 @@ export function organizationReducer(state: OrganizationState, action: Organizati
         notice: null,
       };
     case "close-editor":
-      return { ...state, view: state.tab, momentEditor: null, notice: null };
+      return { ...state, view: state.tab, momentEditor: null, categoryEditor: null, notice: null };
     case "moment-set-field":
       return updateMomentDraft(state, (draft) => ({ ...draft, [action.field]: action.value }));
     case "moment-set-visible":
@@ -228,6 +336,53 @@ export function organizationReducer(state: OrganizationState, action: Organizati
     case "set-preview-filter":
       if (!state.momentEditor) return state;
       return { ...state, momentEditor: { ...state.momentEditor, previewFilter: action.filterId } };
+    case "set-category-query":
+      return { ...state, categoryQuery: action.query };
+    case "reorder-category":
+    case "move-category": {
+      const categories =
+        action.type === "reorder-category"
+          ? reorderCategories(state.categories, action.id, action.toIndex)
+          : moveCategory(state.categories, action.id, action.step);
+      const order = categories.find((category) => category.id === action.id)?.order;
+      return {
+        ...state,
+        categories,
+        notice: order ? `${labelOf(state, action.id)} pasó al orden ${formatOrderNumber(order)}.` : null,
+      };
+    }
+    case "open-category": {
+      const category = state.categories.find((item) => item.id === action.id);
+      if (!category) return state;
+      return {
+        ...state,
+        view: "category-editor",
+        tab: "categories",
+        categoryEditor: openCategoryEditor(category.id, toCategoryDraft(category)),
+        notice: null,
+      };
+    }
+    case "open-new-category":
+      return {
+        ...state,
+        view: "category-editor",
+        tab: "categories",
+        categoryEditor: openCategoryEditor(null, createEmptyCategoryDraft()),
+        notice: null,
+      };
+    case "category-set-field":
+      return updateCategoryDraft(state, (draft) => ({ ...draft, [action.field]: action.value }));
+    case "category-set-visible":
+      return updateCategoryDraft(state, (draft) => ({ ...draft, visible: action.visible }));
+    case "category-set-image":
+      return updateCategoryDraft(state, (draft) => ({ ...draft, image: action.image }));
+    case "category-save":
+      return saveCategory(state);
+    case "category-archive":
+      return archiveEditedCategory(state);
+    case "category-cancel-archive":
+      if (!state.categoryEditor) return state;
+      return { ...state, categoryEditor: { ...state.categoryEditor, confirmingArchive: false }, notice: null };
   }
 }
 
@@ -264,7 +419,6 @@ export function getMomentEditorView(state: OrganizationState): MomentEditorView 
   const isNew = editor.id === null;
   const dirty = isNew || getMomentChanges(editor.saved, draft).length > 0;
   const order = isNew ? nextOrder(state.moments) : state.moments.find((moment) => moment.id === editor.id)?.order;
-  const active = new Map(getActiveCategories(state.categories).map((category) => [category.id, category]));
   let statusLabel = `Sin cambios · versión ${state.version}`;
   if (isNew) statusLabel = `Momento nuevo sin guardar · versión ${state.version}`;
   else if (dirty) statusLabel = `Cambios sin guardar · versión ${state.version}`;
@@ -276,7 +430,7 @@ export function getMomentEditorView(state: OrganizationState): MomentEditorView 
     canDiscard: !isNew && dirty,
     publicationLabel: `${draft.visible ? "Visible en la carta" : "Oculto en la carta"} · Orden ${order ?? 1}`,
     errors: editor.submitted ? validateMomentDraft(draft, { moments: state.moments, editingId: editor.id }) : {},
-    selectedCategories: draft.categoryIds.flatMap((id) => active.get(id) ?? []),
+    selectedCategories: getAssociatedCategories(draft.categoryIds, state.categories),
     categorySuggestions: editor.categoryQuery.trim()
       ? searchAssignableCategories(draft, state.categories, editor.categoryQuery)
       : [],
@@ -284,5 +438,70 @@ export function getMomentEditorView(state: OrganizationState): MomentEditorView 
     products: getAssociatedProducts(draft, state.products),
     productSuggestions: searchAssignableProducts(draft, state.products, editor.productQuery),
     preview: getExplorePreview(draft, { products: state.products, categories: state.categories }, editor.previewFilter),
+  };
+}
+
+export type CategoriesListView = { metrics: CategoryMetrics; rows: CategoryRow[] };
+
+export function getCategoriesListView(state: OrganizationState): CategoriesListView {
+  return {
+    metrics: getCategoryMetrics(state.categories, state.products),
+    rows: getCategoryRows({
+      categories: state.categories,
+      products: state.products,
+      moments: state.moments,
+      query: state.categoryQuery,
+    }),
+  };
+}
+
+export type CategoryEditorView = {
+  title: string;
+  statusLabel: string;
+  dirty: boolean;
+  canSave: boolean;
+  canArchive: boolean;
+  settingsLabel: string;
+  errors: CategoryFormErrors;
+  /** "PRODUCTOS ASOCIADOS", derived from the product assignments. */
+  productCount: number;
+  archiveTitle: string;
+  archiveMessage: string;
+  confirmingArchive: boolean;
+  auditRules: string[];
+};
+
+export function getCategoryEditorView(state: OrganizationState): CategoryEditorView | null {
+  const editor = state.categoryEditor;
+  if (!editor) return null;
+  const isNew = editor.id === null;
+  const dirty = isNew || getCategoryChanges(editor.saved, editor.draft).length > 0;
+  const productCount = editor.id ? countCategoryProducts(state.products, editor.id) : 0;
+  const impact = getArchiveImpact(productCount, editor.id ? countCategoryMoments(state.moments, editor.id) : 0);
+  const order = isNew
+    ? nextOrder(getActiveCategories(state.categories))
+    : (state.categories.find((category) => category.id === editor.id)?.order ?? 1);
+  let statusLabel = "Sin cambios · control de versión activo";
+  if (isNew) statusLabel = "Categoría nueva sin guardar · control de versión activo";
+  else if (dirty) statusLabel = "Cambios sin guardar · control de versión activo";
+  return {
+    title: isNew ? "Crear categoría" : "Editar categoría",
+    statusLabel,
+    dirty,
+    canSave: dirty,
+    canArchive: !isNew,
+    settingsLabel: `${editor.draft.visible ? "Visible en la carta" : "Oculta en la carta"} · Orden ${formatOrderNumber(order)}`,
+    errors: editor.submitted
+      ? validateCategoryDraft(editor.draft, { categories: state.categories, editingId: editor.id })
+      : {},
+    productCount,
+    archiveTitle: impact.requiresConfirmation ? "Archivar requiere confirmación" : "Archivar no afecta productos",
+    archiveMessage: impact.message,
+    confirmingArchive: editor.confirmingArchive,
+    auditRules: [
+      "✓ Los cambios quedan registrados en auditoría.",
+      "✓ Los permisos se verifican en el servidor.",
+      `✓ Versión actual: ${state.version} · evita sobrescrituras.`,
+    ],
   };
 }

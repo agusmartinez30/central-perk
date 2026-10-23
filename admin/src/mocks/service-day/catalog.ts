@@ -17,10 +17,11 @@ export const CATALOG_VERSION = 42;
  * the empty "Licuados" of 08C. The array keeps the 07 order (selects and chips); `order` is the
  * 08C display order, following the export where a category exists (its Combos, Tortas,
  * Ensaladas, Infusiones and Jugos are not in the menu: "Postres" takes the Tortas slot and
- * "Bebidas" the Jugos one). Only the Cafés description comes from 08D; the others are invented.
+ * "Bebidas" the Jugos one). Descriptions are invented: 08D shows Cafés being edited to
+ * "Espresso, filtrados y especialidades de la casa." (its `?state=category-edit` draft).
  */
 export const PRODUCT_CATEGORIES: ProductCategoryInfo[] = [
-  { id: "cafes", label: "Cafés", description: "Espresso, filtrados y especialidades de la casa.", visible: true, order: 1 },
+  { id: "cafes", label: "Cafés", description: "Espresso y filtrados de la casa.", visible: true, order: 1 },
   { id: "bebidas", label: "Bebidas", description: "Jugos exprimidos y bebidas frías.", visible: true, order: 8 },
   { id: "panaderia", label: "Panadería", description: "Medialunas y facturas recién horneadas.", visible: true, order: 3 },
   { id: "tostadas", label: "Tostadas", description: "Panes de masa madre con toppings.", visible: true, order: 2 },

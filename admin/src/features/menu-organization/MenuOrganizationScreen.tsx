@@ -3,11 +3,15 @@
 import { useReducer } from "react";
 import { Plus } from "lucide-react";
 import { useScreenState } from "@/shared/lib/use-screen-state";
+import { CategoriesTable, CategoriesToolbar } from "./CategoriesTable";
+import { CategoryEditor } from "./CategoryEditor";
 import { MomentEditor } from "./MomentEditor";
 import { MomentsGrid } from "./MomentsGrid";
 import { MetricCards, OrganizationTabs, PageHeader } from "./OrganizationParts";
 import {
   createOrganizationState,
+  getCategoriesListView,
+  getCategoryEditorView,
   getMomentEditorView,
   getMomentsListView,
   organizationReducer,
@@ -17,10 +21,20 @@ import {
 
 /**
  * Forced variants: `moment-edit` (08B: Para desayunar with Limonada associated and not saved),
- * `moment-new` (empty "Crear momento" form) and `moment-errors` (Para desayunar saved without a
- * name; not in the exports).
+ * `moment-new` (empty "Crear momento" form), `moment-errors` (Para desayunar saved without a
+ * name; not in the exports), `categories` (08C tab), `category-edit` (08D: Cafés with the export
+ * description typed and not saved), `category-new` (empty "Crear categoría" form) and
+ * `category-archive` (Cafés waiting for the archive confirmation; not in the exports).
  */
-export const ORGANIZATION_FORCED_STATES = ["moment-edit", "moment-new", "moment-errors"] as const;
+export const ORGANIZATION_FORCED_STATES = [
+  "moment-edit",
+  "moment-new",
+  "moment-errors",
+  "categories",
+  "category-edit",
+  "category-new",
+  "category-archive",
+] as const;
 
 type ForcedState = (typeof ORGANIZATION_FORCED_STATES)[number];
 
@@ -34,6 +48,16 @@ const FORCED_ACTIONS: Record<ForcedState, OrganizationAction[]> = {
     { type: "open-moment", id: "desayunar" },
     { type: "moment-set-field", field: "title", value: "" },
     { type: "moment-save" },
+  ],
+  categories: [{ type: "set-tab", tab: "categories" }],
+  "category-edit": [
+    { type: "open-category", id: "cafes" },
+    { type: "category-set-field", field: "description", value: "Espresso, filtrados y especialidades de la casa." },
+  ],
+  "category-new": [{ type: "open-new-category" }],
+  "category-archive": [
+    { type: "open-category", id: "cafes" },
+    { type: "category-archive" },
   ],
 };
 
@@ -63,7 +87,7 @@ function PrimaryAction({ label, onClick }: PrimaryActionProps) {
  * 08 · Categorías y momentos. Container: owns the moments, categories and product assignments
  * as edited in this session (pure `organizationReducer`, seeded from the canonical catalogue)
  * and which view is open: the "Organización de la carta" tabs (08A moments, 08C categories) or
- * an editor (08B). 07 keeps its own session copy of the products.
+ * an editor (08B moment, 08D category). 07 keeps its own session copy of the products.
  */
 export function MenuOrganizationScreen() {
   const forcedState = useScreenState(ORGANIZATION_FORCED_STATES);
@@ -71,8 +95,42 @@ export function MenuOrganizationScreen() {
 
   let content;
   const momentEditorView = getMomentEditorView(state);
+  const categoryEditorView = getCategoryEditorView(state);
   if (state.view === "moment-editor" && state.momentEditor && momentEditorView) {
     content = <MomentEditor editor={state.momentEditor} view={momentEditorView} onAction={dispatch} />;
+  } else if (state.view === "category-editor" && state.categoryEditor && categoryEditorView) {
+    content = <CategoryEditor editor={state.categoryEditor} view={categoryEditorView} onAction={dispatch} />;
+  } else if (state.view === "categories") {
+    const categories = getCategoriesListView(state);
+    content = (
+      <div className="flex h-[calc(100dvh-72px)] min-h-[760px] flex-col gap-3 px-7 pt-[18px] pb-4">
+        <PageHeader
+          title="Organización de la carta"
+          subtitle="Gestioná filtros de producto independientes de los momentos."
+          actions={<PrimaryAction label="Crear categoría" onClick={() => dispatch({ type: "open-new-category" })} />}
+        />
+        <MetricCards
+          height="66"
+          items={[
+            { label: "Categorías activas", value: categories.metrics.active },
+            { label: "Con productos", value: categories.metrics.withProducts },
+            { label: "Vacías", value: categories.metrics.empty },
+          ]}
+        />
+        <OrganizationTabs active="categories" onChange={(tab) => dispatch({ type: "set-tab", tab })} />
+        <CategoriesToolbar
+          query={state.categoryQuery}
+          onQueryChange={(query) => dispatch({ type: "set-category-query", query })}
+        />
+        <CategoriesTable
+          rows={categories.rows}
+          filtered={state.categoryQuery.trim().length > 0}
+          onEdit={(id) => dispatch({ type: "open-category", id })}
+          onReorder={(id, toIndex) => dispatch({ type: "reorder-category", id, toIndex })}
+          onMove={(id, step) => dispatch({ type: "move-category", id, step })}
+        />
+      </div>
+    );
   } else {
     const moments = getMomentsListView(state);
     content = (
@@ -91,16 +149,14 @@ export function MenuOrganizationScreen() {
             { label: "Categorías totales", value: moments.metrics.totalCategories },
           ]}
         />
-        <OrganizationTabs active={state.tab} onChange={(tab) => dispatch({ type: "set-tab", tab })} />
-        {state.view === "moments" && (
-          <MomentsGrid
-            cards={moments.cards}
-            onEdit={(id) => dispatch({ type: "open-moment", id })}
-            onVisibilityChange={(id, visible) => dispatch({ type: "set-moment-visibility", id, visible })}
-            onReorder={(id, toIndex) => dispatch({ type: "reorder-moment", id, toIndex })}
-            onMove={(id, step) => dispatch({ type: "move-moment", id, step })}
-          />
-        )}
+        <OrganizationTabs active="moments" onChange={(tab) => dispatch({ type: "set-tab", tab })} />
+        <MomentsGrid
+          cards={moments.cards}
+          onEdit={(id) => dispatch({ type: "open-moment", id })}
+          onVisibilityChange={(id, visible) => dispatch({ type: "set-moment-visibility", id, visible })}
+          onReorder={(id, toIndex) => dispatch({ type: "reorder-moment", id, toIndex })}
+          onMove={(id, step) => dispatch({ type: "move-moment", id, step })}
+        />
       </div>
     );
   }
