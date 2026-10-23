@@ -21,8 +21,8 @@ The 47 admin screens exist only as static design exports. We need a navigable ba
 
 ## Tasks
 - [x] T0 Bootstrap: create-next-app (Next 16.4.2), deps, vitest, .gitignore (exclude `.atl/`). Route: delegated (part of the writer run). Commit: 42fd059
-- [x] T1 Tokens, fonts and admin shell (sidebar nav for all modules, top bar) from 10A; shared UI primitives. Route: delegated (2+ non-trivial files). Commit: see Progress (T1 entry).
-- [ ] T2 Auth screens 11A–11D with mock auth and pure validation helpers (+tests). Route: delegated (2+ non-trivial files).
+- [x] T1 Tokens, fonts and admin shell (sidebar nav for all modules, top bar) from 10A; shared UI primitives. Route: delegated (2+ non-trivial files). Commit: 23d876d
+- [x] T2 Auth screens 11A–11D with mock auth and pure validation helpers (+tests). Route: delegated (2+ non-trivial files). Commit: see Progress (T2 entry).
 - [ ] T3 General overview 10A with mock metrics (+tests for pure aggregation). Route: delegated (2+ non-trivial files).
 
 ## Acceptance criteria
@@ -36,6 +36,7 @@ lint, tsc, vitest, build.
 ## Progress / Evidence
 - T0 done (42fd059): config copied from `../web` (no create-next-app prompts), `npm install`, `screen-state` helpers ported with their tests. Checks: tsc OK, lint OK, vitest 3/3, build OK.
 - T1 done: `@theme` tokens from the exports (cream, ink, muted, line, brand, brand-wash, sand, success/warning/danger + bg, radii 6–16px, auth/drawer/modal shadows), DM Sans via next/font, `(admin)` route group with `AdminShell` (sidebar + top bar), `ComingSoon` placeholder for 12 non-implemented modules. Navigation helpers test-first (RED: missing module; GREEN: 7/7). Sidebar = 10A order plus "Personal y permisos" from 12A (10A omits it). Checks: tsc OK, lint OK, vitest 10/10, build OK (14 static routes).
+- T2 done: `(auth)` route group with brand panel; `/login` (11A), `/forgot-password` (11B), `/reset-password` (11C), `/verify` (11D). Mock auth in `src/mocks/auth.ts` (demo credentials in README), Web Storage session + `AuthGuard` on `(admin)`. Shared UI: `PrimaryButton`, `TextButton`, `TextField`, `PasswordField`, `Checkbox`, `Notice`. Test-first: `validation.test.ts`, `mocks/auth.test.ts`, `session.test.ts` (RED: modules missing; one GREEN fix for the MFA regex). `?state=` variants: login `error`, forgot `sent`, reset `mismatch|success`, verify `error`. Error/success copy for those variants is not in the exports (documented deviation). Checks: tsc OK, lint OK, vitest 29/29, build OK (18 static routes), `next start` smoke: all auth/admin routes 200, headless screenshots of 11A/11D at 1440×900 match the exports.
 
 ## Next step
-T2.
+T3.

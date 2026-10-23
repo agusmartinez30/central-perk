@@ -1,5 +1,10 @@
 import { AdminShell } from "@/features/admin-shell";
+import { AuthGuard } from "@/features/auth";
 
 export default function AdminLayout({ children }: LayoutProps<"/">) {
-  return <AdminShell>{children}</AdminShell>;
+  return (
+    <AuthGuard>
+      <AdminShell>{children}</AdminShell>
+    </AuthGuard>
+  );
 }
