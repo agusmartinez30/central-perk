@@ -1,1 +1,50 @@
 @import "tailwindcss";
+
+/* Design tokens extracted from the ADMIN Pencil exports (1440×900 desktop frames). */
+@theme {
+  /* Surfaces and text */
+  --color-cream: #f5f3ee;
+  --color-surface: #ffffff;
+  --color-sand: #ece9e2;
+  --color-ink: #101010;
+  --color-muted: #696969;
+  --color-line: #d9d6cf;
+
+  /* Brand */
+  --color-brand: #2f45ad;
+  --color-brand-wash: #e9ecfa;
+
+  /* Sidebar (dark) */
+  --color-sidebar: #101010;
+
+  /* Feedback tones */
+  --color-success: #287a45;
+  --color-success-bg: #e6f3e9;
+  --color-warning: #b56a12;
+  --color-warning-bg: #fff1d6;
+  --color-danger: #c94f3d;
+  --color-danger-bg: #fde9e5;
+
+  /* Radii */
+  --radius-chip: 6px;
+  --radius-nav: 8px;
+  --radius-field: 9px;
+  --radius-tile: 11px;
+  --radius-card: 12px;
+  --radius-auth: 16px;
+
+  /* Shadows */
+  --shadow-auth: 0 8px 28px #10101010;
+  --shadow-drawer: -8px 0 28px #1010101f;
+  --shadow-modal: 0 10px 32px #10101029;
+}
+
+/* Font families resolve next/font CSS variables set on <html>. */
+@theme inline {
+  --font-sans: var(--font-dm-sans), system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--color-cream);
+  color: var(--color-ink);
+}
