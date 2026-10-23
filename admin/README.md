@@ -37,7 +37,8 @@ clear the site storage.
 | `/` | 10A · Resumen general |
 | `/tables` | 02 · Gestión de mesas |
 | `/orders` | 03 · Gestión de pedidos (kanban, order drawer, cancel confirmation) |
-| `/tables/management`, `/tables/qr`, `/bill-requests`, `/history`, `/menu`, `/menu/products`, `/menu/categories`, `/settings`, `/payments`, `/staff` | "Próximamente" placeholder |
+| `/bill-requests` | 04 · Solicitudes de cuenta (requests table, quick-detail drawer) |
+| `/tables/management`, `/tables/qr`, `/history`, `/menu`, `/menu/products`, `/menu/categories`, `/settings`, `/payments`, `/staff` | "Próximamente" placeholder |
 
 ### Forced variants (`?state=`)
 
@@ -49,6 +50,7 @@ clear the site storage.
 | `/verify` | `error` (wrong code) |
 | `/tables` | `empty` (no tables), `no-results` (search for "Mesa 99") |
 | `/orders` | `detail` (drawer of #1051), `cancel` (cancel dialog of #1051), `empty` (no orders), `no-results` (search for "9999") |
+| `/bill-requests` | `selected` (drawer of Mesa 10), `empty` (no requests), `no-results` (search for "Mesa 99") |
 
 ## Structure
 

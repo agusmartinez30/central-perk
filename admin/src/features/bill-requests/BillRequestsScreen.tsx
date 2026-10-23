@@ -1,42 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useReducer, useState } from "react";
 import { BILL_REQUESTS_BOARD } from "@/mocks/bill-requests";
 import { DEMO_STAFF } from "@/mocks/staff";
-import type { ManagedBillRequest } from "@/mocks/types";
 import { useScreenState } from "@/shared/lib/use-screen-state";
 import {
   filterRequests,
   formatTableCount,
   getRequestMetrics,
-  markAttending,
   sortRequests,
   type PaymentFilter,
   type RequestSort,
   type StatusFilter,
 } from "./bill-requests-view";
+import {
+  billRequestsReducer,
+  createBillRequestsState,
+  getSelectedRequest,
+  type BillRequestsState,
+} from "./bill-requests-state";
+import { BillRequestDetailDrawer } from "./BillRequestDetailDrawer";
 import { BillRequestsHeader, RequestMetrics } from "./BillRequestsHeader";
 import { RequestFilters } from "./RequestFilters";
 import { NO_REQUESTS_ICON, NO_RESULTS_ICON, RequestsTable, type TableEmptyState } from "./RequestsTable";
 
 /**
- * Forced variants: `empty` (no bill requests yet) and `no-results` (search with no match).
- * Their copy is not in the 04 exports.
+ * Forced variants: `selected` (drawer of Mesa 10, as in the "Solicitud seleccionada" export),
+ * `empty` (no bill requests yet) and `no-results` (search with no match). The empty and
+ * no-results copy is not in the 04 exports.
  */
-export const BILL_REQUESTS_FORCED_STATES = ["empty", "no-results"] as const;
+export const BILL_REQUESTS_FORCED_STATES = ["selected", "empty", "no-results"] as const;
+
+type ForcedState = (typeof BILL_REQUESTS_FORCED_STATES)[number];
+
+function initBillRequestsState(forcedState: ForcedState | null): BillRequestsState {
+  if (forcedState === "empty") return createBillRequestsState([]);
+  return createBillRequestsState(BILL_REQUESTS_BOARD.requests, {
+    selectedId: forcedState === "selected" ? BILL_REQUESTS_BOARD.selectedId : null,
+  });
+}
 
 /** Query that `?state=no-results` pre-fills: no table has that number. */
 const NO_RESULTS_QUERY = "Mesa 99";
 
 /**
- * 04 · Solicitudes de cuenta. Container: owns the in-memory requests, filters and sort,
- * fed by `BILL_REQUESTS_BOARD`.
+ * 04 · Solicitudes de cuenta. Container: owns the in-memory requests (pure
+ * `billRequestsReducer`: quick-detail drawer and "Marcar en atención"), filters and sort, fed by
+ * `BILL_REQUESTS_BOARD`.
  */
 export function BillRequestsScreen() {
   const forcedState = useScreenState(BILL_REQUESTS_FORCED_STATES);
-  const [requests, setRequests] = useState<ManagedBillRequest[]>(() =>
-    forcedState === "empty" ? [] : BILL_REQUESTS_BOARD.requests,
-  );
+  const [state, dispatch] = useReducer(billRequestsReducer, forcedState, initBillRequestsState);
+  const { requests } = state;
+  const selectedRequest = getSelectedRequest(state);
   const [query, setQuery] = useState(() => (forcedState === "no-results" ? NO_RESULTS_QUERY : ""));
   const [sort, setSort] = useState<RequestSort>("longest-wait");
   const [status, setStatus] = useState<StatusFilter>("active");
@@ -67,11 +83,6 @@ export function BillRequestsScreen() {
           };
   }
 
-  const handleMarkAttending = (id: string) =>
-    setRequests((current) =>
-      current.map((request) => (request.id === id ? markAttending(request, DEMO_STAFF.name) : request)),
-    );
-
   return (
     // The table fills the viewport under the 72px top bar and its rows scroll on their own.
     <div className="flex h-[calc(100dvh-72px)] min-h-[600px] flex-col gap-3 px-7 pt-5 pb-4">
@@ -91,9 +102,12 @@ export function BillRequestsScreen() {
         requests={visible}
         emptyState={emptyState}
         footerCount={formatTableCount(requests)}
-        onMarkAttending={handleMarkAttending}
-        onViewDetail={() => {}}
+        onMarkAttending={(id) => dispatch({ type: "mark-attending", id, staffName: DEMO_STAFF.name })}
+        onViewDetail={(id) => dispatch({ type: "open-detail", id })}
       />
+      {selectedRequest && (
+        <BillRequestDetailDrawer request={selectedRequest} onClose={() => dispatch({ type: "close-detail" })} />
+      )}
     </div>
   );
 }
