@@ -56,5 +56,8 @@ lint, tsc, vitest, build.
 - RDD: not run by the writer (parent-owned).
 - T1 derived values vs exports: moments Para desayunar 7 productos · 4 categorías (Cafés · Tostadas · Panadería · Bebidas) instead of 18; Para merendar 9 · Cafés · Postres · Panadería · Tostados instead of 16; Para cenar 4 · Sándwiches · Hamburguesas · Tostados (3) instead of 14; Para tomar 3 · Cafés · Bebidas · Licuados (3) instead of 20. Categories: 9 instead of 12 (Cafés 4 productos · 3 momentos instead of 12 · 3); metrics 9/8/1 instead of 12/11/1. Invented copy: category descriptions except Cafés, validation messages, "Oculta"/"Oculto", the empty-category archive message.
 
+- Commits: T2 a092f36, T3 71509e6, T4 7738b57.
+- RDD for T1–T4 (committed-only vs main): assessed medium, `slice_budget_reached`; the user declined review for this candidate. Parent spot check: vitest 382/382.
+
 ## Next step
 Parent review of the branch (native review decision); then fast-forward `main` after approval.
