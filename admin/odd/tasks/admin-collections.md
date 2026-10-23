@@ -34,7 +34,9 @@ The sidebar "Historial" entry shows the "Próximamente" placeholder. Staff need 
 lint, tsc, vitest, build.
 
 ## Progress / Evidence
-- (pending)
+- Plan commit: 9807230.
+- T1 done: `ManagedCollection`/`CollectionsHistory` types and `COLLECTIONS_HISTORY` mock (`src/mocks/collections.ts`): today's five 05 rows (COB-0026..0022, Mesa 07/03/05/02/11, $100.900 in 5 accounts) plus 21 illustrative single-order accounts over the previous six days so "Ayer" and "Últimos 7 días" paginate; COB-0026 selected. Pure helpers in `src/features/collections/collections-view.ts`: quick date ranges and "Custom Date Range" label, metrics (Total cobrado $100.900, Cuentas cerradas 5, Ticket promedio $20.180, Transferencias $42.700), totals by method, method/staff/period filters, search by table, account or operation (ignoring case, padding, accents and "#"), sorting ("Más recientes" default), pagination of 5 with "…" page items and the result count, drawer facts, order summaries, account totals with adjustments and the audit timeline. Test-first: RED (missing `@/mocks/collections`), GREEN 24/24. Checks: tsc OK, lint OK, vitest 166/166.
+- Known mock gaps (05 wins): 10A's individual payments differ from the 05 rows (only totals, count and average match); the 05 rows all read "Efectivo" (copy-paste leftover) while "Transferencias" is $42.700, so Mesa 03 and Mesa 11 are transfers, Mesa 05 card and Mesa 02 cash are illustrative; 04's finalized Mesa 09 ($14.300, 12:15) has no 05 row (05 lists $14.300 for Mesa 11 at 12:40); "Mostrando 1–5 de 128 operaciones" / 26 pages contradicts "Cuentas cerradas 5" for "Hoy", so the count and pages follow the data; the drawer's "1 Tostado" shortens order #1048's "Tostado de jamón y queso"; orders other than Mesa 07's, "Tarjeta" as a method and the previous days are illustrative.
 
 ## Next step
-T1.
+T2.

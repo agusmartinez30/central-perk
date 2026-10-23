@@ -173,3 +173,61 @@ export type BillRequestsBoard = {
   /** Request open in the quick-detail drawer of the "Solicitud seleccionada" export. */
   selectedId: string;
 };
+
+/** Payment method actually used to settle an account in 05 · Historial de cobros. */
+export type CollectionMethod = "cash" | "transfer" | "card";
+
+/** The 05 history only lists confirmed collections ("Confirmado"). */
+export type CollectionStatus = "confirmed";
+
+/** Entries of the drawer's "Auditoría" timeline. */
+export type CollectionAuditKind = "payment-confirmed" | "balance-updated" | "table-session-closed";
+
+export type CollectionAuditEvent = {
+  kind: CollectionAuditKind;
+  /** Local "HH:MM" time, on the collection's date. */
+  at: string;
+};
+
+/** One order of the closed account ("Historial completo de pedidos"). */
+export type CollectionOrder = {
+  /** Order number shown as "Pedido #1042". */
+  id: number;
+  customer: string;
+  items: OrderLine[];
+  /** Order total in ARS. */
+  total: number;
+};
+
+export type ManagedCollection = {
+  /** Operation code, e.g. "COB-0026". */
+  id: string;
+  /** Closed account code, e.g. "CTA-026". */
+  accountId: string;
+  tableNumber: number;
+  /** ISO "YYYY-MM-DD" date the table session was closed. */
+  date: string;
+  /** Local "HH:MM" time the payment was confirmed. */
+  time: string;
+  /** "Medio real": how the account was actually paid. */
+  method: CollectionMethod;
+  /** "Preferencia cliente": what the customers asked for when requesting the bill. */
+  customerPreference: BillPaymentMethod;
+  /** Confirmed amount in ARS: the orders' subtotal plus `adjustments`. */
+  amount: number;
+  /** "Descuentos y ajustes" in ARS; negative for discounts. */
+  adjustments: number;
+  /** Staff member who confirmed the payment ("Empleado" / "Confirmado por"). */
+  confirmedBy: string;
+  status: CollectionStatus;
+  orders: CollectionOrder[];
+  audit: CollectionAuditEvent[];
+};
+
+export type CollectionsHistory = {
+  /** ISO date the quick date filters are relative to ("Hoy"). */
+  today: string;
+  collections: ManagedCollection[];
+  /** Collection open in the drawer of the "Cobro seleccionado" export. */
+  selectedId: string;
+};
