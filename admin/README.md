@@ -63,3 +63,9 @@ clear the site storage.
 - `src/features/<feature>` — screens, presentational components and pure helpers (with tests).
 - `src/shared/ui`, `src/shared/lib` — reusable primitives and utilities.
 - `src/mocks` — typed mock data and mock auth.
+  - `src/mocks/service-day` — the single "service day" (21/10/2026 at 14:42) that 10A, 02, 03, 04 and
+    05 derive their rows and metrics from: tables sessions, orders, bill requests, collections, the
+    product catalogue, staff and the 06 payment method / request mode names. `service-day.test.ts`
+    checks that the screens agree with each other. Some numbers differ from the exports on purpose
+    (see `odd/tasks/admin-mock-unification.md`). Each screen keeps its in-memory actions to itself.
+  - `src/mocks/payments.ts` — the saved 06 payment configuration.
