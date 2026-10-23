@@ -41,7 +41,8 @@ clear the site storage.
 | `/history` | 05 · Historial de cobros (collections table with period, filters and pagination; read-only collection drawer) |
 | `/payments` | 06 · Configuración de pagos (methods, request modes and bank details tabs, live customer preview, in-memory save after confirming) |
 | `/menu/products` | 07 · Productos: list with metrics, search, filters and Duplicar / Archivar / availability (07A), editor (07B) and customer preview (07C) of the same draft, in-memory save |
-| `/tables/management`, `/tables/qr`, `/menu`, `/menu/categories`, `/settings`, `/staff` | "Próximamente" placeholder |
+| `/menu/categories` | 08 · Categorías y momentos: "Organización de la carta" tabs with moments (08A, visibility and drag/keyboard reordering) and categories (08C, search and reordering), moment editor with live phone preview (08B), category editor with archive confirmation (08D) and customer explore preview (08E), in-memory save |
+| `/tables/management`, `/tables/qr`, `/menu`, `/settings`, `/staff` | "Próximamente" placeholder |
 
 ### Forced variants (`?state=`)
 
@@ -57,6 +58,7 @@ clear the site storage.
 | `/history` | `selected` (drawer of COB-0026), `empty` (no collections), `no-results` (search for "Mesa 99") |
 | `/payments` | `bank` ("Datos bancarios" tab), `bank-errors` (invalid alias and CBU after a save attempt), `confirm` (save confirmation with a pending change) |
 | `/menu/products` | `edit` (07B: Cappuccino with "Tomar" added, unsaved), `preview` (07C of that draft), `new` (empty new product), `errors` (Cappuccino after publishing without a name and with an invalid price) |
+| `/menu/categories` | `moment-edit` (08B: Para desayunar with Limonada added, unsaved), `moment-new`, `moment-errors` (saved without a name), `categories` (08C tab), `category-edit` (08D: Cafés with the export description, unsaved), `category-new`, `category-archive` (Cafés waiting for the archive confirmation), `preview` (08E of Para desayunar) |
 
 ## Structure
 
@@ -68,7 +70,9 @@ clear the site storage.
   - `src/mocks/service-day` — the single "service day" (21/10/2026 at 14:42) that 10A, 02, 03, 04 and
     05 derive their rows and metrics from: tables sessions, orders, bill requests, collections, the
     product catalogue (also the 07 products screen: categories, moments, options, images in
-    `public/images/products` copied from the customer app by `scripts/copy-product-images.mjs`),
+    `public/images/products` copied from the customer app by `scripts/copy-product-images.mjs`;
+    and the 08 menu organization: moment and category metadata, moment covers in
+    `public/images/moments` copied by `scripts/copy-moment-images.mjs`; counts are always derived),
     staff and the 06 payment method / request mode names. `service-day.test.ts`
     checks that the screens agree with each other. Some numbers differ from the exports on purpose
     (see `odd/tasks/admin-mock-unification.md`). Each screen keeps its in-memory actions to itself.

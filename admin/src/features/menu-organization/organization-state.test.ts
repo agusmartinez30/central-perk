@@ -6,6 +6,7 @@ import {
   getCategoryEditorView,
   getMomentEditorView,
   getMomentsListView,
+  getPreviewView,
   organizationReducer,
   type OrganizationAction,
   type OrganizationState,
@@ -291,5 +292,69 @@ describe("category editor (08D)", () => {
     ]);
     expect(state.view).toBe("categories");
     expect(getCategoriesListView(state).rows.map((row) => row.label)).not.toContain("Té");
+  });
+});
+
+describe("customer explore preview (08E)", () => {
+  it("previews the first visible moment from the lists and returns to the same tab", () => {
+    const state = run([
+      { type: "set-tab", tab: "categories" },
+      { type: "set-moment-visibility", id: "desayunar", visible: false },
+      { type: "open-preview" },
+    ]);
+    expect(state.view).toBe("preview");
+    const view = getPreviewView(state);
+    expect(view?.preview.title).toBe("Para merendar");
+    expect(view?.preview.filters.map((filter) => filter.label)).toEqual(["Todos", "Cafés", "Panadería", "Tostados"]);
+    expect(organizationReducer(state, { type: "close-preview" }).view).toBe("categories");
+  });
+
+  it("reflects saved changes to categories and moments", () => {
+    const state = run([
+      { type: "set-tab", tab: "categories" },
+      { type: "move-category", id: "panaderia", step: -2 },
+      { type: "open-category", id: "tostadas" },
+      { type: "category-set-visible", visible: false },
+      { type: "category-save" },
+      { type: "close-editor" },
+      { type: "open-preview" },
+      { type: "set-preview-filter", filterId: "panaderia" },
+    ]);
+    const view = getPreviewView(state);
+    expect(view?.preview.filters.map((filter) => [filter.label, filter.active])).toEqual([
+      ["Todos", false],
+      ["Panadería", true],
+      ["Cafés", false],
+      ["Bebidas", false],
+    ]);
+    expect(view?.preview.products.map((product) => product.name)).toEqual(["Medialuna"]);
+  });
+
+  it("previews the unsaved draft from the moment editor and goes back to it", () => {
+    const state = run([
+      { type: "open-moment", id: "cenar" },
+      { type: "moment-set-field", field: "title", value: "Cenas" },
+      { type: "moment-add-product", id: "cheesecake" },
+      { type: "moment-add-product", id: "limonada" },
+      { type: "open-preview" },
+    ]);
+    const view = getPreviewView(state);
+    expect(view?.preview.title).toBe("Cenas");
+    expect(view?.preview.countLabel).toBe("5 productos");
+    expect(view?.draft).toBe(true);
+    const back = organizationReducer(state, { type: "close-preview" });
+    expect(back.view).toBe("moment-editor");
+    expect(back.momentEditor?.draft.title).toBe("Cenas");
+  });
+
+  it("shows an empty preview when no moment is visible", () => {
+    const state = run([
+      ...["desayunar", "merendar", "cenar", "tomar"].map(
+        (id): OrganizationAction => ({ type: "set-moment-visibility", id, visible: false }),
+      ),
+      { type: "open-preview" },
+    ]);
+    expect(getPreviewView(state)?.preview.countLabel).toBe("0 productos");
+    expect(getPreviewView(state)?.preview.title).toBe("");
   });
 });

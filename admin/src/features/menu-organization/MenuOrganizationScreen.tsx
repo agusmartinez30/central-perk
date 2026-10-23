@@ -1,10 +1,11 @@
 "use client";
 
 import { useReducer } from "react";
-import { Plus } from "lucide-react";
+import { Eye, Plus } from "lucide-react";
 import { useScreenState } from "@/shared/lib/use-screen-state";
 import { CategoriesTable, CategoriesToolbar } from "./CategoriesTable";
 import { CategoryEditor } from "./CategoryEditor";
+import { ExplorePreviewPage } from "./ExplorePreviewPage";
 import { MomentEditor } from "./MomentEditor";
 import { MomentsGrid } from "./MomentsGrid";
 import { MetricCards, OrganizationTabs, PageHeader } from "./OrganizationParts";
@@ -14,6 +15,7 @@ import {
   getCategoryEditorView,
   getMomentEditorView,
   getMomentsListView,
+  getPreviewView,
   organizationReducer,
   type OrganizationAction,
   type OrganizationState,
@@ -24,7 +26,8 @@ import {
  * `moment-new` (empty "Crear momento" form), `moment-errors` (Para desayunar saved without a
  * name; not in the exports), `categories` (08C tab), `category-edit` (08D: Cafés with the export
  * description typed and not saved), `category-new` (empty "Crear categoría" form) and
- * `category-archive` (Cafés waiting for the archive confirmation; not in the exports).
+ * `category-archive` (Cafés waiting for the archive confirmation; not in the exports) and
+ * `preview` (08E of the first visible moment, Para desayunar).
  */
 export const ORGANIZATION_FORCED_STATES = [
   "moment-edit",
@@ -34,6 +37,7 @@ export const ORGANIZATION_FORCED_STATES = [
   "category-edit",
   "category-new",
   "category-archive",
+  "preview",
 ] as const;
 
 type ForcedState = (typeof ORGANIZATION_FORCED_STATES)[number];
@@ -59,12 +63,27 @@ const FORCED_ACTIONS: Record<ForcedState, OrganizationAction[]> = {
     { type: "open-category", id: "cafes" },
     { type: "category-archive" },
   ],
+  preview: [{ type: "open-preview" }],
 };
 
 function initState(forcedState: ForcedState | null): OrganizationState {
   const state = createOrganizationState();
   if (!forcedState) return state;
   return { ...FORCED_ACTIONS[forcedState].reduce(organizationReducer, state), notice: null };
+}
+
+/** Entry to 08E from the lists (invented: the exports do not show how 08E is reached). */
+function PreviewAction({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-10 items-center gap-[7px] rounded-field bg-surface px-3.5 text-ink outline-1 -outline-offset-[0.5px] outline-line hover:bg-cream"
+    >
+      <Eye size={15} aria-hidden="true" className="shrink-0" />
+      <span className="text-[12px] font-bold whitespace-nowrap">Vista previa del cliente</span>
+    </button>
+  );
 }
 
 type PrimaryActionProps = { label: string; onClick: () => void };
@@ -87,7 +106,8 @@ function PrimaryAction({ label, onClick }: PrimaryActionProps) {
  * 08 · Categorías y momentos. Container: owns the moments, categories and product assignments
  * as edited in this session (pure `organizationReducer`, seeded from the canonical catalogue)
  * and which view is open: the "Organización de la carta" tabs (08A moments, 08C categories) or
- * an editor (08B moment, 08D category). 07 keeps its own session copy of the products.
+ * an editor (08B moment, 08D category) or the customer explore preview (08E). 07 keeps its own
+ * session copy of the products.
  */
 export function MenuOrganizationScreen() {
   const forcedState = useScreenState(ORGANIZATION_FORCED_STATES);
@@ -96,8 +116,14 @@ export function MenuOrganizationScreen() {
   let content;
   const momentEditorView = getMomentEditorView(state);
   const categoryEditorView = getCategoryEditorView(state);
-  if (state.view === "moment-editor" && state.momentEditor && momentEditorView) {
-    content = <MomentEditor editor={state.momentEditor} view={momentEditorView} onAction={dispatch} />;
+  const previewView = getPreviewView(state);
+  const openPreview = () => dispatch({ type: "open-preview" });
+  if (state.view === "preview" && previewView) {
+    content = <ExplorePreviewPage view={previewView} onAction={dispatch} />;
+  } else if (state.view === "moment-editor" && state.momentEditor && momentEditorView) {
+    content = (
+      <MomentEditor editor={state.momentEditor} view={momentEditorView} onAction={dispatch} onOpenPreview={openPreview} />
+    );
   } else if (state.view === "category-editor" && state.categoryEditor && categoryEditorView) {
     content = <CategoryEditor editor={state.categoryEditor} view={categoryEditorView} onAction={dispatch} />;
   } else if (state.view === "categories") {
@@ -107,7 +133,12 @@ export function MenuOrganizationScreen() {
         <PageHeader
           title="Organización de la carta"
           subtitle="Gestioná filtros de producto independientes de los momentos."
-          actions={<PrimaryAction label="Crear categoría" onClick={() => dispatch({ type: "open-new-category" })} />}
+          actions={
+            <>
+              <PreviewAction onClick={openPreview} />
+              <PrimaryAction label="Crear categoría" onClick={() => dispatch({ type: "open-new-category" })} />
+            </>
+          }
         />
         <MetricCards
           height="66"
@@ -139,7 +170,12 @@ export function MenuOrganizationScreen() {
         <PageHeader
           title="Organización de la carta"
           subtitle="Definí cómo los clientes exploran tu menú."
-          actions={<PrimaryAction label="Crear momento" onClick={() => dispatch({ type: "open-new-moment" })} />}
+          actions={
+            <>
+              <PreviewAction onClick={openPreview} />
+              <PrimaryAction label="Crear momento" onClick={() => dispatch({ type: "open-new-moment" })} />
+            </>
+          }
         />
         <MetricCards
           height="74"

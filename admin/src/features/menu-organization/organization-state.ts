@@ -52,11 +52,17 @@ import {
   type MomentFormErrors,
   type MomentMetrics,
 } from "@/features/moments/moment-catalog";
-import { formatOrderNumber, nextOrder } from "@/shared/lib/ordering";
+import { formatOrderNumber, nextOrder, sortByOrder } from "@/shared/lib/ordering";
 
 /** Lists are the two tabs of "Organización de la carta"; the editors are full pages. */
 export type OrganizationTab = "moments" | "categories";
-export type OrganizationView = OrganizationTab | "moment-editor" | "category-editor";
+export type OrganizationView = OrganizationTab | "moment-editor" | "category-editor" | "preview";
+
+/**
+ * 08E "Vista previa del cliente": the saved catalogue (opened from the lists, first visible
+ * moment) or the moment editor's unsaved draft ("Vista previa" of 08B).
+ */
+export type PreviewState = { momentId: string | null; fromEditor: boolean; filterId: string };
 
 export type MomentEditorState = {
   /** `null` while creating a moment. */
@@ -95,6 +101,7 @@ export type OrganizationState = {
   /** 08C "Buscar categoría…". */
   categoryQuery: string;
   categoryEditor: CategoryEditorState | null;
+  preview: PreviewState | null;
   /** Screen-reader announcement of the last action. */
   notice: string | null;
 };
@@ -128,7 +135,9 @@ export type OrganizationAction =
   | { type: "category-set-image"; image: string | undefined }
   | { type: "category-save" }
   | { type: "category-archive" }
-  | { type: "category-cancel-archive" };
+  | { type: "category-cancel-archive" }
+  | { type: "open-preview" }
+  | { type: "close-preview" };
 
 export function createOrganizationState(
   products: readonly CatalogProductRef[] = PRODUCTS,
@@ -143,6 +152,7 @@ export function createOrganizationState(
     momentEditor: null,
     categoryQuery: "",
     categoryEditor: null,
+    preview: null,
     notice: null,
   };
 }
@@ -334,8 +344,36 @@ export function organizationReducer(state: OrganizationState, action: Organizati
     case "moment-save":
       return saveMoment(state);
     case "set-preview-filter":
+      if (state.preview && !state.preview.fromEditor) {
+        return { ...state, preview: { ...state.preview, filterId: action.filterId } };
+      }
       if (!state.momentEditor) return state;
       return { ...state, momentEditor: { ...state.momentEditor, previewFilter: action.filterId } };
+    case "open-preview": {
+      if (state.view === "moment-editor" && state.momentEditor) {
+        return {
+          ...state,
+          view: "preview",
+          preview: { momentId: state.momentEditor.id, fromEditor: true, filterId: state.momentEditor.previewFilter },
+          notice: null,
+        };
+      }
+      const first = sortByOrder(state.moments).find((moment) => moment.visible);
+      return {
+        ...state,
+        view: "preview",
+        preview: { momentId: first?.id ?? null, fromEditor: false, filterId: ALL_FILTER_ID },
+        notice: null,
+      };
+    }
+    case "close-preview":
+      if (!state.preview) return state;
+      return {
+        ...state,
+        view: state.preview.fromEditor && state.momentEditor ? "moment-editor" : state.tab,
+        preview: null,
+        notice: null,
+      };
     case "set-category-query":
       return { ...state, categoryQuery: action.query };
     case "reorder-category":
@@ -504,4 +542,26 @@ export function getCategoryEditorView(state: OrganizationState): CategoryEditorV
       `✓ Versión actual: ${state.version} · evita sobrescrituras.`,
     ],
   };
+}
+
+export type PreviewView = {
+  preview: ExplorePreview;
+  /** The phone shows the moment editor's unsaved draft. */
+  draft: boolean;
+};
+
+/** 08E phone: the editor draft, the chosen saved moment, or an empty phone without visible moments. */
+export function getPreviewView(state: OrganizationState): PreviewView | null {
+  const preview = state.preview;
+  if (!preview) return null;
+  const catalog = { products: state.products, categories: state.categories };
+  if (preview.fromEditor && state.momentEditor) {
+    return {
+      preview: getExplorePreview(state.momentEditor.draft, catalog, state.momentEditor.previewFilter),
+      draft: true,
+    };
+  }
+  const moment = state.moments.find((item) => item.id === preview.momentId);
+  const source = moment ? toMomentDraft(moment, state.products) : createEmptyMomentDraft();
+  return { preview: getExplorePreview(source, catalog, preview.filterId), draft: false };
 }
