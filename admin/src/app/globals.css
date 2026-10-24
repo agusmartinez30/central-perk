@@ -50,3 +50,29 @@ body {
   /* The exports set `line-height: normal` on almost every text layer. */
   line-height: normal;
 }
+
+/* Printable QR cards (09D/09E): only the `data-print-root` portal is printed. */
+[data-print-root] {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  body {
+    background-color: #ffffff;
+  }
+
+  body > :not([data-print-root]) {
+    display: none !important;
+  }
+
+  [data-print-root] {
+    display: block;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

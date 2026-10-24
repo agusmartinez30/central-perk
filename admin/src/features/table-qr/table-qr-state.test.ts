@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   createTableQrState,
+  getDetailView,
   getEditorView,
   getListView,
+  getMaterialView,
   tableQrReducer,
   type TableQrAction,
   type TableQrState,
@@ -123,5 +125,81 @@ describe("editor (09B)", () => {
     expect(state.view).toBe("list");
     expect(state.editor).toBeNull();
     expect(tableOf(state, "tbl_07").label).toBe("Mesa 07");
+  });
+});
+
+describe("QR detail (09C) and regeneration (09F)", () => {
+  it("opens the QR of Mesa 07 with its URL and credential history", () => {
+    const state = run({ type: "open-detail", id: "tbl_07" });
+    expect(state.view).toBe("detail");
+    expect(getDetailView(state)).toMatchObject({
+      tableId: "tbl_07",
+      label: "Mesa 07",
+      title: "Código QR · Mesa 07",
+      meta: "Interior · 4 personas",
+      identity: "Mesa 07 · Interior",
+      stableId: "ID interno estable · tbl_07",
+      url: "http://localhost:3000/?mesa=07&qr=4pX9kR2mL7",
+      displayUrl: "localhost:3000/?mesa=07&qr=4pX9kR2mL7",
+      history: [
+        { status: "active", meta: "Generado hoy · Sofía M." },
+        { status: "revoked", meta: "Rotado hoy · auditoría #QR-118" },
+      ],
+    });
+    expect(state.regenerating).toBe(false);
+  });
+
+  it("asks for confirmation before rotating the token, and cancelling keeps it", () => {
+    const asked = run({ type: "open-detail", id: "tbl_07" }, { type: "open-regenerate" });
+    expect(asked.regenerating).toBe(true);
+    const cancelled = tableQrReducer(asked, { type: "cancel-regenerate" });
+    expect(cancelled.regenerating).toBe(false);
+    expect(getDetailView(cancelled)?.url).toBe(getDetailView(asked)?.url);
+  });
+
+  it("rotates the token on confirm: the URL changes and the old token is revoked", () => {
+    const state = run(
+      { type: "open-detail", id: "tbl_07" },
+      { type: "open-regenerate" },
+      { type: "confirm-regenerate", token: "Q7wE3rT9yU" },
+    );
+    const view = getDetailView(state);
+    expect(state.regenerating).toBe(false);
+    expect(view?.url).toBe("http://localhost:3000/?mesa=07&qr=Q7wE3rT9yU");
+    expect(view?.history.map((row) => row.meta)).toEqual([
+      "Generado hoy · Sofía M.",
+      "Rotado hoy · auditoría #QR-119",
+      "Rotado hoy · auditoría #QR-118",
+    ]);
+    expect(state.notice).toBe("Código QR de Mesa 07 regenerado. El código anterior dejó de funcionar.");
+  });
+
+  it("opens the regeneration straight from the list menu", () => {
+    const state = run({ type: "open-regenerate", id: "tbl_03" });
+    expect(state.view).toBe("detail");
+    expect(state.detailId).toBe("tbl_03");
+    expect(state.regenerating).toBe(true);
+  });
+
+  it("closes the drawer back to the list", () => {
+    const state = run({ type: "open-detail", id: "tbl_07" }, { type: "close-detail" });
+    expect(state.view).toBe("list");
+    expect(state.detailId).toBeNull();
+  });
+});
+
+describe("printable material (09D)", () => {
+  it("shows the card of the table and the first compact A4 sheet", () => {
+    const state = run({ type: "open-material", id: "tbl_07" });
+    expect(state.view).toBe("material");
+    const view = getMaterialView(state);
+    expect(view?.card).toMatchObject({ tableId: "tbl_07", title: "MESA 07", url: "http://localhost:3000/?mesa=07&qr=4pX9kR2mL7" });
+    expect(view?.sheet.map((card) => card.title)).toEqual(["MESA 01", "MESA 02", "MESA 03", "MESA 04", "MESA 05", "MESA 06"]);
+  });
+
+  it("has no card for a table that cannot be printed", () => {
+    const state = run({ type: "toggle-enabled", id: "tbl_01" }, { type: "open-material", id: "tbl_01" });
+    expect(getMaterialView(state)?.card).toBeNull();
+    expect(getMaterialView(state)?.sheet[0].title).toBe("MESA 02");
   });
 });

@@ -94,10 +94,17 @@ export type RowActions = {
   onRegenerate?: (id: string) => void;
 };
 
-type IconActionProps = { label: string; icon: typeof Pencil; onClick: () => void; expanded?: boolean };
+type IconActionProps = {
+  label: string;
+  icon: typeof Pencil;
+  onClick: () => void;
+  expanded?: boolean;
+  /** "Action · Ver QR" is brand blue in 09A. */
+  brand?: boolean;
+};
 
 /** 15px row icons; the 26px hit area keeps the export's 11px gap between them. */
-function IconAction({ label, icon: Icon, onClick, expanded }: IconActionProps) {
+function IconAction({ label, icon: Icon, onClick, expanded, brand = false }: IconActionProps) {
   return (
     <button
       type="button"
@@ -106,7 +113,10 @@ function IconAction({ label, icon: Icon, onClick, expanded }: IconActionProps) {
       aria-haspopup={expanded === undefined ? undefined : "menu"}
       aria-expanded={expanded}
       onClick={onClick}
-      className="flex size-[26px] items-center justify-center rounded-chip text-ink hover:bg-cream"
+      className={clsx(
+        "flex size-[26px] items-center justify-center rounded-chip hover:bg-cream",
+        brand ? "text-brand" : "text-ink",
+      )}
     >
       <Icon size={15} aria-hidden="true" />
     </button>
@@ -116,7 +126,7 @@ function IconAction({ label, icon: Icon, onClick, expanded }: IconActionProps) {
 type MenuItem = { label: string; onSelect: () => void; disabled?: boolean; hint?: string; tone?: "danger" };
 
 /** "Action · Más" menu (invented: the exports only show the ellipsis). */
-function RowMenu({ items, onClose }: { items: MenuItem[]; onClose: () => void }) {
+function RowMenu({ items, onClose, up }: { items: MenuItem[]; onClose: () => void; up: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     ref.current?.querySelector<HTMLButtonElement>("button:not([disabled])")?.focus();
@@ -141,7 +151,10 @@ function RowMenu({ items, onClose }: { items: MenuItem[]; onClose: () => void })
           next?.focus();
         }
       }}
-      className="absolute top-8 right-0 z-20 flex w-[230px] flex-col rounded-card bg-surface p-1.5 shadow-modal outline-1 -outline-offset-[0.5px] outline-line"
+      className={clsx(
+        "absolute right-0 z-20 flex w-[230px] flex-col rounded-card bg-surface p-1.5 shadow-modal outline-1 -outline-offset-[0.5px] outline-line",
+        up ? "bottom-8" : "top-8",
+      )}
     >
       {items.map((item) => (
         <button
@@ -210,7 +223,7 @@ export function TableConfigurationList({ rows, filtered, actions }: TableConfigu
               {filtered ? "No hay mesas que coincidan con la búsqueda." : "Todavía no hay mesas configuradas."}
             </p>
           )}
-          {rows.map((row) => (
+          {rows.map((row, index) => (
             <div
               key={row.id}
               role="row"
@@ -238,7 +251,12 @@ export function TableConfigurationList({ rows, filtered, actions }: TableConfigu
               <span role="cell" className="relative flex flex-1 items-center justify-end">
                 <IconAction label={`Editar ${row.label}`} icon={Pencil} onClick={() => actions.onEdit(row.id)} />
                 {actions.onViewQr && (
-                  <IconAction label={`Ver QR de ${row.label}`} icon={QrCodeIcon} onClick={() => actions.onViewQr?.(row.id)} />
+                  <IconAction
+                    label={`Ver QR de ${row.label}`}
+                    icon={QrCodeIcon}
+                    brand
+                    onClick={() => actions.onViewQr?.(row.id)}
+                  />
                 )}
                 {actions.onDownload && row.qr.status !== "missing" && (
                   <IconAction
@@ -253,7 +271,10 @@ export function TableConfigurationList({ rows, filtered, actions }: TableConfigu
                   expanded={menuId === row.id}
                   onClick={() => setMenuId((current) => (current === row.id ? null : row.id))}
                 />
-                {menuId === row.id && <RowMenu items={menuItems(row)} onClose={() => setMenuId(null)} />}
+                {menuId === row.id && (
+                  // The last rows open the menu upwards so it stays inside the list.
+                  <RowMenu items={menuItems(row)} onClose={() => setMenuId(null)} up={index >= 3 && index >= rows.length - 3} />
+                )}
               </span>
             </div>
           ))}
