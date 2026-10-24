@@ -28,7 +28,7 @@ The sidebar has three table entries. "Gestión de mesas" is a placeholder, and t
 ## Tasks
 - [x] T1 Shared venue store (`useSyncExternalStore`) + move `table-config`/`space-config` into `src/features/venue/` + new layout/space/delete helpers, test-first. Route: delegated.
 - [x] T2 Management screen at `/tables/management`: plan per space in edit mode, space tabs with "+ Nuevo espacio", side panel with table and space forms, `?state=` variants. Route: delegated.
-- [ ] T3 Drag-and-drop (pointer + keyboard arrows) with snap/clamp/collision feedback, shape toggle, delete rules with confirmation. Route: delegated.
+- [x] T3 Drag-and-drop (pointer + keyboard arrows) with snap/clamp/collision feedback, shape toggle, delete rules with confirmation. Route: delegated.
 - [ ] T4 Rewire 09 (QR-only; links to Gestión) and 02 (reads the store) + docs. Route: delegated.
 
 ## Acceptance criteria
@@ -52,5 +52,11 @@ lint, tsc, vitest, build, screenshots.
   - Invented UI (no export): header links "Ver en vivo"/"Códigos QR", space tabs with counts + "Nuevo espacio", "Nueva mesa" in the plan toolbar, dotted 780×620 editable area, shape picker, space icon/color pickers, space list with up/down reorder, delete dialog copy.
   - RED observed for `management-state` (missing module) and the nav topbar test, then GREEN. Checks: build OK, tsc OK, lint OK, vitest 41 files / 540 tests. Screenshots `tm-plan`, `tm-table-form`, `tm-delete-table`, `tm-errors`, `tm-space-new` reviewed.
 
+- T3 (delegated writer) — commit `ac80af4` feat(table-management): drag.
+  - `plan-drag.ts` (pointer delta → plan units at the zoom, snapped + clamped; 4px click threshold; arrow keys 8px / Shift 40px), test-first (RED: missing module).
+  - `PlanEditor`: pointer capture drag; live red "No entra acá" over another table; a refused drop snaps back with the notice "Mesa 01 no entra ahí: se superpone con Mesa 02."; the click ending a drag does not reselect; arrow keys on the focused table. Shape toggle and delete rules with confirmation came with T2.
+  - `RegenerateDialog` now renders the shared `ConfirmDialog` (same copy, layout, focus and Escape/scrim behavior; screenshot `tm-regenerate`).
+  - Checks: build OK, tsc OK, lint OK, vitest 42 files / 545 tests. Screenshots `tm-drag-result` (Mesa 07 dragged), `tm-drag-overlap` (held over Mesa 02), `tm-drag-refused`, `tm-space-form`, `tm-delete-space`.
+
 ## Next step
-T3.
+T4.
