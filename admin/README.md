@@ -35,7 +35,7 @@ clear the site storage.
 | `/reset-password` | 11C · Reset Password |
 | `/verify` | 11D · Multi-Factor Verification |
 | `/` | 10A · Resumen general |
-| `/tables` | 02 · Gestión de mesas |
+| `/tables` | 02 · Gestión de mesas: floor plan per space (tables with chairs by capacity, live account and time seated, zoom and fit, space tabs), Plano / Lista switch, search, quick-detail panel |
 | `/orders` | 03 · Gestión de pedidos (kanban, order drawer, cancel confirmation) |
 | `/bill-requests` | 04 · Solicitudes de cuenta (requests table, quick-detail drawer) |
 | `/history` | 05 · Historial de cobros (collections table with period, filters and pagination; read-only collection drawer) |
@@ -53,7 +53,7 @@ clear the site storage.
 | `/forgot-password` | `sent` (generic confirmation) |
 | `/reset-password` | `mismatch`, `success` |
 | `/verify` | `error` (wrong code) |
-| `/tables` | `empty` (no tables), `no-results` (search for "Mesa 99") |
+| `/tables` | `empty` (no tables), `no-results` (search for "Mesa 99"), `list` ("Lista" view), `terraza` (Terraza plan) |
 | `/tables/qr` | `edit` (09B: Mesa 07), `new`, `errors` (Mesa 07 renamed "Mesa 05" with capacity 0 after saving), `detail` (09C: Mesa 07), `regenerate` (09F), `material` (09D: Mesa 07), `bulk-print` (09E), `space-edit` (Salón renamed inline), `space-new` (duplicate name after saving) |
 | `/orders` | `detail` (drawer of #1051), `cancel` (cancel dialog of #1051), `empty` (no orders), `no-results` (search for "9999") |
 | `/bill-requests` | `selected` (drawer of Mesa 10), `empty` (no requests), `no-results` (search for "Mesa 99") |

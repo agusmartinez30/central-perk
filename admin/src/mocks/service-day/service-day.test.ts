@@ -371,3 +371,32 @@ describe("venue tables (09)", () => {
     }
   });
 });
+
+describe("floor plan (02)", () => {
+  it("times every seated table from its session to now", () => {
+    for (const table of TABLES_BOARD.tables) {
+      const session = openSessions.find((item) => item.tableNumber === table.number);
+      expect(table.seatedMinutes, `Mesa ${table.number}`).toBe(session ? minutesBetween(session.openedAt, day.now) : undefined);
+    }
+  });
+
+  it("places the tables where the 02 export draws them, never overlapping within a space", () => {
+    const columns = [38, 222, 406, 590];
+    const rows = [64, 236, 408];
+    for (const table of day.tables) {
+      const index = table.number - 1;
+      expect(table.layout, table.id).toEqual({
+        x: columns[index % 4],
+        y: rows[Math.floor(index / 4)],
+        shape: table.spaceId === "patio" ? "round" : "rect",
+      });
+    }
+    for (const a of day.tables) {
+      for (const b of day.tables) {
+        if (a.id >= b.id || a.spaceId !== b.spaceId) continue;
+        const apart = Math.abs(a.layout.x - b.layout.x) >= 150 || Math.abs(a.layout.y - b.layout.y) >= 132;
+        expect(apart, `${a.id} / ${b.id}`).toBe(true);
+      }
+    }
+  });
+});

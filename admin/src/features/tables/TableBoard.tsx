@@ -2,7 +2,6 @@ import clsx from "clsx";
 import { ChefHat, SearchX, WalletCards, type LucideIcon } from "lucide-react";
 import type { ManagedTable } from "@/mocks/types";
 import { Card } from "@/shared/ui";
-import type { TablesView } from "./SearchAndFilters";
 import { InfoTag, StatusBadge, TONE_CLASSES } from "./TableTags";
 import {
   formatAccountTotal,
@@ -12,6 +11,9 @@ import {
   getPaymentPreferenceLabel,
   getStatusBadge,
 } from "./tables-view";
+
+/** Card grid or one row per table (the 02 "Lista" view). */
+export type TableBoardView = "grid" | "list";
 
 const CARDS_PER_ROW = 4;
 
@@ -98,7 +100,7 @@ function TableRow({ table, selected, onSelect }: TableItemProps) {
 
 type TableBoardProps = {
   tables: ManagedTable[];
-  view: TablesView;
+  view: TableBoardView;
   selectedId: string | null;
   onSelect: (id: string) => void;
   /** Shown when `tables` is empty. */

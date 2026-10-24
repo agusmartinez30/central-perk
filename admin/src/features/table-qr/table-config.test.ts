@@ -7,6 +7,7 @@ import {
   formatCapacity,
   formatCredentialDate,
   getCredentialHistory,
+  getFreeLayout,
   getQuickToggle,
   getSessionStatuses,
   getTableChanges,
@@ -184,7 +185,25 @@ describe("table drafts", () => {
       version: 1,
       qr: { token: "N3wT0k3nAa", generatedOn: TODAY, generatedBy: "Sofía M." },
       revokedQrs: [],
+      // Patio only uses the third row of the plan, so the first free spot is the top-left one.
+      layout: { x: 38, y: 64, shape: "rect" },
     });
+  });
+
+  it("moves a table to a free spot of its new space", () => {
+    const draft = { ...toTableDraft(table("tbl_01")), spaceId: "terraza" };
+    expect(table("tbl_01", applyTableDraft(tables, "tbl_01", draft, context()).tables).layout).toEqual({
+      x: 38,
+      y: 64,
+      shape: "rect",
+    });
+    const same = applyTableDraft(tables, "tbl_01", { ...toTableDraft(table("tbl_01")), capacity: "4" }, context());
+    expect(table("tbl_01", same.tables).layout).toEqual(table("tbl_01").layout);
+  });
+
+  it("finds the first free spot of a space, row by row", () => {
+    expect(getFreeLayout(tables, "salon")).toEqual({ x: 38, y: 236, shape: "rect" });
+    expect(getFreeLayout(tables, "barra")).toEqual({ x: 38, y: 64, shape: "rect" });
   });
 });
 

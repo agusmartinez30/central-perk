@@ -49,6 +49,10 @@ const SEEDS: TableSeed[] = [
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
+/** The 02 export draws the twelve tables on a 4×3 grid; each keeps its spot in its space's plan. */
+const PLAN_COLUMNS = [38, 222, 406, 590];
+const PLAN_ROWS = [64, 236, 408];
+
 /** Every table of the venue, all enabled with an active QR as in 09A. */
 export const VENUE_TABLES: VenueTable[] = SEEDS.map((seed) => ({
   id: `tbl_${pad(seed.number)}`,
@@ -65,4 +69,10 @@ export const VENUE_TABLES: VenueTable[] = SEEDS.map((seed) => ({
     seed.number === 7
       ? [{ token: "Ma2rB6vKe9", generatedOn: "2026-03-02", generatedBy: "María G.", revokedOn: "2026-10-21", auditId: "QR-118" }]
       : [],
+  layout: {
+    x: PLAN_COLUMNS[(seed.number - 1) % 4],
+    y: PLAN_ROWS[Math.floor((seed.number - 1) / 4)],
+    // Patio tables are drawn round in 02.
+    shape: seed.spaceId === "patio" ? "round" : "rect",
+  },
 }));

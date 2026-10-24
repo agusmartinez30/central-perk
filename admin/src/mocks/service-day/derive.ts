@@ -107,6 +107,7 @@ export function deriveTable(day: ServiceDay, tableNumber: number): ManagedTable 
       paymentPreference: request.paymentPreference,
       billRequestedMinutesAgo: minutesBetween(request.requestedAt, day.now),
     }),
+    seatedMinutes: minutesBetween(session.openedAt, day.now),
   };
 }
 

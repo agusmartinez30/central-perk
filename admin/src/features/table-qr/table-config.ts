@@ -3,6 +3,7 @@ import {
   type QrCredential,
   type ServiceDay,
   type SpaceId,
+  type TableLayout,
   type VenueSpace,
   type VenueTable,
 } from "@/mocks/service-day";
@@ -264,9 +265,18 @@ export function applyTableDraft(
   };
   const existing = editingId ? tables.find((table) => table.id === editingId) : undefined;
   if (existing) {
+    const layout =
+      existing.spaceId === fields.spaceId
+        ? existing.layout
+        : getFreeLayout(
+            tables.filter((table) => table.id !== existing.id),
+            fields.spaceId,
+          );
     return {
       id: existing.id,
-      tables: tables.map((table) => (table.id === existing.id ? { ...table, ...fields, version: table.version + 1 } : table)),
+      tables: tables.map((table) =>
+        table.id === existing.id ? { ...table, ...fields, layout, version: table.version + 1 } : table,
+      ),
     };
   }
   const number = nextTableNumber(tables);
@@ -277,8 +287,26 @@ export function applyTableDraft(
     version: 1,
     qr: issueCredential(context),
     revokedQrs: [],
+    layout: getFreeLayout(tables, fields.spaceId),
   };
   return { id: created.id, tables: [...tables, created] };
+}
+
+// 02 floor plan
+
+const PLAN_COLUMNS = [38, 222, 406, 590];
+const PLAN_FIRST_ROW = 64;
+const PLAN_ROW_STEP = 172;
+
+/** First spot of the space's 4-column plan grid (row by row) that no table of the space uses. */
+export function getFreeLayout(tables: readonly VenueTable[], spaceId: SpaceId): TableLayout {
+  const used = tables.filter((table) => table.spaceId === spaceId);
+  for (let row = 0; ; row += 1) {
+    const y = PLAN_FIRST_ROW + row * PLAN_ROW_STEP;
+    for (const x of PLAN_COLUMNS) {
+      if (!used.some((table) => table.layout.x === x && table.layout.y === y)) return { x, y, shape: "rect" };
+    }
+  }
 }
 
 // Enable / disable

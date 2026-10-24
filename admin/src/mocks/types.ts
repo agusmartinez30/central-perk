@@ -88,6 +88,8 @@ export type ManagedTable = {
   paymentPreference?: BillPaymentMethod;
   /** Minutes since the bill was requested; only set once the bill was requested. */
   billRequestedMinutesAgo?: number;
+  /** Minutes since the table's session opened (02 plan "◷ 18 min"); only set while seated. */
+  seatedMinutes?: number;
 };
 
 export type TablesBoard = {

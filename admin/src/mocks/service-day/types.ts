@@ -130,6 +130,9 @@ export type RevokedQrCredential = QrCredential & {
   auditId: string;
 };
 
+/** 02 floor plan: top-left of the table's 150×132 box (with chairs) in its space, and its shape. */
+export type TableLayout = { x: number; y: number; shape: "rect" | "round" };
+
 /** A physical table of the venue as 09 configures it; its live state comes from its sessions. */
 export type VenueTable = {
   /** Stable internal id, e.g. "tbl_07"; it never changes when the label does. */
@@ -151,6 +154,8 @@ export type VenueTable = {
   qr: QrCredential | null;
   /** Rotated credentials, newest first. */
   revokedQrs: RevokedQrCredential[];
+  /** Position on the 02 floor plan of its space. */
+  layout: TableLayout;
 };
 
 /** Seated period of a table: from the first customer to the payment that frees it. */
