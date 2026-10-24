@@ -11,6 +11,7 @@ import {
   getPlanSummary,
   getSpacePlan,
   getSpaceTabs,
+  getTableBody,
   zoomAround,
   zoomBy,
 } from "./floor-plan";
@@ -49,6 +50,24 @@ describe("getChairs", () => {
       expect(chair.x + chair.width).toBeLessThanOrEqual(TABLE_BOX.width);
       expect(chair.y + chair.height).toBeLessThanOrEqual(TABLE_BOX.height);
     }
+  });
+
+  it("spreads the chairs along a resized box", () => {
+    const long = getChairs(6, { width: 184, height: 132 });
+    expect(long.filter((chair) => chair.side === "top").map((chair) => [chair.x, chair.width])).toEqual([
+      [47, 40],
+      [97, 40],
+    ]);
+    expect(long.find((chair) => chair.side === "right")).toMatchObject({ x: 173, y: 45 });
+    expect(getChairs(4, { width: 200, height: 200 }).find((chair) => chair.side === "bottom")).toMatchObject({ x: 75, y: 193 });
+    expect(getChairs(4, { width: 200, height: 200 }).find((chair) => chair.side === "left")).toMatchObject({ y: 79 });
+  });
+});
+
+describe("getTableBody", () => {
+  it("leaves the chairs' margin around the body: 120×110 in the default box", () => {
+    expect(getTableBody(TABLE_BOX)).toEqual({ x: 15, y: 8, width: 120, height: 110 });
+    expect(getTableBody({ width: 184, height: 160 })).toEqual({ x: 15, y: 8, width: 154, height: 138 });
   });
 });
 
@@ -102,6 +121,13 @@ describe("getSpacePlan", () => {
     expect(plan[1]).toMatchObject({ tone: "occupied", account: "$16.800" });
     expect(plan[1].duration).toMatch(/min$/);
     expect(plan[4]).toMatchObject({ code: "M07", tone: "bill", account: "$19.900", x: 406, y: 236 });
+    expect(plan[0]).toMatchObject({ width: 150, height: 132 });
+  });
+
+  it("draws each table at its stored size", () => {
+    const m08 = getSpacePlan("terraza", tables, live, "").find((table) => table.code === "M08")!;
+    expect(m08).toMatchObject({ width: 184, height: 132 });
+    expect(m08.chairs.filter((chair) => chair.side === "top").map((chair) => chair.x)).toEqual([47, 97]);
   });
 
   it("draws the patio tables round", () => {
@@ -139,6 +165,12 @@ describe("zoom", () => {
     expect(transform.x).toBeCloseTo((852 - 702 * 1.14) / 2 - 38 * 1.14, 5);
     expect(transform.y).toBeCloseTo((640 - 476 * 1.14) / 2 - 64 * 1.14, 5);
     expect(getFitTransform([], { width: 800, height: 600 })).toEqual({ scale: 1, x: 0, y: 0 });
+  });
+
+  it("fits resized tables by their own size", () => {
+    const sized = getFitTransform([{ x: 0, y: 0, width: 400, height: 200 }], { width: 448, height: 448 }, 24);
+    expect(sized.scale).toBe(1);
+    expect(sized).toMatchObject({ x: 24, y: 124 });
   });
 });
 

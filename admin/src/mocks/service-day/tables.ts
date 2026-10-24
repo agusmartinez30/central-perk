@@ -72,6 +72,9 @@ export const VENUE_TABLES: VenueTable[] = SEEDS.map((seed) => ({
   layout: {
     x: PLAN_COLUMNS[(seed.number - 1) % 4],
     y: PLAN_ROWS[Math.floor((seed.number - 1) / 4)],
+    // The six-seat Terraza table is a longer rectangle; the rest keep the 02 150×132 box.
+    width: seed.number === 8 ? 184 : 150,
+    height: 132,
     // Patio tables are drawn round in 02.
     shape: seed.spaceId === "patio" ? "round" : "rect",
   },

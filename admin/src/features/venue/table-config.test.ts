@@ -119,7 +119,7 @@ describe("table drafts", () => {
       qr: { token: "N3wT0k3nAa", generatedOn: TODAY, generatedBy: "Sofía M." },
       revokedQrs: [],
       // Patio only uses the third row of the plan, so the first free spot is the top-left one.
-      layout: { x: 38, y: 64, shape: "rect" },
+      layout: { x: 38, y: 64, width: 150, height: 132, shape: "rect" },
     });
   });
 
@@ -128,6 +128,8 @@ describe("table drafts", () => {
     expect(table("tbl_01", applyTableDraft(tables, "tbl_01", draft, context()).tables).layout).toEqual({
       x: 38,
       y: 64,
+      width: 150,
+      height: 132,
       shape: "rect",
     });
     const same = applyTableDraft(tables, "tbl_01", { ...toTableDraft(table("tbl_01")), capacity: "4" }, context());

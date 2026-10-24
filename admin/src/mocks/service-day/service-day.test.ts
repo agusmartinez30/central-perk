@@ -380,7 +380,7 @@ describe("floor plan (02)", () => {
     }
   });
 
-  it("places the tables where the 02 export draws them, never overlapping within a space", () => {
+  it("places the tables where the 02 export draws them, sized by their box, never overlapping within a space", () => {
     const columns = [38, 222, 406, 590];
     const rows = [64, 236, 408];
     for (const table of day.tables) {
@@ -388,13 +388,18 @@ describe("floor plan (02)", () => {
       expect(table.layout, table.id).toEqual({
         x: columns[index % 4],
         y: rows[Math.floor(index / 4)],
+        // Mesa 08 (six seats, Terraza) is a longer rectangle; the rest use the 150×132 box.
+        width: table.number === 8 ? 184 : 150,
+        height: 132,
         shape: table.spaceId === "patio" ? "round" : "rect",
       });
     }
     for (const a of day.tables) {
       for (const b of day.tables) {
         if (a.id >= b.id || a.spaceId !== b.spaceId) continue;
-        const apart = Math.abs(a.layout.x - b.layout.x) >= 150 || Math.abs(a.layout.y - b.layout.y) >= 132;
+        const [left, right] = a.layout.x <= b.layout.x ? [a.layout, b.layout] : [b.layout, a.layout];
+        const [top, bottom] = a.layout.y <= b.layout.y ? [a.layout, b.layout] : [b.layout, a.layout];
+        const apart = right.x - left.x >= left.width || bottom.y - top.y >= top.height;
         expect(apart, `${a.id} / ${b.id}`).toBe(true);
       }
     }

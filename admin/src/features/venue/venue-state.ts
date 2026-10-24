@@ -10,7 +10,7 @@ import {
   type SessionStatus,
   type TableDraft,
 } from "./table-config";
-import { moveTable, setTableShape, type TableShape } from "./table-layout";
+import { moveTable, resizeTable, setTableShape, type TableShape } from "./table-layout";
 import { deleteTable, getTableNumbersWithHistory, getTableRemoval } from "./table-removal";
 
 /**
@@ -37,6 +37,7 @@ export type VenueAction =
   | { type: "set-table-enabled"; id: string; enabled: boolean }
   | { type: "delete-table"; id: string }
   | { type: "move-table"; id: string; x: number; y: number }
+  | { type: "resize-table"; id: string; x: number; y: number; width: number; height: number }
   | { type: "set-table-shape"; id: string; shape: TableShape }
   | ({ type: "regenerate-qr"; id: string } & CredentialInput);
 
@@ -99,6 +100,10 @@ export function venueReducer(state: VenueState, action: VenueAction): VenueState
     }
     case "move-table":
       return withTables(state, moveTable(state.tables, action.id, { x: action.x, y: action.y }).tables);
+    case "resize-table": {
+      const { id, x, y, width, height } = action;
+      return withTables(state, resizeTable(state.tables, id, { x, y, width, height }).tables);
+    }
     case "set-table-shape":
       return withTables(state, setTableShape(state.tables, action.id, action.shape));
     case "regenerate-qr":

@@ -130,8 +130,11 @@ export type RevokedQrCredential = QrCredential & {
   auditId: string;
 };
 
-/** 02 floor plan: top-left of the table's 150×132 box (with chairs) in its space, and its shape. */
-export type TableLayout = { x: number; y: number; shape: "rect" | "round" };
+/**
+ * 02 floor plan: top-left and size of the table's box (body plus chairs, 150×132 by default) in
+ * its space, and its shape.
+ */
+export type TableLayout = { x: number; y: number; width: number; height: number; shape: "rect" | "round" };
 
 /** A physical table of the venue as 09 configures it; its live state comes from its sessions. */
 export type VenueTable = {

@@ -53,6 +53,13 @@ describe("initial state", () => {
     expect(plan.tables[0]).toMatchObject({ capacityLabel: "4 personas", shape: "round", enabled: true, selected: false });
     expect(plan.tables[0].chairs).toHaveLength(4);
   });
+
+  it("draws every table at its stored size, with its chairs spread along it", () => {
+    const { ui, venue } = run({ type: "select-space", id: "terraza" });
+    const long = getPlanView(ui, venue).tables.find((table) => table.label === "Mesa 08")!;
+    expect(long).toMatchObject({ capacity: 6, width: 184, height: 132 });
+    for (const chair of long.chairs) expect(chair.x + chair.width).toBeLessThanOrEqual(184);
+  });
 });
 
 describe("tables", () => {
@@ -162,6 +169,25 @@ describe("moving tables", () => {
     const world = run({ type: "move-table", id: "tbl_01", x: 230, y: 70 });
     expect(tableOf(world, "tbl_01")?.layout).toMatchObject({ x: 38, y: 64 });
     expect(world.ui.notice).toEqual({ tone: "error", text: "Mesa 01 no entra ahí: se superpone con Mesa 02." });
+  });
+});
+
+describe("resizing tables", () => {
+  it("saves the dragged size and announces it", () => {
+    const world = run({ type: "resize-table", id: "tbl_01", x: 38, y: 64, width: 184, height: 160 });
+    expect(tableOf(world, "tbl_01")?.layout).toMatchObject({ x: 38, y: 64, width: 184, height: 160 });
+    expect(world.ui.notice).toEqual({ tone: "info", text: "Mesa 01: tamaño actualizado." });
+  });
+
+  it("refuses a size over another table and explains why", () => {
+    const world = run({ type: "resize-table", id: "tbl_01", x: 38, y: 64, width: 240, height: 132 });
+    expect(tableOf(world, "tbl_01")?.layout).toMatchObject({ width: 150, height: 132 });
+    expect(world.ui.notice).toEqual({ tone: "error", text: "Mesa 01 no entra con ese tamaño: se superpone con Mesa 02." });
+  });
+
+  it("ignores unknown tables", () => {
+    const world = run({ type: "resize-table", id: "nope", x: 0, y: 0, width: 150, height: 132 });
+    expect(world.ui.notice).toBeNull();
   });
 });
 

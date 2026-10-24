@@ -52,7 +52,7 @@ describe("tables", () => {
       spaceId: "barra",
       enabled: true,
       qr: { token: "N3wT0k3nAa", generatedOn: SERVICE_DAY.date, generatedBy: "Sofía M." },
-      layout: { x: 38, y: 64, shape: "round" },
+      layout: { x: 38, y: 64, width: 150, height: 132, shape: "round" },
     });
   });
 
@@ -83,9 +83,15 @@ describe("tables", () => {
 
   it("moves a table on its plan and changes its shape", () => {
     const moved = run({ type: "move-table", id: "tbl_01", x: 37, y: 380 });
-    expect(tableOf(moved, "tbl_01")?.layout).toEqual({ x: 40, y: 384, shape: "rect" });
+    expect(tableOf(moved, "tbl_01")?.layout).toEqual({ x: 40, y: 384, width: 150, height: 132, shape: "rect" });
     expect(run({ type: "move-table", id: "tbl_01", x: 222, y: 64 })).toEqual(seed);
     expect(tableOf(run({ type: "set-table-shape", id: "tbl_01", shape: "round" }), "tbl_01")?.layout.shape).toBe("round");
+  });
+
+  it("resizes a table on its plan and refuses a size over another table", () => {
+    const resized = run({ type: "resize-table", id: "tbl_01", x: 38, y: 64, width: 184, height: 160 });
+    expect(tableOf(resized, "tbl_01")).toMatchObject({ layout: { x: 38, y: 64, width: 184, height: 160, shape: "rect" }, version: 5 });
+    expect(run({ type: "resize-table", id: "tbl_01", x: 38, y: 64, width: 240, height: 132 })).toEqual(seed);
   });
 
   it("rotates a table's QR credential", () => {

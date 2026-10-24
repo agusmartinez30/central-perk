@@ -1,46 +1,64 @@
 import { deriveTable, type ServiceDay, type SpaceId, type VenueSpace, type VenueTable } from "@/mocks/service-day";
 import type { ManagedTable } from "@/mocks/types";
-import { TABLE_BOX } from "@/features/venue/table-layout";
+import {
+  BODY_INSET,
+  CHAIR_SIDES,
+  CHAIR_SIZES,
+  TABLE_BOX,
+  getChairRowLength,
+  getSeatsBySide,
+  type ChairSide,
+  type PlanSize,
+} from "@/features/venue/table-layout";
 import { formatPrice } from "@/shared/lib/format-price";
 import { filterTables } from "./tables-view";
 
 export { TABLE_BOX };
+export type { ChairSide };
 
-/** Body of a table inside its 150×132 box ("Mesa 01 · free": 120×110 at 15/8). */
-export const TABLE_BODY = { x: 15, y: 8, width: 120, height: 110 } as const;
+/** Body of a table inside its box ("Mesa 01 · free": 120×110 at 15/8 in the 150×132 box). */
+export function getTableBody({ width, height }: PlanSize): { x: number; y: number; width: number; height: number } {
+  return {
+    x: BODY_INSET.x,
+    y: BODY_INSET.top,
+    width: width - BODY_INSET.x * 2,
+    height: height - BODY_INSET.top - BODY_INSET.bottom,
+  };
+}
 
-export type ChairSide = "top" | "bottom" | "left" | "right";
+/** Body of the default box, until every caller draws from the stored size. */
+export const TABLE_BODY = getTableBody(TABLE_BOX);
+
 export type Chair = { side: ChairSide; x: number; y: number; width: number; height: number };
 
-const SIDES: readonly ChairSide[] = ["top", "bottom", "left", "right"];
 const CHAIR_DEPTH = 7;
-const CHAIR_GAP = 10;
 
-/** Places `count` chairs centered along a `length` px side: one 50/42px chair, or several 40/30px ones. */
-function spread(count: number, length: number, single: number, several: number): { offset: number; size: number }[] {
-  const size = count === 1 ? single : several;
-  const total = count * size + (count - 1) * CHAIR_GAP;
-  const start = (length - total) / 2;
-  return Array.from({ length: count }, (_, index) => ({ offset: start + index * (size + CHAIR_GAP), size }));
+/** Places `count` chairs centered along a `length` px side. */
+function spread(count: number, length: number, sizes: { single: number; several: number }): { offset: number; size: number }[] {
+  const size = count === 1 ? sizes.single : sizes.several;
+  const start = (length - getChairRowLength(count, sizes)) / 2;
+  return Array.from({ length: count }, (_, index) => ({ offset: start + index * (size + CHAIR_SIZES.gap), size }));
 }
 
 /**
- * Chairs around a table by capacity: seats go round-robin to top, bottom, left and right, so
- * two people sit face to face, four take every side and six double the long sides.
+ * Chairs around a table box of `size` (150×132 by default) by capacity: seats go round-robin to
+ * top, bottom, left and right, so two people sit face to face, four take every side and six
+ * double the long sides. Each row is centered along its side, so a longer box spreads them out.
  */
-export function getChairs(capacity: number): Chair[] {
-  const counts: Record<ChairSide, number> = { top: 0, bottom: 0, left: 0, right: 0 };
-  for (let seat = 0; seat < Math.max(0, capacity); seat += 1) counts[SIDES[seat % SIDES.length]] += 1;
+export function getChairs(capacity: number, size: PlanSize = TABLE_BOX): Chair[] {
+  const counts = getSeatsBySide(capacity);
   const chairs: Chair[] = [];
-  for (const side of SIDES) {
+  for (const side of CHAIR_SIDES) {
     if (counts[side] === 0) continue;
     const horizontal = side === "top" || side === "bottom";
-    const slots = horizontal ? spread(counts[side], TABLE_BOX.width, 50, 40) : spread(counts[side], TABLE_BOX.height, 42, 30);
-    for (const { offset, size } of slots) {
+    const slots = horizontal
+      ? spread(counts[side], size.width, CHAIR_SIZES.horizontal)
+      : spread(counts[side], size.height, CHAIR_SIZES.vertical);
+    for (const { offset, size: length } of slots) {
       chairs.push(
         horizontal
-          ? { side, x: offset, y: side === "top" ? 0 : TABLE_BOX.height - CHAIR_DEPTH, width: size, height: CHAIR_DEPTH }
-          : { side, x: side === "left" ? 4 : TABLE_BOX.width - 4 - CHAIR_DEPTH, y: offset, width: CHAIR_DEPTH, height: size },
+          ? { side, x: offset, y: side === "top" ? 0 : size.height - CHAIR_DEPTH, width: length, height: CHAIR_DEPTH }
+          : { side, x: side === "left" ? 4 : size.width - 4 - CHAIR_DEPTH, y: offset, width: CHAIR_DEPTH, height: length },
       );
     }
   }
@@ -75,6 +93,9 @@ export type PlanTable = {
   duration: string | null;
   x: number;
   y: number;
+  /** Stored box size (body plus chairs). */
+  width: number;
+  height: number;
   shape: "rect" | "round";
   chairs: Chair[];
   /** False when the search does not find it (the plan dims it). */
@@ -110,8 +131,10 @@ export function getSpacePlan(
       duration: seated && state.seatedMinutes !== undefined ? formatDuration(state.seatedMinutes) : null,
       x: table.layout.x,
       y: table.layout.y,
+      width: table.layout.width,
+      height: table.layout.height,
       shape: table.layout.shape,
-      chairs: getChairs(table.capacity),
+      chairs: getChairs(table.capacity, table.layout),
       matches: matching.has(table.number),
     });
   }
@@ -168,17 +191,17 @@ export function zoomBy(scale: number, direction: 1 | -1): number {
 
 export type PlanTransform = { scale: number; x: number; y: number };
 
-/** "Fit View": the largest scale (within the limits) that shows every table, centered. */
+/** "Fit View": the largest scale (within the limits) that shows every table (default box when unsized), centered. */
 export function getFitTransform(
-  positions: readonly { x: number; y: number }[],
+  positions: readonly { x: number; y: number; width?: number; height?: number }[],
   viewport: { width: number; height: number },
   padding = 24,
 ): PlanTransform {
   if (positions.length === 0) return { scale: 1, x: 0, y: 0 };
   const left = Math.min(...positions.map((item) => item.x));
   const top = Math.min(...positions.map((item) => item.y));
-  const width = Math.max(...positions.map((item) => item.x)) + TABLE_BOX.width - left;
-  const height = Math.max(...positions.map((item) => item.y)) + TABLE_BOX.height - top;
+  const width = Math.max(...positions.map((item) => item.x + (item.width ?? TABLE_BOX.width))) - left;
+  const height = Math.max(...positions.map((item) => item.y + (item.height ?? TABLE_BOX.height))) - top;
   const fit = Math.min((viewport.width - padding * 2) / width, (viewport.height - padding * 2) / height);
   const scale = clampZoom(Math.floor(fit * 100) / 100);
   return {

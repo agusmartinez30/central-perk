@@ -19,7 +19,7 @@ import {
   type TableDraft,
   type TableDraftErrors,
 } from "@/features/venue/table-config";
-import { resolveMove, type TableShape } from "@/features/venue/table-layout";
+import { resolveMove, resolveResize, type MoveResult, type TableShape } from "@/features/venue/table-layout";
 import { getTableRemoval, type TableRemoval } from "@/features/venue/table-removal";
 import { sessionOf, venueReducer, type CredentialInput, type VenueAction, type VenueState } from "@/features/venue/venue-state";
 
@@ -60,6 +60,7 @@ export type ManagementAction =
   | { type: "confirm-delete" }
   | { type: "cancel-delete" }
   | { type: "move-table"; id: string; x: number; y: number }
+  | { type: "resize-table"; id: string; x: number; y: number; width: number; height: number }
   | { type: "dismiss-notice" };
 
 const spaceForm = (venue: VenueState, id: SpaceId): SpaceForm => {
@@ -95,6 +96,9 @@ export type ManagementResult = { ui: ManagementState; venue?: VenueAction };
 
 const info = (text: string): Notice => ({ tone: "info", text });
 const error = (text: string): Notice => ({ tone: "error", text });
+
+const refusal = (result: Exclude<MoveResult, { ok: true }>) =>
+  result.reason === "overlap" ? `se superpone con ${result.conflict.label}` : "no está disponible";
 
 function saveTable(ui: ManagementState, form: TableForm, venue: VenueState, credential: CredentialInput): ManagementResult {
   const errors = validateTableDraft(form.draft, venue.tables, form.id, venue.spaces);
@@ -219,11 +223,19 @@ export function reduceManagement(ui: ManagementState, action: ManagementAction, 
       const table = findTable(venue, action.id);
       if (!table) return { ui };
       const result = resolveMove(venue.tables, table.id, { x: action.x, y: action.y });
-      if (!result.ok) {
-        const reason = result.reason === "overlap" ? `se superpone con ${result.conflict.label}` : "no está disponible";
-        return { ui: { ...ui, notice: error(`${table.label} no entra ahí: ${reason}.`) } };
-      }
+      if (!result.ok) return { ui: { ...ui, notice: error(`${table.label} no entra ahí: ${refusal(result)}.`) } };
       return { venue: { type: "move-table", id: table.id, x: action.x, y: action.y }, ui: { ...ui, notice: info(`${table.label} movida.`) } };
+    }
+    case "resize-table": {
+      const table = findTable(venue, action.id);
+      if (!table) return { ui };
+      const { x, y, width, height } = action;
+      const result = resolveResize(venue.tables, table.id, { x, y, width, height });
+      if (!result.ok) return { ui: { ...ui, notice: error(`${table.label} no entra con ese tamaño: ${refusal(result)}.`) } };
+      return {
+        venue: { type: "resize-table", id: table.id, x, y, width, height },
+        ui: { ...ui, notice: info(`${table.label}: tamaño actualizado.`) },
+      };
     }
     case "dismiss-notice":
       return { ui: { ...ui, notice: null } };
@@ -247,9 +259,13 @@ export type EditorTable = {
   id: string;
   label: string;
   capacityLabel: string;
+  /** Seats: the resize gesture keeps the box above the room its chairs need. */
+  capacity: number;
   shape: TableShape;
   x: number;
   y: number;
+  width: number;
+  height: number;
   chairs: Chair[];
   enabled: boolean;
   selected: boolean;
@@ -266,10 +282,13 @@ export function getPlanView(ui: ManagementState, venue: VenueState): PlanView {
       id: table.id,
       label: table.label,
       capacityLabel: formatCapacity(table.capacity),
+      capacity: table.capacity,
       shape: table.layout.shape,
       x: table.layout.x,
       y: table.layout.y,
-      chairs: getChairs(table.capacity),
+      width: table.layout.width,
+      height: table.layout.height,
+      chairs: getChairs(table.capacity, table.layout),
       enabled: table.enabled,
       selected: table.id === selectedId,
     }));
