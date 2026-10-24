@@ -27,7 +27,7 @@ The sidebar has three table entries. "Gestión de mesas" is a placeholder, and t
 
 ## Tasks
 - [x] T1 Shared venue store (`useSyncExternalStore`) + move `table-config`/`space-config` into `src/features/venue/` + new layout/space/delete helpers, test-first. Route: delegated.
-- [ ] T2 Management screen at `/tables/management`: plan per space in edit mode, space tabs with "+ Nuevo espacio", side panel with table and space forms, `?state=` variants. Route: delegated.
+- [x] T2 Management screen at `/tables/management`: plan per space in edit mode, space tabs with "+ Nuevo espacio", side panel with table and space forms, `?state=` variants. Route: delegated.
 - [ ] T3 Drag-and-drop (pointer + keyboard arrows) with snap/clamp/collision feedback, shape toggle, delete rules with confirmation. Route: delegated.
 - [ ] T4 Rewire 09 (QR-only; links to Gestión) and 02 (reads the store) + docs. Route: delegated.
 
@@ -45,5 +45,12 @@ lint, tsc, vitest, build, screenshots.
   - Store: in memory per browser session, no Web Storage. Server snapshot = seed = first client snapshot, so hydration never mismatches; client navigation keeps edits; a full reload resets. No token/audit counter needed: tokens come from `createUniqueQrToken` (screen) and audit ids from `nextAuditId`.
   - RED observed (missing modules/functions), then GREEN. Checks: build OK, tsc OK, lint OK, vitest 40 files / 518 tests passed.
 
+- T2 (delegated writer) — commit `542706d` feat(table-management). ~1.7k lines incl. tests: one screen (container + plan editor + two forms + pure UI reducer); not split because each piece alone is not a usable unit.
+  - `src/features/table-management/`: `management-state.ts` (pure UI reducer `reduceManagement(ui, action, venue)` returning the `VenueAction` for the store; views for plan, tabs, forms and the delete dialog; deep links; forced-state replay that skips venue actions), `TableManagementScreen.tsx`, `PlanEditor.tsx`, `TableForm.tsx`, `SpacePanel.tsx`, `FormField.tsx`. Extracted `TableFigure` and `ZoomControls` from the 02 `FloorPlan` (02 output unchanged), `SPACE_ICONS`/`SPACE_TONES` to `venue/space-icons.ts`, and a reusable `ConfirmDialog` in `src/shared/ui` (needed here for the delete variants, moved up from T3).
+  - Nav: `/tables/management` uses the 02 `location` top bar (test-first in `navigation.test.ts`).
+  - `?state=`: `table-edit`, `table-new`, `space-edit`, `space-new`, `delete-table` (Mesa 01: offers disabling), `delete-space` (Patio: blocked), `errors`. Deep links `?table=<id>|new`, `?space=<id>|new`.
+  - Invented UI (no export): header links "Ver en vivo"/"Códigos QR", space tabs with counts + "Nuevo espacio", "Nueva mesa" in the plan toolbar, dotted 780×620 editable area, shape picker, space icon/color pickers, space list with up/down reorder, delete dialog copy.
+  - RED observed for `management-state` (missing module) and the nav topbar test, then GREEN. Checks: build OK, tsc OK, lint OK, vitest 41 files / 540 tests. Screenshots `tm-plan`, `tm-table-form`, `tm-delete-table`, `tm-errors`, `tm-space-new` reviewed.
+
 ## Next step
-T2.
+T3.
