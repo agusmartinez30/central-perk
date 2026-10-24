@@ -33,6 +33,7 @@ Out of scope: new shapes beyond rect/round.
   - `PlanEditor.tsx`: grab zones on every border and corner of every table (no selection needed; `stopPropagation` so a resize never starts a move), brand highlight line on the hovered border, `MoveDiagonal2` badge on the bottom-right corner (hover/selected/resizing), resize cursors, live preview with chairs re-spread and red "No entra acá" over another table; release dispatches `resize-table`. Hint: "Arrastrá cualquier borde de la mesa para cambiar su tamaño."
   - `FloorPlan.tsx` (02): `TableFigure` draws body and chairs from the stored size; selection check follows the right border.
   - Evidence: RED observed (plan-drag 6 failed), then GREEN. Checks: `npx vitest run` 568 passed; `npx tsc --noEmit` exit 0; `npm run lint` clean; dev server answers 200 on `/tables/management` and `/tables`. Pointer interaction not exercised in a browser (pending manual check).
+  - Commit: `067d219` feat(floor-plan): resize tables by dragging any border with a resize badge.
 
 ## Acceptance criteria
 - Dragging a rect table's border changes only that dimension; corners change both; snapped, clamped to min size and plan.
