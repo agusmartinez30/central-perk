@@ -29,7 +29,7 @@ The sidebar has three table entries. "Gestión de mesas" is a placeholder, and t
 - [x] T1 Shared venue store (`useSyncExternalStore`) + move `table-config`/`space-config` into `src/features/venue/` + new layout/space/delete helpers, test-first. Route: delegated.
 - [x] T2 Management screen at `/tables/management`: plan per space in edit mode, space tabs with "+ Nuevo espacio", side panel with table and space forms, `?state=` variants. Route: delegated.
 - [x] T3 Drag-and-drop (pointer + keyboard arrows) with snap/clamp/collision feedback, shape toggle, delete rules with confirmation. Route: delegated.
-- [ ] T4 Rewire 09 (QR-only; links to Gestión) and 02 (reads the store) + docs. Route: delegated.
+- [x] T4 Rewire 09 (QR-only; links to Gestión) and 02 (reads the store) + docs. Route: delegated.
 
 ## Acceptance criteria
 - Creating space "Barra" and "Mesa 13" in it shows up in `/tables` (Barra tab) and in `/tables/qr` with a QR in the same session.
@@ -58,5 +58,12 @@ lint, tsc, vitest, build, screenshots.
   - `RegenerateDialog` now renders the shared `ConfirmDialog` (same copy, layout, focus and Escape/scrim behavior; screenshot `tm-regenerate`).
   - Checks: build OK, tsc OK, lint OK, vitest 42 files / 545 tests. Screenshots `tm-drag-result` (Mesa 07 dragged), `tm-drag-overlap` (held over Mesa 02), `tm-drag-refused`, `tm-space-form`, `tm-delete-space`.
 
+- T4 (delegated writer) — commit `8cba01d` feat(table-qr): store + QR-only.
+  - `/tables/qr`: spaces/tables/sessions from `useVenue()`; the pure `tableQrReducer` keeps only list/detail/regenerate/material/bulk actions, and the screen mirrors "toggle-enabled" and "confirm-regenerate" into the store (`set-table-enabled`, `regenerate-qr`). "Nueva mesa" → `/tables/management?table=new`, row "Editar" → `?table=<id>`, space cards → `?space=<id>`, "Crear espacio" → `?space=new`. `TableEditor.tsx` and the inline space form removed. Old `?state=` `edit`, `new`, `errors`, `space-edit`, `space-new` redirect (`router.replace`) to the matching Gestión variants.
+  - `/tables` (02): spaces, tables and positions from the store; live rows from `getLiveTables(config, SERVICE_DAY)` (enabled tables by number, `deriveTable`; equals `TABLES_BOARD` for the seed, new tables are free). Test-first (RED: `getLiveTables` missing).
+  - README routes/states/store section updated; note added to `admin-table-qr.md`.
+  - Checks: build OK, tsc OK, lint OK, vitest 42 files / 538 tests (09 editor/space-form tests removed with the feature, replaced by a store-driven test). Screenshots: end-to-end in one browser page with client navigation — `tm-flow-1-management` (Barra created, Mesa 13 created in it), `tm-flow-2-tables` (Barra tab shows M13, "3 disponibles"), `tm-flow-3-qr` (Barra card "1 mesa"), `tm-flow-4-qr-detail` (Mesa 13 · Barra with its QR `?mesa=13&qr=…`); `tm-check-overview`, `tm-check-orders`, `tm-check-tables`, `tm-qr-list`, `tm-qr-legacy-edit` (redirect).
+  - Acceptance: Barra + Mesa 13 visible in `/tables` and `/tables/qr` with a QR in the same session ✓; dragging changes the position read by `/tables` (same store) ✓; invariants and all checks pass ✓.
+
 ## Next step
-T4.
+User review; push / fast-forward `main` only when the user says so. Follow-ups: the 02 header still reads "Gestión de mesas" (export title) while the sidebar says "Mesas"; the 02 plan-vs-spaces layout gap stays deferred.
