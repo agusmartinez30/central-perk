@@ -24,6 +24,7 @@ import {
 const TODAY = SERVICE_DAY.date;
 const tables = SERVICE_DAY.tables;
 const sessions = getSessionStatuses(SERVICE_DAY);
+const spaces = SERVICE_DAY.spaces;
 const table = (id: string, list: readonly VenueTable[] = tables) => list.find((candidate) => candidate.id === id)!;
 const context = (token = "N3wT0k3nAa") => ({ today: TODAY, staffName: "Sofía M.", createToken: () => token });
 
@@ -36,13 +37,13 @@ describe("session statuses", () => {
 });
 
 describe("getTableRows", () => {
-  it("lists every table by number with sector, capacity, configuration, session and QR status", () => {
-    const rows = getTableRows(tables, sessions);
+  it("lists every table by number with space, capacity, configuration, session and QR status", () => {
+    const rows = getTableRows(tables, sessions, spaces);
     expect(rows).toHaveLength(12);
     expect(rows[6]).toMatchObject({
       id: "tbl_07",
       label: "Mesa 07",
-      sectorLabel: "Interior",
+      spaceName: "Salón",
       capacityLabel: "4 personas",
       configuration: { enabled: true, label: "Habilitada" },
       session: { status: "bill-requested", label: "Cuenta solicitada" },
@@ -55,14 +56,14 @@ describe("getTableRows", () => {
       { ...table("tbl_01"), enabled: false },
       { ...table("tbl_02"), qr: null },
     ];
-    const rows = getTableRows(changed, sessions);
+    const rows = getTableRows(changed, sessions, spaces);
     expect(rows[0].configuration.label).toBe("Deshabilitada");
     expect(rows[0].qr).toEqual({ status: "paused", label: "QR pausado" });
     expect(rows[1].qr).toEqual({ status: "missing", label: "Sin QR" });
   });
 
   it("treats a table without session data as available", () => {
-    expect(getTableRows([{ ...table("tbl_01"), id: "tbl_13", number: 13 }], sessions)[0].session.status).toBe(
+    expect(getTableRows([{ ...table("tbl_01"), id: "tbl_13", number: 13 }], sessions, spaces)[0].session.status).toBe(
       "available",
     );
   });
@@ -77,9 +78,9 @@ describe("getTableMetrics", () => {
 });
 
 describe("filterTableRows", () => {
-  const rows = getTableRows(tables, sessions);
+  const rows = getTableRows(tables, sessions, spaces);
   const ids = (query: string) =>
-    filterTableRows(rows, { query, sector: "all", configuration: "all" }).map((row) => row.id);
+    filterTableRows(rows, { query, spaceId: "all", configuration: "all" }).map((row) => row.id);
 
   it("finds a table by label or unpadded number", () => {
     expect(ids("mesa 7")).toEqual(["tbl_07"]);
@@ -87,12 +88,12 @@ describe("filterTableRows", () => {
     expect(ids("  MESA 1")).toEqual(["tbl_01", "tbl_10", "tbl_11", "tbl_12"]);
   });
 
-  it("filters by sector and configuration", () => {
+  it("filters by space and configuration", () => {
     expect(
-      filterTableRows(rows, { query: "", sector: "terraza", configuration: "all" }).map((row) => row.number),
+      filterTableRows(rows, { query: "", spaceId: "terraza", configuration: "all" }).map((row) => row.number),
     ).toEqual([5, 6, 8]);
-    expect(filterTableRows(rows, { query: "", sector: "all", configuration: "disabled" })).toEqual([]);
-    expect(filterTableRows(rows, { query: "", sector: "all", configuration: "enabled" })).toHaveLength(12);
+    expect(filterTableRows(rows, { query: "", spaceId: "all", configuration: "disabled" })).toEqual([]);
+    expect(filterTableRows(rows, { query: "", spaceId: "all", configuration: "enabled" })).toHaveLength(12);
   });
 });
 
@@ -107,9 +108,9 @@ describe("table drafts", () => {
   it("starts a new table with the next free number and its label", () => {
     expect(nextTableNumber(tables)).toBe(13);
     expect(nextTableNumber([])).toBe(1);
-    expect(createEmptyTableDraft(tables)).toEqual({
+    expect(createEmptyTableDraft(tables, spaces)).toEqual({
       label: "Mesa 13",
-      sector: "interior",
+      spaceId: "salon",
       capacity: "4",
       description: "",
       enabled: true,
@@ -133,8 +134,11 @@ describe("table drafts", () => {
       label: "Usá hasta 30 caracteres.",
       capacity: "Ingresá un número entero entre 1 y 20.",
     });
+    expect(validateTableDraft({ ...toTableDraft(table("tbl_07")), spaceId: "barra" }, tables, "tbl_07", spaces)).toEqual({
+      spaceId: "Elegí un espacio.",
+    });
     expect(validateTableDraft(toTableDraft(table("tbl_07")), tables, "tbl_07")).toEqual({});
-    expect(validateTableDraft(createEmptyTableDraft(tables), tables, null)).toEqual({});
+    expect(validateTableDraft(createEmptyTableDraft(tables, spaces), tables, null)).toEqual({});
   });
 
   it("lists the changed fields", () => {
@@ -142,9 +146,9 @@ describe("table drafts", () => {
     expect(getTableChanges(table("tbl_07"), draft)).toEqual(["enabled"]);
     expect(getTableChanges(table("tbl_07"), { ...draft, capacity: "6" })).toEqual(["capacity", "enabled"]);
     expect(getTableChanges(table("tbl_07"), toTableDraft(table("tbl_07")))).toEqual([]);
-    expect(getTableChanges(null, createEmptyTableDraft(tables))).toEqual([
+    expect(getTableChanges(null, createEmptyTableDraft(tables, spaces))).toEqual([
       "label",
-      "sector",
+      "spaceId",
       "capacity",
       "description",
       "enabled",
@@ -167,13 +171,13 @@ describe("table drafts", () => {
   });
 
   it("creates a new table with a fresh credential", () => {
-    const result = applyTableDraft(tables, null, { ...createEmptyTableDraft(tables), sector: "patio" }, context());
+    const result = applyTableDraft(tables, null, { ...createEmptyTableDraft(tables, spaces), spaceId: "patio" }, context());
     expect(result.id).toBe("tbl_13");
     expect(table("tbl_13", result.tables)).toEqual({
       id: "tbl_13",
       number: 13,
       label: "Mesa 13",
-      sector: "patio",
+      spaceId: "patio",
       capacity: 4,
       description: "",
       enabled: true,

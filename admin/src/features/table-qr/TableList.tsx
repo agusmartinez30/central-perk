@@ -3,8 +3,8 @@
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Download, Ellipsis, Pencil, QrCode as QrCodeIcon, Search } from "lucide-react";
-import { TABLE_SECTORS } from "@/mocks/service-day";
-import type { ConfigurationFilter, QrStatus, SectorFilter, SessionStatus } from "./table-config";
+import type { VenueSpace } from "@/mocks/service-day";
+import type { ConfigurationFilter, QrStatus, SpaceFilter, SessionStatus } from "./table-config";
 import { CONFIGURATION_FILTERS } from "./table-config";
 import type { ListRow } from "./table-qr-state";
 import { StatusChip, type ChipTone } from "./TableQrParts";
@@ -16,7 +16,7 @@ type SelectFilterProps<T extends string> = {
   onChange: (value: T) => void;
 };
 
-/** "Filter · Sector: Todos": 190×44 select; each option carries the filter name, 10px → 12px. */
+/** "Filter · Espacio: Todos": 190×44 select; each option carries the filter name, 10px → 12px. */
 function SelectFilter<T extends string>({ label, value, options, onChange }: SelectFilterProps<T>) {
   return (
     <div className="relative h-11 w-[190px] shrink-0">
@@ -37,21 +37,22 @@ function SelectFilter<T extends string>({ label, value, options, onChange }: Sel
   );
 }
 
-const SECTOR_OPTIONS: readonly { id: SectorFilter; label: string }[] = [
-  { id: "all", label: "Todos" },
-  ...TABLE_SECTORS.map((sector) => ({ id: sector.id, label: sector.label })),
-];
+/** "Espacio" filter options: "Todos" plus every space. */
+function getSpaceOptions(spaces: readonly VenueSpace[]): { id: SpaceFilter; label: string }[] {
+  return [{ id: "all", label: "Todos" }, ...spaces.map((space) => ({ id: space.id, label: space.name }))];
+}
 
 type TableToolbarProps = {
   query: string;
-  sector: SectorFilter;
+  spaces: readonly VenueSpace[];
+  space: SpaceFilter;
   configuration: ConfigurationFilter;
   onQueryChange: (query: string) => void;
-  onSectorChange: (sector: SectorFilter) => void;
+  onSpaceChange: (space: SpaceFilter) => void;
   onConfigurationChange: (configuration: ConfigurationFilter) => void;
 };
 
-/** "Table Toolbar": search plus the "Sector" and "Configuración" filters. */
+/** "Table Toolbar": search plus the "Espacio" and "Configuración" filters. */
 export function TableToolbar(props: TableToolbarProps) {
   return (
     <div className="flex h-11 w-full shrink-0 gap-2">
@@ -66,7 +67,12 @@ export function TableToolbar(props: TableToolbarProps) {
           className="min-w-0 flex-1 bg-transparent text-[12px] text-ink outline-none placeholder:text-muted"
         />
       </label>
-      <SelectFilter label="Sector" value={props.sector} options={SECTOR_OPTIONS} onChange={props.onSectorChange} />
+      <SelectFilter
+        label="Espacio"
+        value={props.space}
+        options={getSpaceOptions(props.spaces)}
+        onChange={props.onSpaceChange}
+      />
       <SelectFilter
         label="Configuración"
         value={props.configuration}
@@ -209,7 +215,7 @@ export function TableConfigurationList({ rows, filtered, actions }: TableConfigu
         <div role="rowgroup" className="shrink-0">
           <div role="row" className="flex h-9 items-center bg-sand px-3 text-[11px] font-bold text-muted">
             <span role="columnheader" className="w-[160px]">MESA</span>
-            <span role="columnheader" className="w-[120px]">SECTOR</span>
+            <span role="columnheader" className="w-[120px]">ESPACIO</span>
             <span role="columnheader" className="w-[120px]">CAPACIDAD</span>
             <span role="columnheader" className="w-[130px]">CONFIGURACIÓN</span>
             <span role="columnheader" className="w-[160px]">SESIÓN</span>
@@ -232,7 +238,7 @@ export function TableConfigurationList({ rows, filtered, actions }: TableConfigu
               <span role="cell" className="w-[160px] truncate pr-2 text-[13px] font-bold text-ink">
                 {row.label}
               </span>
-              <span role="cell" className="w-[120px] text-[12px] text-muted">{row.sectorLabel}</span>
+              <span role="cell" className="w-[120px] text-[12px] text-muted">{row.spaceName}</span>
               <span role="cell" className="w-[120px] text-[12px] text-muted">{row.capacityLabel}</span>
               <span role="cell" className="w-[130px]">
                 <StatusChip

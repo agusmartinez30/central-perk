@@ -2,8 +2,7 @@
 
 import { useId, type ReactNode } from "react";
 import { ChevronDown, Users } from "lucide-react";
-import { TABLE_SECTORS } from "@/mocks/service-day";
-import type { TableSector } from "@/mocks/service-day";
+import type { SpaceId, VenueSpace } from "@/mocks/service-day";
 import type { EditorView, TableEditorState, TableQrAction } from "./table-qr-state";
 import { BarButton, PageHeader, Switch } from "./TableQrParts";
 
@@ -38,14 +37,20 @@ const IDENTITY_RULES = [
   "✓ Permisos verificados en el servidor",
 ];
 
-type TableEditorProps = { editor: TableEditorState; view: EditorView; onAction: (action: TableQrAction) => void; onSave: () => void };
+type TableEditorProps = {
+  editor: TableEditorState;
+  view: EditorView;
+  spaces: readonly VenueSpace[];
+  onAction: (action: TableQrAction) => void;
+  onSave: () => void;
+};
 
 /**
  * 09B · Crear y editar mesa ("Table Editor Main"): the stable id bar with Cancelar / Guardar
  * mesa, "Información de la mesa" and the operational rules column ("Sesión activa" only while
  * the table has an open session). Saving only changes this screen's in-memory tables.
  */
-export function TableEditor({ editor, view, onAction, onSave }: TableEditorProps) {
+export function TableEditor({ editor, view, spaces, onAction, onSave }: TableEditorProps) {
   const { draft } = editor;
   const setText = (field: "label" | "capacity" | "description") => (value: string) =>
     onAction({ type: "editor-set-field", field, value });
@@ -87,20 +92,22 @@ export function TableEditor({ editor, view, onAction, onSave }: TableEditorProps
               />
             )}
           </Field>
-          <Field label="Sector">
-            {({ id }) => (
+          <Field label="Espacio" error={view.errors.spaceId}>
+            {({ id, describedBy }) => (
               <div className="relative">
                 <select
                   id={id}
-                  value={draft.sector}
+                  value={draft.spaceId}
+                  aria-invalid={Boolean(view.errors.spaceId)}
+                  aria-describedby={describedBy}
                   onChange={(event) =>
-                    onAction({ type: "editor-set-field", field: "sector", value: event.target.value as TableSector })
+                    onAction({ type: "editor-set-field", field: "spaceId", value: event.target.value as SpaceId })
                   }
                   className={`${fieldClass} cursor-pointer appearance-none pr-9`}
                 >
-                  {TABLE_SECTORS.map((sector) => (
-                    <option key={sector.id} value={sector.id}>
-                      {sector.label}
+                  {spaces.map((space) => (
+                    <option key={space.id} value={space.id}>
+                      {space.name}
                     </option>
                   ))}
                 </select>

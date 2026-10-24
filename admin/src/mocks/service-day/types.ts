@@ -100,10 +100,17 @@ export type ConsumptionMomentInfo = {
   categoryIds: ProductCategoryId[];
 };
 
-/** Area of the venue a table belongs to (09A "Sector"). */
-export type TableSector = "interior" | "terraza" | "patio";
+/** Id of a venue space, e.g. "salon"; spaces created in 09A get a slug of their name. */
+export type SpaceId = string;
 
-export type TableSectorInfo = { id: TableSector; label: string };
+/** Lucide icon of a 09A space card ("store", "sun", "trees"; "map-pin" for new spaces). */
+export type SpaceIcon = "store" | "sun" | "trees" | "map-pin";
+
+/** Wash behind the space icon: brand (Salón), warning (Terraza), success (Patio), neutral (new). */
+export type SpaceTone = "brand" | "warning" | "success" | "neutral";
+
+/** 09A "Espacios": an area of the venue where tables are placed (Salón, Terraza, Patio). */
+export type VenueSpace = { id: SpaceId; name: string; icon: SpaceIcon; tone: SpaceTone };
 
 /** Public QR credential of a table: the token its printed code carries. */
 export type QrCredential = {
@@ -131,7 +138,7 @@ export type VenueTable = {
   number: number;
   /** Visible label (09B "Nombre o número de mesa"), e.g. "Mesa 07". */
   label: string;
-  sector: TableSector;
+  spaceId: SpaceId;
   /** Seats, a positive integer. */
   capacity: number;
   /** 09B "Descripción interna · opcional"; empty when unset. */
@@ -217,6 +224,8 @@ export type ServiceDay = {
   syncedAt: string;
   /** Numbers of the enabled tables of the venue (the live screens show these). */
   tableNumbers: number[];
+  /** 09A "Espacios", in display order. */
+  spaces: VenueSpace[];
   /** Every table of the venue with its 09 configuration and QR credential. */
   tables: VenueTable[];
   staff: StaffMember[];

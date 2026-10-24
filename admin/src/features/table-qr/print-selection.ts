@@ -1,5 +1,5 @@
 import type { VenueTable } from "@/mocks/service-day";
-import type { SectorFilter } from "./table-config";
+import type { SpaceFilter } from "./table-config";
 
 export type PrintSizeId = "a6" | "compact";
 
@@ -23,13 +23,13 @@ export function getPrintableTables(tables: readonly VenueTable[]): VenueTable[] 
   return tables.filter((table) => table.enabled && table.qr).sort((a, b) => a.number - b.number);
 }
 
-export function filterBySector(tables: readonly VenueTable[], sector: SectorFilter): VenueTable[] {
-  return sector === "all" ? [...tables] : tables.filter((table) => table.sector === sector);
+export function filterBySpace(tables: readonly VenueTable[], spaceId: SpaceFilter): VenueTable[] {
+  return spaceId === "all" ? [...tables] : tables.filter((table) => table.spaceId === spaceId);
 }
 
-/** Choosing a sector selects every printable table of it. */
-export function selectSector(printable: readonly VenueTable[], sector: SectorFilter): string[] {
-  return filterBySector(printable, sector).map((table) => table.id);
+/** Choosing a spaceId selects every printable table of it. */
+export function selectSpace(printable: readonly VenueTable[], spaceId: SpaceFilter): string[] {
+  return filterBySpace(printable, spaceId).map((table) => table.id);
 }
 
 export function toggleSelection(selection: readonly string[], id: string): string[] {

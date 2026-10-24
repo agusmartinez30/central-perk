@@ -23,21 +23,24 @@ import {
   getEditorView,
   getListView,
   getMaterialView,
+  getSpaceEditorView,
   tableQrReducer,
   type TableQrAction,
   type TableQrState,
 } from "./table-qr-state";
 import { TableEditor } from "./TableEditor";
 import { TableConfigurationList, TableToolbar } from "./TableList";
-import { HeaderButton, MetricCards, PageHeader } from "./TableQrParts";
+import { HeaderButton, PageHeader } from "./TableQrParts";
+import { SpacesManagement } from "./SpacesManagement";
 
 /**
  * Forced variants: `edit` (09B: Mesa 07), `new` (empty "Nueva mesa" form), `errors` (Mesa 07
  * renamed "Mesa 05" with capacity 0 after a save attempt; not in the exports), `detail` (09C:
  * Mesa 07), `regenerate` (09F over 09C), `material` (09D: Mesa 07) and `bulk-print` (09E over
- * 09A with every printable table selected).
+ * 09A with every printable table selected), `space-edit` (Salón renamed inline) and `space-new`
+ * ("Crear espacio" form with a duplicate name after saving; not in the exports).
  */
-export const TABLE_QR_FORCED_STATES = ["edit", "new", "errors", "detail", "regenerate", "material", "bulk-print"] as const;
+export const TABLE_QR_FORCED_STATES = ["edit", "new", "errors", "detail", "regenerate", "material", "bulk-print", "space-edit", "space-new"] as const;
 
 type ForcedState = (typeof TABLE_QR_FORCED_STATES)[number];
 
@@ -54,6 +57,11 @@ const FORCED_ACTIONS: Record<ForcedState, TableQrAction[]> = {
   regenerate: [{ type: "open-detail", id: "tbl_07" }, { type: "open-regenerate" }],
   material: [{ type: "open-material", id: "tbl_07" }],
   "bulk-print": [{ type: "open-bulk" }],
+  "space-edit": [
+    { type: "open-space-editor", id: "salon" },
+    { type: "space-set-name", name: "Salón principal" },
+  ],
+  "space-new": [{ type: "open-space-editor" }, { type: "space-set-name", name: "Terraza" }, { type: "space-save" }],
 };
 
 function initState(forcedState: ForcedState | null): TableQrState {
@@ -110,6 +118,7 @@ export function TableQrScreen() {
       <TableEditor
         editor={state.editor}
         view={editorView}
+        spaces={state.spaces}
         onAction={dispatch}
         onSave={() => dispatch({ type: "editor-save", token: newToken() })}
       />
@@ -133,8 +142,9 @@ export function TableQrScreen() {
       // The list fills the viewport under the 72px top bar, as in the 1440×900 export.
       <div className="flex h-[calc(100dvh-72px)] min-h-[760px] flex-col gap-[11px] px-7 pt-[18px] pb-4">
         <PageHeader
+          breadcrumb="Mesas / Espacios / Códigos QR"
           title="Mesas y códigos QR"
-          subtitle="Configurá tus mesas y los accesos a la carta digital."
+          subtitle="Organizá espacios, asigná mesas y administrá los accesos a la carta digital."
           actions={
             <>
               <HeaderButton
@@ -147,20 +157,18 @@ export function TableQrScreen() {
             </>
           }
         />
-        <MetricCards
-          items={[
-            { label: "Mesas totales", value: list.metrics.total },
-            { label: "Habilitadas", value: list.metrics.enabled },
-            { label: "Sin QR", value: list.metrics.withoutQr },
-            { label: "Deshabilitadas", value: list.metrics.disabled },
-          ]}
+        <SpacesManagement
+          cards={list.spaces}
+          editor={getSpaceEditorView(state)}
+          onAction={dispatch}
         />
         <TableToolbar
           query={state.query}
-          sector={state.sector}
+          spaces={state.spaces}
+          space={state.space}
           configuration={state.configuration}
           onQueryChange={(query) => dispatch({ type: "set-query", query })}
-          onSectorChange={(sector) => dispatch({ type: "set-sector", sector })}
+          onSpaceChange={(space) => dispatch({ type: "set-space", space })}
           onConfigurationChange={(configuration) => dispatch({ type: "set-configuration", configuration })}
         />
         <TableConfigurationList

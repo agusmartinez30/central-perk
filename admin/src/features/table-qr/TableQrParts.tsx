@@ -5,14 +5,14 @@ import type { ReactNode } from "react";
 /** "Breadcrumb" of every 09 page. */
 export const TABLE_QR_BREADCRUMB = "Mesas / Códigos QR";
 
-type PageHeaderProps = { title: string; subtitle: string; actions?: ReactNode };
+type PageHeaderProps = { title: string; subtitle: string; actions?: ReactNode; breadcrumb?: string };
 
-/** "Page Header": 9px breadcrumb → 11px, 25px title, 11px subtitle → 12px. */
-export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
+/** "Page Header" (09A breadcrumb "Mesas / Espacios / Códigos QR"): 9px breadcrumb → 11px, 25px title, 11px subtitle → 12px. */
+export function PageHeader({ title, subtitle, actions, breadcrumb = TABLE_QR_BREADCRUMB }: PageHeaderProps) {
   return (
     <header className="flex w-full shrink-0 items-end justify-between gap-4">
       <div className="flex flex-col gap-1">
-        <p className="text-[11px] font-bold whitespace-nowrap text-brand">{TABLE_QR_BREADCRUMB}</p>
+        <p className="text-[11px] font-bold whitespace-nowrap text-brand">{breadcrumb}</p>
         <h2 className="text-[25px] font-bold whitespace-nowrap text-ink">{title}</h2>
         <p className="text-[12px] whitespace-nowrap text-muted">{subtitle}</p>
       </div>

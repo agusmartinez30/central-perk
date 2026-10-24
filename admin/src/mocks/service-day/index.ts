@@ -29,7 +29,7 @@ export {
   getOverviewSnapshot,
   getTablesBoard,
 } from "./derive";
-export { TABLE_SECTORS, VENUE_TABLES } from "./tables";
+export { VENUE_SPACES, VENUE_TABLES } from "./tables";
 export { addMinutes, minutesBetween } from "./time";
 export type * from "./types";
 

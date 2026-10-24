@@ -3,10 +3,10 @@
 import clsx from "clsx";
 import { useEffect, useId, useRef } from "react";
 import { ChevronDown, Square, SquareCheck, X } from "lucide-react";
-import { TABLE_SECTORS } from "@/mocks/service-day";
+import type { VenueSpace } from "@/mocks/service-day";
 import type { PrintSizeId } from "./print-selection";
 import { QrCode } from "./QrCode";
-import type { SectorFilter } from "./table-config";
+import type { SpaceFilter } from "./table-config";
 import type { BulkView, TableQrAction } from "./table-qr-state";
 
 type BulkPrintModalProps = {
@@ -15,14 +15,14 @@ type BulkPrintModalProps = {
   onExport: () => void;
 };
 
-const SECTOR_OPTIONS: readonly { id: SectorFilter; label: string }[] = [
-  { id: "all", label: "Todos" },
-  ...TABLE_SECTORS.map((sector) => ({ id: sector.id, label: sector.label })),
-];
+/** "Espacio" filter options: "Todos" plus every space. */
+function getSpaceOptions(spaces: readonly VenueSpace[]): { id: SpaceFilter; label: string }[] {
+  return [{ id: "all", label: "Todos" }, ...spaces.map((space) => ({ id: space.id, label: space.name }))];
+}
 
 const FOCUSABLE = "button:not([disabled]), select, [tabindex]:not([tabindex='-1'])";
 
-/** "Bulk Filter · Sector / Tamaño": cream select whose options carry the filter name, 9px → 11px. */
+/** "Bulk Filter · Espacio / Tamaño": cream select whose options carry the filter name, 9px → 11px. */
 function BulkSelect<T extends string>(props: {
   label: string;
   value: T;
@@ -50,7 +50,7 @@ function BulkSelect<T extends string>(props: {
 
 /**
  * 09E "Bulk QR Printing Modal" over the dimmed 09A list ("Modal Scrim"): selection count,
- * "✓ Seleccionar todos", sector and size, the table checklist, the A4 preview of the first sheet
+ * "✓ Seleccionar todos", spaceId and size, the table checklist, the A4 preview of the first sheet
  * and "Exportar PDF" (the browser's print dialog with every sheet). Escape, the close button or
  * the scrim close it; focus stays inside and returns to "Imprimir códigos QR".
  */
@@ -127,10 +127,10 @@ export function BulkPrintModal({ view, onAction, onExport }: BulkPrintModalProps
             {view.allSelected ? "✓ Seleccionar todos" : "Seleccionar todos"}
           </button>
           <BulkSelect
-            label="Sector"
-            value={view.sector}
-            options={SECTOR_OPTIONS}
-            onChange={(sector) => onAction({ type: "bulk-set-sector", sector })}
+            label="Espacio"
+            value={view.space}
+            options={getSpaceOptions(view.spaces)}
+            onChange={(space) => onAction({ type: "bulk-set-space", space })}
           />
           <BulkSelect<PrintSizeId>
             label="Tamaño"

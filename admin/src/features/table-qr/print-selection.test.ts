@@ -6,7 +6,7 @@ import {
   getPrintSize,
   getSelectedTables,
   paginate,
-  selectSector,
+  selectSpace,
   toggleAll,
   toggleSelection,
 } from "./print-selection";
@@ -27,9 +27,9 @@ describe("getPrintableTables", () => {
 describe("selection", () => {
   const printable = getPrintableTables(tables);
 
-  it("selects a whole sector", () => {
-    expect(selectSector(printable, "terraza")).toEqual(["tbl_05", "tbl_06", "tbl_08"]);
-    expect(selectSector(printable, "all")).toHaveLength(12);
+  it("selects a whole spaceId", () => {
+    expect(selectSpace(printable, "terraza")).toEqual(["tbl_05", "tbl_06", "tbl_08"]);
+    expect(selectSpace(printable, "all")).toHaveLength(12);
   });
 
   it("toggles one table", () => {
@@ -38,7 +38,7 @@ describe("selection", () => {
   });
 
   it("selects every visible table, or clears them when all are selected", () => {
-    const visible = printable.filter((table) => table.sector === "patio");
+    const visible = printable.filter((table) => table.spaceId === "patio");
     expect(toggleAll(visible, ["tbl_01"])).toEqual(["tbl_01", "tbl_09", "tbl_10", "tbl_11", "tbl_12"]);
     expect(toggleAll(visible, ["tbl_01", "tbl_09", "tbl_10", "tbl_11", "tbl_12"])).toEqual(["tbl_01"]);
     expect(toggleAll([], ["tbl_01"])).toEqual(["tbl_01"]);

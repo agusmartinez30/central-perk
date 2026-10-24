@@ -42,7 +42,7 @@ clear the site storage.
 | `/payments` | 06 · Configuración de pagos (methods, request modes and bank details tabs, live customer preview, in-memory save after confirming) |
 | `/menu/products` | 07 · Productos: list with metrics, search, filters and Duplicar / Archivar / availability (07A), editor (07B) and customer preview (07C) of the same draft, in-memory save |
 | `/menu/categories` | 08 · Categorías y momentos: "Organización de la carta" tabs with moments (08A, visibility and drag/keyboard reordering) and categories (08C, search and reordering), moment editor with live phone preview (08B), category editor with archive confirmation (08D) and customer explore preview (08E), in-memory save |
-| `/tables/qr` | 09 · Mesas y códigos QR: tables list with filters and quick enable/disable (09A), table editor (09B), QR detail with copy / PNG / SVG / PDF and token regeneration after confirming (09C, 09F), printable card and A4 sheet (09D), bulk print modal with A6 / compact A4 sheets (09E); real QR codes (`qrcode`) pointing to `NEXT_PUBLIC_CUSTOMER_APP_URL` (default `http://localhost:3000`) `/?mesa=NN&qr=<token>`; printing uses `window.print()` with print CSS |
+| `/tables/qr` | 09 · Mesas y códigos QR: tables list with filters and quick enable/disable (09A), space cards with inline create / rename (09A "Espacios"), table editor with its space (09B), QR detail with copy / PNG / SVG / PDF and token regeneration after confirming (09C, 09F), printable card and A4 sheet (09D), bulk print modal with A6 / compact A4 sheets (09E); real QR codes (`qrcode`) pointing to `NEXT_PUBLIC_CUSTOMER_APP_URL` (default `http://localhost:3000`) `/?mesa=NN&qr=<token>`; printing uses `window.print()` with print CSS |
 | `/tables/management`, `/menu`, `/settings`, `/staff` | "Próximamente" placeholder |
 
 ### Forced variants (`?state=`)
@@ -54,7 +54,7 @@ clear the site storage.
 | `/reset-password` | `mismatch`, `success` |
 | `/verify` | `error` (wrong code) |
 | `/tables` | `empty` (no tables), `no-results` (search for "Mesa 99") |
-| `/tables/qr` | `edit` (09B: Mesa 07), `new`, `errors` (Mesa 07 renamed "Mesa 05" with capacity 0 after saving), `detail` (09C: Mesa 07), `regenerate` (09F), `material` (09D: Mesa 07), `bulk-print` (09E) |
+| `/tables/qr` | `edit` (09B: Mesa 07), `new`, `errors` (Mesa 07 renamed "Mesa 05" with capacity 0 after saving), `detail` (09C: Mesa 07), `regenerate` (09F), `material` (09D: Mesa 07), `bulk-print` (09E), `space-edit` (Salón renamed inline), `space-new` (duplicate name after saving) |
 | `/orders` | `detail` (drawer of #1051), `cancel` (cancel dialog of #1051), `empty` (no orders), `no-results` (search for "9999") |
 | `/bill-requests` | `selected` (drawer of Mesa 10), `empty` (no requests), `no-results` (search for "Mesa 99") |
 | `/history` | `selected` (drawer of COB-0026), `empty` (no collections), `no-results` (search for "Mesa 99") |

@@ -1,11 +1,12 @@
 import {
-  TABLE_SECTORS,
   deriveTable,
   type QrCredential,
   type ServiceDay,
-  type TableSector,
+  type SpaceId,
+  type VenueSpace,
   type VenueTable,
 } from "@/mocks/service-day";
+import { getSpaceName } from "./space-config";
 
 /** 09A "SESIÓN": the live state of the table's open session. */
 export type SessionStatus = "available" | "occupied" | "bill-requested";
@@ -37,10 +38,6 @@ export function getSessionStatuses(day: ServiceDay): Record<number, SessionStatu
   return statuses;
 }
 
-export function getSectorLabel(sector: TableSector): string {
-  return TABLE_SECTORS.find((item) => item.id === sector)?.label ?? sector;
-}
-
 /** "4 personas". */
 export function formatCapacity(capacity: number): string {
   return `${capacity} ${capacity === 1 ? "persona" : "personas"}`;
@@ -55,8 +52,8 @@ export type TableRow = {
   id: string;
   number: number;
   label: string;
-  sector: TableSector;
-  sectorLabel: string;
+  spaceId: SpaceId;
+  spaceName: string;
   capacityLabel: string;
   configuration: { enabled: boolean; label: string };
   session: { status: SessionStatus; label: string };
@@ -64,7 +61,11 @@ export type TableRow = {
 };
 
 /** 09A "Table Configuration List" rows, by table number. */
-export function getTableRows(tables: readonly VenueTable[], sessions: Record<number, SessionStatus>): TableRow[] {
+export function getTableRows(
+  tables: readonly VenueTable[],
+  sessions: Record<number, SessionStatus>,
+  spaces: readonly VenueSpace[],
+): TableRow[] {
   return [...tables]
     .sort((a, b) => a.number - b.number)
     .map((table) => {
@@ -74,8 +75,8 @@ export function getTableRows(tables: readonly VenueTable[], sessions: Record<num
         id: table.id,
         number: table.number,
         label: table.label,
-        sector: table.sector,
-        sectorLabel: getSectorLabel(table.sector),
+        spaceId: table.spaceId,
+        spaceName: getSpaceName(spaces, table.spaceId),
         capacityLabel: formatCapacity(table.capacity),
         configuration: { enabled: table.enabled, label: table.enabled ? "Habilitada" : "Deshabilitada" },
         session: { status: session, label: SESSION_STATUS_LABELS[session] },
@@ -97,9 +98,9 @@ export function getTableMetrics(tables: readonly VenueTable[]): TableMetrics {
   };
 }
 
-export type SectorFilter = "all" | TableSector;
+export type SpaceFilter = "all" | SpaceId;
 export type ConfigurationFilter = "all" | "enabled" | "disabled";
-export type TableRowQuery = { query: string; sector: SectorFilter; configuration: ConfigurationFilter };
+export type TableRowQuery = { query: string; spaceId: SpaceFilter; configuration: ConfigurationFilter };
 
 export const CONFIGURATION_FILTERS: readonly { id: ConfigurationFilter; label: string }[] = [
   { id: "all", label: "Todas" },
@@ -123,12 +124,12 @@ function matchesQuery(row: TableRow, query: string): boolean {
   return /^\d+$/.test(digits) && Number(digits) === row.number;
 }
 
-/** "Buscar número de mesa…", "Sector" and "Configuración". */
-export function filterTableRows(rows: readonly TableRow[], { query, sector, configuration }: TableRowQuery): TableRow[] {
+/** "Buscar número de mesa…", "Espacio" and "Configuración". */
+export function filterTableRows(rows: readonly TableRow[], { query, spaceId, configuration }: TableRowQuery): TableRow[] {
   const normalized = normalize(query);
   return rows.filter(
     (row) =>
-      (sector === "all" || row.sector === sector) &&
+      (spaceId === "all" || row.spaceId === spaceId) &&
       (configuration === "all" || row.configuration.enabled === (configuration === "enabled")) &&
       matchesQuery(row, normalized),
   );
@@ -138,7 +139,7 @@ export function filterTableRows(rows: readonly TableRow[], { query, sector, conf
 
 export type TableDraft = {
   label: string;
-  sector: TableSector;
+  spaceId: SpaceId;
   /** Raw input; validated as an integer. */
   capacity: string;
   description: string;
@@ -146,7 +147,7 @@ export type TableDraft = {
 };
 
 export type TableDraftField = keyof TableDraft;
-export type TableDraftErrors = Partial<Record<"label" | "capacity" | "description", string>>;
+export type TableDraftErrors = Partial<Record<"label" | "spaceId" | "capacity" | "description", string>>;
 
 export const LABEL_MAX_LENGTH = 30;
 export const DESCRIPTION_MAX_LENGTH = 60;
@@ -156,7 +157,7 @@ export const CAPACITY_MAX = 20;
 export function toTableDraft(table: VenueTable): TableDraft {
   return {
     label: table.label,
-    sector: table.sector,
+    spaceId: table.spaceId,
     capacity: String(table.capacity),
     description: table.description,
     enabled: table.enabled,
@@ -168,9 +169,15 @@ export function nextTableNumber(tables: readonly VenueTable[]): number {
   return tables.reduce((max, table) => Math.max(max, table.number), 0) + 1;
 }
 
-/** New table form: the next number as its label, Interior, 4 seats (invented defaults), enabled. */
-export function createEmptyTableDraft(tables: readonly VenueTable[]): TableDraft {
-  return { label: `Mesa ${pad(nextTableNumber(tables))}`, sector: "interior", capacity: "4", description: "", enabled: true };
+/** New table form: the next number as its label, the first space, 4 seats (invented defaults), enabled. */
+export function createEmptyTableDraft(tables: readonly VenueTable[], spaces: readonly VenueSpace[]): TableDraft {
+  return {
+    label: `Mesa ${pad(nextTableNumber(tables))}`,
+    spaceId: spaces[0]?.id ?? "",
+    capacity: "4",
+    description: "",
+    enabled: true,
+  };
 }
 
 function parseCapacity(value: string): number | null {
@@ -185,6 +192,8 @@ export function validateTableDraft(
   draft: TableDraft,
   tables: readonly VenueTable[],
   editingId: string | null,
+  /** When given, the draft's space must be one of them. */
+  spaces?: readonly VenueSpace[],
 ): TableDraftErrors {
   const errors: TableDraftErrors = {};
   const label = normalize(draft.label);
@@ -193,6 +202,7 @@ export function validateTableDraft(
   else if (tables.some((table) => table.id !== editingId && normalize(table.label) === label)) {
     errors.label = "Ya existe una mesa con ese nombre.";
   }
+  if (spaces && !spaces.some((space) => space.id === draft.spaceId)) errors.spaceId = "Elegí un espacio.";
   if (parseCapacity(draft.capacity) === null) {
     errors.capacity = `Ingresá un número entero entre ${CAPACITY_MIN} y ${CAPACITY_MAX}.`;
   }
@@ -202,13 +212,13 @@ export function validateTableDraft(
   return errors;
 }
 
-const FIELDS: readonly TableDraftField[] = ["label", "sector", "capacity", "description", "enabled"];
+const FIELDS: readonly TableDraftField[] = ["label", "spaceId", "capacity", "description", "enabled"];
 
 function comparable(draft: TableDraft): Record<TableDraftField, string | boolean> {
   const capacity = parseCapacity(draft.capacity);
   return {
     label: draft.label.trim(),
-    sector: draft.sector,
+    spaceId: draft.spaceId,
     capacity: capacity === null ? draft.capacity.trim() : String(capacity),
     description: draft.description.trim(),
     enabled: draft.enabled,
@@ -247,7 +257,7 @@ export function applyTableDraft(
 ): { tables: VenueTable[]; id: string } {
   const fields = {
     label: draft.label.trim(),
-    sector: draft.sector,
+    spaceId: draft.spaceId,
     capacity: parseCapacity(draft.capacity) ?? CAPACITY_MIN,
     description: draft.description.trim(),
     enabled: draft.enabled,

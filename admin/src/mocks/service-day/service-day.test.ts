@@ -14,7 +14,7 @@ import {
   PAYMENT_METHODS,
   REQUEST_MODES,
   SERVICE_DAY,
-  TABLE_SECTORS,
+  VENUE_SPACES,
   TABLES_BOARD,
   minutesBetween,
 } from "./index";
@@ -298,16 +298,17 @@ describe("bill requests (04) and collections (05)", () => {
 describe("venue tables (09)", () => {
   const tables = day.tables;
 
-  it("configures the twelve tables of 02 with the 09A sectors and capacities", () => {
+  it("configures the twelve tables of 02 with the 09A spaces and capacities", () => {
     expect(tables.map((table) => table.label)).toEqual(
       Array.from({ length: 12 }, (_, index) => `Mesa ${String(index + 1).padStart(2, "0")}`),
     );
-    expect(tables.map((table) => table.sector)).toEqual([
-      "interior", "interior", "interior", "interior", "terraza", "terraza",
-      "interior", "terraza", "patio", "patio", "patio", "patio",
+    expect(tables.map((table) => table.spaceId)).toEqual([
+      "salon", "salon", "salon", "salon", "terraza", "terraza",
+      "salon", "terraza", "patio", "patio", "patio", "patio",
     ]);
     expect(tables.map((table) => table.capacity)).toEqual([2, 4, 4, 2, 4, 2, 4, 6, 4, 6, 4, 2]);
-    expect(TABLE_SECTORS.map((sector) => sector.label)).toEqual(["Interior", "Terraza", "Patio"]);
+    expect(VENUE_SPACES.map((space) => space.name)).toEqual(["Salón", "Terraza", "Patio"]);
+    expect(day.spaces).toBe(VENUE_SPACES);
   });
 
   it("uses unique, stable ids, numbers and labels", () => {
@@ -329,6 +330,15 @@ describe("venue tables (09)", () => {
   it("seats sessions only at configured tables", () => {
     const numbers = new Set(tables.map((table) => table.number));
     for (const session of day.sessions) expect(numbers.has(session.tableNumber), session.id).toBe(true);
+  });
+
+  it("places every table in a configured space, with unique space ids and names", () => {
+    const spaceIds = day.spaces.map((space) => space.id);
+    expect(new Set(spaceIds).size).toBe(spaceIds.length);
+    expect(new Set(day.spaces.map((space) => space.name.toLowerCase())).size).toBe(day.spaces.length);
+    for (const table of tables) expect(spaceIds, table.id).toContain(table.spaceId);
+    // 09A space cards: Salón 5 mesas, Terraza 3, Patio 4.
+    expect(day.spaces.map((space) => tables.filter((table) => table.spaceId === space.id).length)).toEqual([5, 3, 4]);
   });
 
   it("never reuses a QR token, active or revoked", () => {
