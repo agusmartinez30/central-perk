@@ -15,7 +15,7 @@ import { buildTableQrUrl } from "./qr-url";
 import { QrDetail, type DownloadFormat } from "./QrDetail";
 import { PrintMaterial } from "./PrintMaterial";
 import { RegenerateDialog } from "./RegenerateDialog";
-import { getUsedTokens } from "./table-config";
+import { getUsedTokens } from "./qr-config";
 import {
   createTableQrState,
   getBulkView,

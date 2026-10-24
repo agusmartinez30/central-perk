@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { useEffect, useRef } from "react";
 import { Check, MapPin, Pencil, Plus, Store, Sun, Trees, X, type LucideIcon } from "lucide-react";
 import type { SpaceIcon, SpaceTone } from "@/mocks/service-day";
-import type { SpaceCard } from "./space-config";
+import type { SpaceCard } from "@/features/venue/space-config";
 import type { SpaceEditorView, TableQrAction } from "./table-qr-state";
 
 export const SPACE_ICONS: Record<SpaceIcon, LucideIcon> = { store: Store, sun: Sun, trees: Trees, "map-pin": MapPin };

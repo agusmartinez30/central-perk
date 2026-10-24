@@ -1,6 +1,6 @@
 import { DEMO_STAFF } from "@/mocks/staff";
 import { SERVICE_DAY, type SpaceId, type VenueSpace, type VenueTable } from "@/mocks/service-day";
-import { getSpaceCards, getSpaceName, saveSpace, validateSpaceName, type SpaceCard } from "./space-config";
+import { getSpaceCards, getSpaceName, saveSpace, validateSpaceName, type SpaceCard } from "@/features/venue/space-config";
 import {
   PRINT_SIZES,
   filterBySpace,
@@ -19,29 +19,31 @@ import { buildTableQrUrl, formatDisplayUrl } from "./qr-url";
 import {
   applyTableDraft,
   createEmptyTableDraft,
-  filterTableRows,
   formatCapacity,
-  getCredentialHistory,
   getQuickToggle,
   getSessionStatuses,
   getTableChanges,
-  getTableMetrics,
-  getTableRows,
   nextTableNumber,
-  regenerateTableQr,
   setTableEnabled,
   toTableDraft,
   validateTableDraft,
-  type ConfigurationFilter,
-  type CredentialHistoryRow,
   type QuickToggle,
-  type SpaceFilter,
   type SessionStatus,
   type TableDraft,
   type TableDraftErrors,
+} from "@/features/venue/table-config";
+import {
+  filterTableRows,
+  getCredentialHistory,
+  getTableMetrics,
+  getTableRows,
+  regenerateTableQr,
+  type ConfigurationFilter,
+  type CredentialHistoryRow,
+  type SpaceFilter,
   type TableMetrics,
   type TableRow,
-} from "./table-config";
+} from "./qr-config";
 
 /** Views of the single `/tables/qr` route. */
 export type TableQrView = "list" | "editor" | "detail" | "material";

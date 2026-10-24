@@ -6,7 +6,7 @@ import { ChevronDown, Square, SquareCheck, X } from "lucide-react";
 import type { VenueSpace } from "@/mocks/service-day";
 import type { PrintSizeId } from "./print-selection";
 import { QrCode } from "./QrCode";
-import type { SpaceFilter } from "./table-config";
+import type { SpaceFilter } from "./qr-config";
 import type { BulkView, TableQrAction } from "./table-qr-state";
 
 type BulkPrintModalProps = {

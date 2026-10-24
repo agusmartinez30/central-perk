@@ -1,5 +1,5 @@
 import type { VenueTable } from "@/mocks/service-day";
-import type { SpaceFilter } from "./table-config";
+import type { SpaceFilter } from "./qr-config";
 
 export type PrintSizeId = "a6" | "compact";
 

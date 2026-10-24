@@ -4,8 +4,9 @@ import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Download, Ellipsis, Pencil, QrCode as QrCodeIcon, Search } from "lucide-react";
 import type { VenueSpace } from "@/mocks/service-day";
-import type { ConfigurationFilter, QrStatus, SpaceFilter, SessionStatus } from "./table-config";
-import { CONFIGURATION_FILTERS } from "./table-config";
+import type { SessionStatus } from "@/features/venue/table-config";
+import type { ConfigurationFilter, QrStatus, SpaceFilter } from "./qr-config";
+import { CONFIGURATION_FILTERS } from "./qr-config";
 import type { ListRow } from "./table-qr-state";
 import { StatusChip, type ChipTone } from "./TableQrParts";
 

@@ -1,17 +1,10 @@
 import type { SpaceIcon, SpaceId, SpaceTone, VenueSpace, VenueTable } from "@/mocks/service-day";
+import { normalizeName as normalize } from "./normalize";
 
 export const SPACE_NAME_MAX_LENGTH = 24;
 
 /** Shown for a table whose space no longer exists (never happens with the seeded data). */
 export const UNKNOWN_SPACE_NAME = "Sin espacio";
-
-const normalize = (value: string) =>
-  value
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ");
 
 export function getSpaceName(spaces: readonly VenueSpace[], id: SpaceId): string {
   return spaces.find((space) => space.id === id)?.name ?? UNKNOWN_SPACE_NAME;
