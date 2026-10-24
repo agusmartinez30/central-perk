@@ -4,3 +4,4 @@ export { PasswordField, type PasswordFieldProps } from "./PasswordField";
 export { Checkbox } from "./Checkbox";
 export { Notice, type NoticeTone } from "./Notice";
 export { Card } from "./Card";
+export { ConfirmDialog, type ConfirmDialogProps } from "./ConfirmDialog";

@@ -2,19 +2,10 @@
 
 import clsx from "clsx";
 import { useEffect, useRef } from "react";
-import { Check, MapPin, Pencil, Plus, Store, Sun, Trees, X, type LucideIcon } from "lucide-react";
-import type { SpaceIcon, SpaceTone } from "@/mocks/service-day";
+import { Check, Pencil, Plus, X } from "lucide-react";
+import { SPACE_ICONS, SPACE_TONES } from "@/features/venue/space-icons";
 import type { SpaceCard } from "@/features/venue/space-config";
 import type { SpaceEditorView, TableQrAction } from "./table-qr-state";
-
-export const SPACE_ICONS: Record<SpaceIcon, LucideIcon> = { store: Store, sun: Sun, trees: Trees, "map-pin": MapPin };
-
-export const SPACE_TONES: Record<SpaceTone, string> = {
-  brand: "bg-brand-wash text-brand",
-  warning: "bg-warning-bg text-warning",
-  success: "bg-success-bg text-success",
-  neutral: "bg-sand text-muted",
-};
 
 const cardClass = "flex h-[58px] min-w-0 flex-1 items-center gap-2.5 rounded-[10px] bg-surface px-3 outline-1 -outline-offset-[0.5px] outline-line";
 

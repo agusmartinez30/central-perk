@@ -1,13 +1,14 @@
 "use client";
 
 import clsx from "clsx";
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { Check, Map as MapIcon, Maximize, Minus, Plus } from "lucide-react";
 import {
   TABLE_BODY,
   TABLE_BOX,
   getFitTransform,
   zoomAround,
+  type Chair,
   type PlanTable,
   type PlanTone,
   type PlanTransform,
@@ -19,6 +20,44 @@ const TONES: Record<PlanTone, { chair: string; body: string; text: string; ring:
   occupied: { chair: "bg-brand-wash", body: "bg-brand-wash", text: "text-brand", ring: "outline-brand", dot: "bg-brand" },
   bill: { chair: "bg-danger-bg", body: "bg-danger-bg", text: "text-danger", ring: "outline-danger", dot: "bg-danger" },
 };
+
+type TableFigureProps = {
+  chairs: readonly Chair[];
+  shape: "rect" | "round";
+  chairClass: string;
+  bodyClass: string;
+  /** Outline color class when selected; null draws the resting hairline. */
+  ringClass: string | null;
+  children: ReactNode;
+};
+
+/** A table in its 150×132 box: chairs by capacity around the 120×110 body (round or rect). */
+export function TableFigure({ chairs, shape, chairClass, bodyClass, ringClass, children }: TableFigureProps) {
+  return (
+    <>
+      {chairs.map((chair, index) => (
+        <span
+          key={index}
+          aria-hidden="true"
+          style={{ left: chair.x, top: chair.y, width: chair.width, height: chair.height }}
+          className={clsx("absolute rounded-[4px]", chairClass)}
+        />
+      ))}
+      <span
+        aria-hidden="true"
+        style={{ left: TABLE_BODY.x, top: TABLE_BODY.y, width: TABLE_BODY.width, height: TABLE_BODY.height }}
+        className={clsx(
+          "absolute flex flex-col items-center justify-center gap-1.5 group-hover:brightness-[0.97]",
+          bodyClass,
+          shape === "round" ? "rounded-full" : "rounded-[14px]",
+          ringClass ? clsx("outline-3 -outline-offset-[1.5px]", ringClass) : "outline-1 -outline-offset-[0.5px] outline-line",
+        )}
+      >
+        {children}
+      </span>
+    </>
+  );
+}
 
 type PlanTableProps = { table: PlanTable; selected: boolean; onSelect: (id: string) => void };
 
@@ -38,23 +77,12 @@ function PlanTableButton({ table, selected, onSelect }: PlanTableProps) {
         !table.matches && "opacity-30",
       )}
     >
-      {table.chairs.map((chair, index) => (
-        <span
-          key={index}
-          aria-hidden="true"
-          style={{ left: chair.x, top: chair.y, width: chair.width, height: chair.height }}
-          className={clsx("absolute rounded-[4px]", tone.chair)}
-        />
-      ))}
-      <span
-        aria-hidden="true"
-        style={{ left: TABLE_BODY.x, top: TABLE_BODY.y, width: TABLE_BODY.width, height: TABLE_BODY.height }}
-        className={clsx(
-          "absolute flex flex-col items-center justify-center gap-1.5 group-hover:brightness-[0.97]",
-          tone.body,
-          table.shape === "round" ? "rounded-full" : "rounded-[14px]",
-          selected ? clsx("outline-3 -outline-offset-[1.5px]", tone.ring) : "outline-1 -outline-offset-[0.5px] outline-line",
-        )}
+      <TableFigure
+        chairs={table.chairs}
+        shape={table.shape}
+        chairClass={tone.chair}
+        bodyClass={tone.body}
+        ringClass={selected ? tone.ring : null}
       >
         <span className={clsx("text-[14px] font-bold whitespace-nowrap", tone.text)}>{table.code}</span>
         {table.account ? (
@@ -69,7 +97,7 @@ function PlanTableButton({ table, selected, onSelect }: PlanTableProps) {
         ) : (
           <span className="text-[10px] whitespace-nowrap text-muted">{table.capacityLabel}</span>
         )}
-      </span>
+      </TableFigure>
       {selected && (
         <span
           aria-hidden="true"
@@ -79,6 +107,27 @@ function PlanTableButton({ table, selected, onSelect }: PlanTableProps) {
         </span>
       )}
     </button>
+  );
+}
+
+/** "Zoom Controls": in, out and fit, stacked at the bottom-left corner of the plan. */
+export function ZoomControls({ onZoom, onFit }: { onZoom: (direction: 1 | -1) => void; onFit: () => void }) {
+  return (
+    <div
+      role="group"
+      aria-label="Zoom del plano"
+      className="absolute bottom-[26px] left-4 flex flex-col rounded-nav bg-surface outline-1 -outline-offset-[0.5px] outline-line"
+    >
+      <button type="button" aria-label="Acercar" onClick={() => onZoom(1)} className="flex h-[30px] w-8 items-center justify-center text-ink hover:bg-cream">
+        <Plus size={14} aria-hidden="true" />
+      </button>
+      <button type="button" aria-label="Alejar" onClick={() => onZoom(-1)} className="flex h-[30px] w-8 items-center justify-center text-ink hover:bg-cream">
+        <Minus size={14} aria-hidden="true" />
+      </button>
+      <button type="button" aria-label="Ajustar a la vista" onClick={onFit} className="flex h-[30px] w-8 items-center justify-center text-ink hover:bg-cream">
+        <Maximize size={14} aria-hidden="true" />
+      </button>
+    </div>
   );
 }
 
@@ -144,26 +193,7 @@ export function FloorPlan(props: FloorPlanProps) {
         </div>
       )}
 
-      <div
-        role="group"
-        aria-label="Zoom del plano"
-        className="absolute bottom-[26px] left-4 flex flex-col rounded-nav bg-surface outline-1 -outline-offset-[0.5px] outline-line"
-      >
-        <button type="button" aria-label="Acercar" onClick={() => zoom(1)} className="flex h-[30px] w-8 items-center justify-center text-ink hover:bg-cream">
-          <Plus size={14} aria-hidden="true" />
-        </button>
-        <button type="button" aria-label="Alejar" onClick={() => zoom(-1)} className="flex h-[30px] w-8 items-center justify-center text-ink hover:bg-cream">
-          <Minus size={14} aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          aria-label="Ajustar a la vista"
-          onClick={() => props.onTransformChange(getFitTransform(props.tables, viewport()))}
-          className="flex h-[30px] w-8 items-center justify-center text-ink hover:bg-cream"
-        >
-          <Maximize size={14} aria-hidden="true" />
-        </button>
-      </div>
+      <ZoomControls onZoom={zoom} onFit={() => props.onTransformChange(getFitTransform(props.tables, viewport()))} />
 
       <div
         role="tablist"

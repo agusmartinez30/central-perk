@@ -112,7 +112,13 @@ describe("getTopbarConfig", () => {
       variant: "location",
       title: "Café Central · Sede Centro · Turno mañana",
     });
-    expect(getTopbarConfig("/tables/management").variant).toBe("section");
+  });
+
+  it("reuses the 02 branch and shift top bar on the table management screen", () => {
+    expect(getTopbarConfig("/tables/management")).toEqual({
+      variant: "location",
+      title: "Café Central · Sede Centro · Turno mañana",
+    });
   });
 
   it("shows the table management title and the secure-tokens pill on the 09 tables and QR screen", () => {

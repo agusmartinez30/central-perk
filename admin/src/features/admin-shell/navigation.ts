@@ -30,7 +30,8 @@ export type NavItem = {
 
 /**
  * `section`: 10A top bar ("Café Central · Resumen", connection pill, compact profile).
- * `location`: 02 top bar (branch and shift, round notifications button, larger profile).
+ * `location`: 02 top bar (branch and shift, round notifications button, larger profile), reused by
+ *   Gestión de mesas, which has no export.
  * `live-location`: 03 top bar (branch and shift plus an "En vivo" pill and 12/10px profile copy),
  *   reused by 04, whose 11/9px profile copy maps to the same 12/10px scale.
  * `verified-location`: 05 top bar, like `live-location` but with a "Datos verificados" pill and a
@@ -73,7 +74,7 @@ export const TOPBAR_BRANCH = `${BRAND_NAME} · Sede Centro`;
 export const NAV_ITEMS: readonly NavItem[] = [
   { id: "overview", label: "Resumen", href: "/", icon: LayoutDashboard },
   { id: "tables", label: "Mesas", href: "/tables", icon: Armchair, topbar: "location" },
-  { id: "table-management", label: "Gestión de mesas", href: "/tables/management", icon: LayoutGrid },
+  { id: "table-management", label: "Gestión de mesas", href: "/tables/management", icon: LayoutGrid, topbar: "location" },
   {
     id: "table-qr",
     label: "Mesas y códigos QR",
