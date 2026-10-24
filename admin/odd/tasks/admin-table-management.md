@@ -26,7 +26,7 @@ The sidebar has three table entries. "Gestión de mesas" is a placeholder, and t
 `ask-on-risk` (inherited). No PRs; fast-forward `main` and push only when the user says so.
 
 ## Tasks
-- [ ] T1 Shared venue store (`useSyncExternalStore`) + move `table-config`/`space-config` into `src/features/venue/` + new layout/space/delete helpers, test-first. Route: delegated.
+- [x] T1 Shared venue store (`useSyncExternalStore`) + move `table-config`/`space-config` into `src/features/venue/` + new layout/space/delete helpers, test-first. Route: delegated.
 - [ ] T2 Management screen at `/tables/management`: plan per space in edit mode, space tabs with "+ Nuevo espacio", side panel with table and space forms, `?state=` variants. Route: delegated.
 - [ ] T3 Drag-and-drop (pointer + keyboard arrows) with snap/clamp/collision feedback, shape toggle, delete rules with confirmation. Route: delegated.
 - [ ] T4 Rewire 09 (QR-only; links to Gestión) and 02 (reads the store) + docs. Route: delegated.
@@ -40,7 +40,10 @@ The sidebar has three table entries. "Gestión de mesas" is a placeholder, and t
 lint, tsc, vitest, build, screenshots.
 
 ## Progress / Evidence
-- (pending)
+- T1 (delegated writer; trigger: 2+ non-trivial files) — commits `496c683` refactor(venue): move helpers, `fcbf4f5` feat(venue): store + rules.
+  - `src/features/venue/`: `table-config.ts` (drafts, validation, `applyTableDraft`, enable rules, session statuses, `nextTableId`), `space-config.ts` (+ style, `moveSpace`, `getSpaceRemoval`/`deleteSpace`), `table-layout.ts` (`TABLE_BOX`, `PLAN_SIZE` 780×620, 8px `GRID_STEP`, snap/clamp/overlap, `resolveMove`/`moveTable`, `setTableShape`, overlap-aware `getFreeLayout`), `table-removal.ts` (delete only without session history, otherwise offer disable; blocked while a session is open), `venue-state.ts` (pure reducer), `venue-store.ts` (`useSyncExternalStore`). QR-only helpers stay in `table-qr/qr-config.ts`.
+  - Store: in memory per browser session, no Web Storage. Server snapshot = seed = first client snapshot, so hydration never mismatches; client navigation keeps edits; a full reload resets. No token/audit counter needed: tokens come from `createUniqueQrToken` (screen) and audit ids from `nextAuditId`.
+  - RED observed (missing modules/functions), then GREEN. Checks: build OK, tsc OK, lint OK, vitest 40 files / 518 tests passed.
 
 ## Next step
-T1.
+T2.
