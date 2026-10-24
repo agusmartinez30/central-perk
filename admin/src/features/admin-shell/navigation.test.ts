@@ -112,6 +112,13 @@ describe("getTopbarConfig", () => {
       variant: "location",
       title: "Café Central · Sede Centro · Turno mañana",
     });
-    expect(getTopbarConfig("/tables/qr").variant).toBe("section");
+    expect(getTopbarConfig("/tables/management").variant).toBe("section");
+  });
+
+  it("shows the table management title and the secure-tokens pill on the 09 tables and QR screen", () => {
+    expect(getTopbarConfig("/tables/qr")).toEqual({
+      variant: "credentials",
+      title: "Café Central · Gestión de mesas",
+    });
   });
 });

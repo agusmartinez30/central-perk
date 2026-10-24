@@ -1,0 +1,1 @@
+export { TableQrScreen } from "./TableQrScreen";
