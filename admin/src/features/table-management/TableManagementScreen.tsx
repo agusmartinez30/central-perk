@@ -12,7 +12,7 @@ import type { PlanTransform } from "@/features/tables/floor-plan";
 import { getUsedTokens } from "@/features/table-qr/qr-config";
 import { createUniqueQrToken } from "@/features/table-qr/qr-token";
 import { HeaderButton, HeaderLink, PageHeader } from "@/features/table-qr/TableQrParts";
-import { resolveMove } from "@/features/venue/table-layout";
+import { resolveMove, resolveResize } from "@/features/venue/table-layout";
 import { dispatchVenue, useVenue } from "@/features/venue/venue-store";
 import type { VenueState } from "@/features/venue/venue-state";
 import {
@@ -173,6 +173,8 @@ export function TableManagementScreen() {
             onSelect={(id) => dispatch({ type: "select-table", id })}
             onMove={(id, point) => dispatch({ type: "move-table", id, ...point })}
             canDrop={(id, point) => resolveMove(venue.tables, id, point).ok}
+            onResize={(id, rect) => dispatch({ type: "resize-table", id, ...rect })}
+            canResize={(id, rect) => resolveResize(venue.tables, id, rect).ok}
             onDismissNotice={() => dispatch({ type: "dismiss-notice" })}
             onNewTable={() => dispatch({ type: "new-table" })}
           />

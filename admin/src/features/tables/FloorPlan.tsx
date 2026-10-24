@@ -4,9 +4,8 @@ import clsx from "clsx";
 import { useRef, type ReactNode } from "react";
 import { Check, Map as MapIcon, Maximize, Minus, Plus } from "lucide-react";
 import {
-  TABLE_BODY,
-  TABLE_BOX,
   getFitTransform,
+  getTableBody,
   zoomAround,
   type Chair,
   type PlanTable,
@@ -22,6 +21,8 @@ const TONES: Record<PlanTone, { chair: string; body: string; text: string; ring:
 };
 
 type TableFigureProps = {
+  /** Box size (body plus chairs), as stored in the layout. */
+  size: { width: number; height: number };
   chairs: readonly Chair[];
   shape: "rect" | "round";
   chairClass: string;
@@ -31,8 +32,9 @@ type TableFigureProps = {
   children: ReactNode;
 };
 
-/** A table in its 150×132 box: chairs by capacity around the 120×110 body (round or rect). */
-export function TableFigure({ chairs, shape, chairClass, bodyClass, ringClass, children }: TableFigureProps) {
+/** A table in its box (150×132 by default): chairs by capacity around the body (round or rect). */
+export function TableFigure({ size, chairs, shape, chairClass, bodyClass, ringClass, children }: TableFigureProps) {
+  const body = getTableBody(size);
   return (
     <>
       {chairs.map((chair, index) => (
@@ -45,7 +47,7 @@ export function TableFigure({ chairs, shape, chairClass, bodyClass, ringClass, c
       ))}
       <span
         aria-hidden="true"
-        style={{ left: TABLE_BODY.x, top: TABLE_BODY.y, width: TABLE_BODY.width, height: TABLE_BODY.height }}
+        style={{ left: body.x, top: body.y, width: body.width, height: body.height }}
         className={clsx(
           "absolute flex flex-col items-center justify-center gap-1.5 group-hover:brightness-[0.97]",
           bodyClass,
@@ -61,7 +63,7 @@ export function TableFigure({ chairs, shape, chairClass, bodyClass, ringClass, c
 
 type PlanTableProps = { table: PlanTable; selected: boolean; onSelect: (id: string) => void };
 
-/** "Mesa NN · free/occ/bill": chairs by capacity around a 120×110 body (round in the patio). */
+/** "Mesa NN · free/occ/bill": chairs by capacity around the body at its stored size (round in the patio). */
 function PlanTableButton({ table, selected, onSelect }: PlanTableProps) {
   const tone = TONES[table.tone];
   const details = table.account ? `${table.account}, ${table.duration ?? ""}` : table.capacityLabel;
@@ -71,13 +73,14 @@ function PlanTableButton({ table, selected, onSelect }: PlanTableProps) {
       aria-pressed={selected}
       aria-label={`${table.label}: ${details}`}
       onClick={() => onSelect(table.id)}
-      style={{ left: table.x, top: table.y, width: TABLE_BOX.width, height: TABLE_BOX.height }}
+      style={{ left: table.x, top: table.y, width: table.width, height: table.height }}
       className={clsx(
         "group absolute rounded-[14px] transition-opacity focus-visible:outline-2 focus-visible:outline-brand",
         !table.matches && "opacity-30",
       )}
     >
       <TableFigure
+        size={table}
         chairs={table.chairs}
         shape={table.shape}
         chairClass={tone.chair}
@@ -101,7 +104,8 @@ function PlanTableButton({ table, selected, onSelect }: PlanTableProps) {
       {selected && (
         <span
           aria-hidden="true"
-          className={clsx("absolute top-3.5 left-[125px] flex size-[18px] items-center justify-center rounded-full text-white", tone.dot)}
+          style={{ left: table.width - 25 }}
+          className={clsx("absolute top-3.5 flex size-[18px] items-center justify-center rounded-full text-white", tone.dot)}
         >
           <Check size={10} strokeWidth={3} />
         </span>

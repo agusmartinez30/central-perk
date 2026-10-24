@@ -26,9 +26,6 @@ export function getTableBody({ width, height }: PlanSize): { x: number; y: numbe
   };
 }
 
-/** Body of the default box, until every caller draws from the stored size. */
-export const TABLE_BODY = getTableBody(TABLE_BOX);
-
 export type Chair = { side: ChairSide; x: number; y: number; width: number; height: number };
 
 const CHAIR_DEPTH = 7;

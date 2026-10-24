@@ -2,47 +2,76 @@
 
 import clsx from "clsx";
 import { useRef, useState, type PointerEvent } from "react";
-import { Map as MapIcon, Plus, X } from "lucide-react";
+import { Map as MapIcon, MoveDiagonal2, Plus, X } from "lucide-react";
 import { TableFigure, ZoomControls } from "@/features/tables/FloorPlan";
-import { getFitTransform, zoomAround, type PlanTransform } from "@/features/tables/floor-plan";
-import { PLAN_SIZE, TABLE_BOX, type PlanPoint } from "@/features/venue/table-layout";
+import { getChairs, getFitTransform, zoomAround, type PlanTransform } from "@/features/tables/floor-plan";
+import {
+  PLAN_SIZE,
+  RESIZE_HANDLES,
+  getResizedLayout,
+  type PlanPoint,
+  type PlanRect,
+  type ResizeHandle,
+} from "@/features/venue/table-layout";
 import type { EditorTable, Notice, PlanView } from "./management-state";
-import { getArrowMove, getDragPoint, hasDragged } from "./plan-drag";
+import { RESIZE_CURSORS, getArrowMove, getDragPoint, getGrabZone, hasDragged, isEdgeHandle } from "./plan-drag";
 
 /** The plan opens at 1:1 with the editable area 16px from the corner. */
 export const DEFAULT_EDITOR_TRANSFORM: PlanTransform = { scale: 1, x: 16, y: 16 };
 
-/** Corners of the editable area, so "Ajustar a la vista" shows the whole plan. */
-const PLAN_CORNERS = [
-  { x: 0, y: 0 },
-  { x: PLAN_SIZE.width - TABLE_BOX.width, y: PLAN_SIZE.height - TABLE_BOX.height },
-];
+/** The whole editable area, so "Ajustar a la vista" shows the plan. */
+const PLAN_BOUNDS = [{ x: 0, y: 0, ...PLAN_SIZE }];
 
-/** A press on a table: where it started and, once it travelled past the threshold, where it is drawn. */
-type Drag = { id: string; pointerId: number; start: PlanPoint; origin: PlanPoint; point: PlanPoint; moved: boolean };
+/**
+ * A press on a table: what it does (move, or resize from a border or corner), where it started,
+ * the table's box at that moment and, once it travelled past the threshold, the box drawn now.
+ * Every frame starts again from `origin` with the total pointer delta, so snapping never drifts.
+ */
+type Drag = {
+  id: string;
+  handle: ResizeHandle | null;
+  pointerId: number;
+  start: PlanPoint;
+  origin: EditorTable;
+  rect: PlanRect;
+  moved: boolean;
+};
+
+const rectOf = ({ x, y, width, height }: PlanRect): PlanRect => ({ x, y, width, height });
+const sameRect = (a: PlanRect, b: PlanRect) => a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 
 type EditorTableProps = {
   table: EditorTable;
-  /** Position while being dragged; null at rest. */
-  dragPoint: PlanPoint | null;
+  scale: number;
+  /** Box while being moved or resized; null at rest. */
+  preview: { rect: PlanRect; resizing: boolean } | null;
   /** False while dragged over another table: the drop will be refused. */
   droppable: boolean;
   onSelect: (id: string) => void;
   onMove: (id: string, point: PlanPoint) => void;
-  onPointerDown: (event: PointerEvent<HTMLButtonElement>, table: EditorTable) => void;
-  onPointerMove: (event: PointerEvent<HTMLButtonElement>) => void;
-  onPointerEnd: (event: PointerEvent<HTMLButtonElement>, drop: boolean) => void;
+  onPointerDown: (event: PointerEvent<HTMLElement>, table: EditorTable, handle: ResizeHandle | null) => void;
+  onPointerMove: (event: PointerEvent<HTMLElement>) => void;
+  onPointerEnd: (event: PointerEvent<HTMLElement>, drop: boolean) => void;
   /** True right after a drag, so the click that ends it does not reselect. */
   consumeClick: () => boolean;
 };
 
 /**
  * A table in edit mode: the 02 figure in neutral colors with its label and capacity; disabled
- * ones dimmed. Drag it with the pointer, or focus it and use the arrow keys (Shift: 40px).
+ * ones dimmed. Drag it to move it, or drag any border or corner to resize it (round tables keep
+ * their proportions); the corner badge tells it can be resized. Focused, the arrow keys move it
+ * (Shift: 40px).
  */
 function EditorTableButton(props: EditorTableProps) {
-  const { table, dragPoint, droppable } = props;
-  const point = dragPoint ?? table;
+  const { table, preview, droppable, scale } = props;
+  const box = preview?.rect ?? table;
+  const chairs = preview?.resizing ? getChairs(table.capacity, box) : table.chairs;
+  const refused = preview !== null && !droppable;
+  const start = (handle: ResizeHandle) => (event: PointerEvent<HTMLElement>) => {
+    // The press starts a resize, not a move of the table underneath.
+    event.stopPropagation();
+    props.onPointerDown(event, table, handle);
+  };
   return (
     <button
       type="button"
@@ -53,37 +82,83 @@ function EditorTableButton(props: EditorTableProps) {
         if (!props.consumeClick()) props.onSelect(table.id);
       }}
       onKeyDown={(event) => {
-        const next = getArrowMove(table, event.key, event.shiftKey);
+        const next = getArrowMove(table, event.key, event.shiftKey, table);
         if (!next) return;
         event.preventDefault();
         props.onMove(table.id, next);
       }}
-      onPointerDown={(event) => props.onPointerDown(event, table)}
+      onPointerDown={(event) => props.onPointerDown(event, table, null)}
       onPointerMove={props.onPointerMove}
       onPointerUp={(event) => props.onPointerEnd(event, true)}
       onPointerCancel={(event) => props.onPointerEnd(event, false)}
-      style={{ left: point.x, top: point.y, width: TABLE_BOX.width, height: TABLE_BOX.height }}
+      style={{ left: box.x, top: box.y, width: box.width, height: box.height }}
       className={clsx(
         "group absolute touch-none rounded-[14px] focus-visible:outline-2 focus-visible:outline-brand",
-        dragPoint ? "z-10 cursor-grabbing drop-shadow-[0_8px_16px_#10101026]" : "cursor-grab",
-        !table.enabled && !table.selected && !dragPoint && "opacity-45",
+        preview ? "z-10 drop-shadow-[0_8px_16px_#10101026]" : "hover:z-10",
+        preview && !preview.resizing ? "cursor-grabbing" : "cursor-grab",
+        !table.enabled && !table.selected && !preview && "opacity-45",
       )}
     >
       <TableFigure
-        chairs={table.chairs}
+        size={box}
+        chairs={chairs}
         shape={table.shape}
-        chairClass={dragPoint && !droppable ? "bg-danger-bg" : "bg-[#e9e6e1]"}
-        bodyClass={dragPoint && !droppable ? "bg-danger-bg" : table.enabled ? "bg-surface" : "bg-sand"}
-        ringClass={dragPoint && !droppable ? "outline-danger" : table.selected || dragPoint ? "outline-brand" : null}
+        chairClass={refused ? "bg-danger-bg" : "bg-[#e9e6e1]"}
+        bodyClass={refused ? "bg-danger-bg" : table.enabled ? "bg-surface" : "bg-sand"}
+        ringClass={refused ? "outline-danger" : table.selected || preview ? "outline-brand" : null}
       >
-        <span className="max-w-[104px] truncate text-[13px] font-bold whitespace-nowrap text-ink">{table.label}</span>
+        <span className="max-w-full truncate px-2 text-[13px] font-bold whitespace-nowrap text-ink">{table.label}</span>
         <span className="text-[10px] whitespace-nowrap text-muted">{table.capacityLabel}</span>
-        {dragPoint && !droppable ? (
+        {refused ? (
           <span className="text-[10px] font-bold whitespace-nowrap text-danger">No entra acá</span>
         ) : (
           !table.enabled && <span className="text-[10px] font-bold whitespace-nowrap text-muted">Deshabilitada</span>
         )}
       </TableFigure>
+
+      {/* Grab zones on every border and corner, so any table resizes without selecting it first. */}
+      {RESIZE_HANDLES.map((handle) => (
+        <span
+          key={handle}
+          aria-hidden="true"
+          data-handle={handle}
+          onPointerDown={start(handle)}
+          style={{ ...getGrabZone(handle, box, scale), cursor: RESIZE_CURSORS[handle] }}
+          className="group/handle absolute z-10 flex touch-none items-center justify-center"
+        >
+          {isEdgeHandle(handle) && (
+            // Border highlight while the zone is hovered or dragged.
+            <span
+              className={clsx(
+                "rounded-full bg-brand transition-opacity group-hover/handle:opacity-100",
+                handle === "n" || handle === "s" ? "w-full" : "h-full",
+                preview?.resizing ? "opacity-60" : "opacity-0",
+              )}
+              style={handle === "n" || handle === "s" ? { height: 3 / scale } : { width: 3 / scale }}
+            />
+          )}
+        </span>
+      ))}
+
+      {/* Resize affordance: the badge on the bottom-right corner tells the table can be resized. */}
+      <span
+        aria-hidden="true"
+        title="Arrastrá un borde para cambiar el tamaño"
+        onPointerDown={start("se")}
+        style={{
+          left: box.width - 11 / scale,
+          top: box.height - 11 / scale,
+          width: 22 / scale,
+          height: 22 / scale,
+          cursor: RESIZE_CURSORS.se,
+        }}
+        className={clsx(
+          "absolute z-20 flex touch-none items-center justify-center rounded-full bg-brand text-white shadow-[0_2px_6px_#10101033] transition-opacity",
+          table.selected || preview?.resizing ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+        )}
+      >
+        <MoveDiagonal2 strokeWidth={2.5} style={{ width: 13 / scale, height: 13 / scale }} />
+      </span>
     </button>
   );
 }
@@ -98,6 +173,10 @@ type PlanEditorProps = {
   onMove: (id: string, point: PlanPoint) => void;
   /** Whether a table could be dropped at `point` (live feedback while dragging). */
   canDrop: (id: string, point: PlanPoint) => boolean;
+  /** Border or corner drag released; the screen refuses overlaps with a notice. */
+  onResize: (id: string, rect: PlanRect) => void;
+  /** Whether a table could take `rect` (live feedback while resizing). */
+  canResize: (id: string, rect: PlanRect) => boolean;
   onDismissNotice: () => void;
   onNewTable: () => void;
 };
@@ -105,7 +184,8 @@ type PlanEditorProps = {
 /**
  * The active space's plan in edit mode (no export; built from the 02 plan): the editable area
  * drawn as a dotted grid, every table of the space (disabled ones too) and the 02 zoom controls.
- * Tables are dragged with pointer events, snapped to the 8px grid and kept inside the area.
+ * Tables are moved and resized with pointer events, snapped to the 8px grid and kept inside the
+ * area.
  */
 export function PlanEditor({
   view,
@@ -115,6 +195,8 @@ export function PlanEditor({
   onSelect,
   onMove,
   canDrop,
+  onResize,
+  canResize,
   onDismissNotice,
   onNewTable,
 }: PlanEditorProps) {
@@ -122,23 +204,36 @@ export function PlanEditor({
   const suppressClickRef = useRef(false);
   const viewportRef = useRef<HTMLElement>(null);
 
-  const startDrag = (event: PointerEvent<HTMLButtonElement>, table: EditorTable) => {
+  const startDrag = (event: PointerEvent<HTMLElement>, table: EditorTable, handle: ResizeHandle | null) => {
     if (event.button !== 0) return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    const origin = { x: table.x, y: table.y };
-    setDrag({ id: table.id, pointerId: event.pointerId, start: { x: event.clientX, y: event.clientY }, origin, point: origin, moved: false });
+    const rect = rectOf(table);
+    setDrag({ id: table.id, handle, pointerId: event.pointerId, start: { x: event.clientX, y: event.clientY }, origin: table, rect, moved: false });
   };
-  const moveDrag = (event: PointerEvent<HTMLButtonElement>) => {
+  const moveDrag = (event: PointerEvent<HTMLElement>) => {
     if (!drag || event.pointerId !== drag.pointerId) return;
     const current = { x: event.clientX, y: event.clientY };
     const moved = drag.moved || hasDragged(drag.start, current);
-    setDrag({ ...drag, moved, point: moved ? getDragPoint(drag.origin, drag.start, current, transform.scale) : drag.origin });
+    if (!moved) return;
+    const { origin, handle, start } = drag;
+    let rect: PlanRect;
+    if (handle) {
+      const layout = { ...rectOf(origin), shape: origin.shape };
+      const scale = transform.scale;
+      rect = rectOf(getResizedLayout(layout, origin.capacity, handle, (current.x - start.x) / scale, (current.y - start.y) / scale));
+    } else {
+      rect = { ...rectOf(origin), ...getDragPoint(origin, start, current, transform.scale, origin) };
+    }
+    setDrag({ ...drag, moved, rect });
   };
-  const endDrag = (event: PointerEvent<HTMLButtonElement>, drop: boolean) => {
+  const endDrag = (event: PointerEvent<HTMLElement>, drop: boolean) => {
     if (!drag || event.pointerId !== drag.pointerId) return;
     if (drag.moved) {
       suppressClickRef.current = true;
-      if (drop && (drag.point.x !== drag.origin.x || drag.point.y !== drag.origin.y)) onMove(drag.id, drag.point);
+      if (drop && !sameRect(drag.rect, rectOf(drag.origin))) {
+        if (drag.handle) onResize(drag.id, drag.rect);
+        else onMove(drag.id, { x: drag.rect.x, y: drag.rect.y });
+      }
     }
     setDrag(null);
   };
@@ -178,13 +273,20 @@ export function PlanEditor({
           }}
         />
         {view.tables.map((table) => {
-          const dragPoint = drag?.id === table.id && drag.moved ? drag.point : null;
+          const active = drag?.id === table.id && drag.moved ? drag : null;
+          const preview = active ? { rect: active.rect, resizing: active.handle !== null } : null;
+          const droppable = !active
+            ? true
+            : active.handle
+              ? canResize(table.id, active.rect)
+              : canDrop(table.id, { x: active.rect.x, y: active.rect.y });
           return (
             <EditorTableButton
               key={table.id}
               table={table}
-              dragPoint={dragPoint}
-              droppable={dragPoint ? canDrop(table.id, dragPoint) : true}
+              scale={scale}
+              preview={preview}
+              droppable={droppable}
               onSelect={onSelect}
               onMove={onMove}
               onPointerDown={startDrag}
@@ -237,12 +339,16 @@ export function PlanEditor({
 
       <p
         id="plan-editor-help"
-        className="absolute right-4 bottom-4 rounded-nav bg-surface/90 px-2.5 py-1.5 text-[11px] text-muted outline-1 -outline-offset-[0.5px] outline-line"
+        className="absolute right-4 bottom-4 flex max-w-[calc(100%-96px)] flex-col items-end gap-0.5 rounded-nav bg-surface/90 px-2.5 py-1.5 text-right text-[11px] text-muted outline-1 -outline-offset-[0.5px] outline-line"
       >
-        Arrastrá una mesa para ubicarla · Con la mesa enfocada, flechas: 8 px · Shift + flechas: 40 px
+        <span>Arrastrá una mesa para ubicarla · Con la mesa enfocada, flechas: 8 px · Shift + flechas: 40 px</span>
+        <span className="flex items-center gap-1">
+          <MoveDiagonal2 size={11} aria-hidden="true" className="text-brand" />
+          Arrastrá cualquier borde de la mesa para cambiar su tamaño.
+        </span>
       </p>
 
-      <ZoomControls onZoom={zoom} onFit={() => onTransformChange(getFitTransform(PLAN_CORNERS, viewport()))} />
+      <ZoomControls onZoom={zoom} onFit={() => onTransformChange(getFitTransform(PLAN_BOUNDS, viewport()))} />
     </section>
   );
 }
