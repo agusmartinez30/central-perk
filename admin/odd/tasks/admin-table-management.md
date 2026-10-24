@@ -65,5 +65,7 @@ lint, tsc, vitest, build, screenshots.
   - Checks: build OK, tsc OK, lint OK, vitest 42 files / 538 tests (09 editor/space-form tests removed with the feature, replaced by a store-driven test). Screenshots: end-to-end in one browser page with client navigation — `tm-flow-1-management` (Barra created, Mesa 13 created in it), `tm-flow-2-tables` (Barra tab shows M13, "3 disponibles"), `tm-flow-3-qr` (Barra card "1 mesa"), `tm-flow-4-qr-detail` (Mesa 13 · Barra with its QR `?mesa=13&qr=…`); `tm-check-overview`, `tm-check-orders`, `tm-check-tables`, `tm-qr-list`, `tm-qr-legacy-edit` (redirect).
   - Acceptance: Barra + Mesa 13 visible in `/tables` and `/tables/qr` with a QR in the same session ✓; dragging changes the position read by `/tables` (same store) ✓; invariants and all checks pass ✓.
 
+- RDD for T1–T4 (committed-only vs feat/admin-table-qr): assessed medium, `slice_budget_reached`; the user declined review for this candidate. Parent spot check: vitest 538/538; screenshots tm-flow-1/2 reviewed (Barra + Mesa 13 appear in /tables).
+
 ## Next step
 User review; push / fast-forward `main` only when the user says so. Follow-ups: the 02 header still reads "Gestión de mesas" (export title) while the sidebar says "Mesas"; the 02 plan-vs-spaces layout gap stays deferred.
