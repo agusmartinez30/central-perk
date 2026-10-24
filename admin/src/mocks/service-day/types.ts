@@ -100,6 +100,52 @@ export type ConsumptionMomentInfo = {
   categoryIds: ProductCategoryId[];
 };
 
+/** Area of the venue a table belongs to (09A "Sector"). */
+export type TableSector = "interior" | "terraza" | "patio";
+
+export type TableSectorInfo = { id: TableSector; label: string };
+
+/** Public QR credential of a table: the token its printed code carries. */
+export type QrCredential = {
+  /** Public, non-guessable token with no session id, e.g. "4pX9kR2mL7". */
+  token: string;
+  /** ISO "YYYY-MM-DD" the credential was generated. */
+  generatedOn: string;
+  /** Staff member who generated it. */
+  generatedBy: string;
+};
+
+/** A rotated credential: its printed code no longer resolves the table. */
+export type RevokedQrCredential = QrCredential & {
+  /** ISO "YYYY-MM-DD" it was rotated. */
+  revokedOn: string;
+  /** Audit entry of the rotation, e.g. "QR-118". */
+  auditId: string;
+};
+
+/** A physical table of the venue as 09 configures it; its live state comes from its sessions. */
+export type VenueTable = {
+  /** Stable internal id, e.g. "tbl_07"; it never changes when the label does. */
+  id: string;
+  /** Number the live screens (02/03/04/05) and the QR URL use; unique and stable. */
+  number: number;
+  /** Visible label (09B "Nombre o número de mesa"), e.g. "Mesa 07". */
+  label: string;
+  sector: TableSector;
+  /** Seats, a positive integer. */
+  capacity: number;
+  /** 09B "Descripción interna · opcional"; empty when unset. */
+  description: string;
+  /** 09B "Mesa habilitada". */
+  enabled: boolean;
+  /** Configuration version (09B "versión 18"). */
+  version: number;
+  /** Active credential; null when the table has no QR. */
+  qr: QrCredential | null;
+  /** Rotated credentials, newest first. */
+  revokedQrs: RevokedQrCredential[];
+};
+
 /** Seated period of a table: from the first customer to the payment that frees it. */
 export type TableSession = {
   /** e.g. "S-2026-10-21-05-1". */
@@ -169,8 +215,10 @@ export type ServiceDay = {
   now: string;
   /** "HH:MM:SS" of the last realtime sync. */
   syncedAt: string;
-  /** Enabled tables of the venue. */
+  /** Numbers of the enabled tables of the venue (the live screens show these). */
   tableNumbers: number[];
+  /** Every table of the venue with its 09 configuration and QR credential. */
+  tables: VenueTable[];
   staff: StaffMember[];
   products: Product[];
   sessions: TableSession[];

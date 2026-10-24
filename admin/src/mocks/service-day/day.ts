@@ -1,6 +1,7 @@
 import { PAYMENT_SETTINGS } from "../payments";
 import type { BillPaymentMethod, CollectionMethod, OrderHistoryEvent } from "../types";
 import { PRODUCTS, STAFF } from "./catalog";
+import { VENUE_TABLES } from "./tables";
 import { addMinutes } from "./time";
 import type {
   ServiceBillRequest,
@@ -310,7 +311,8 @@ export const SERVICE_DAY: ServiceDay = {
   date: DATE,
   now: NOW,
   syncedAt: `${NOW}:18`,
-  tableNumbers: Array.from({ length: 12 }, (_, index) => index + 1),
+  tableNumbers: VENUE_TABLES.filter((table) => table.enabled).map((table) => table.number),
+  tables: VENUE_TABLES,
   staff: STAFF,
   products: PRODUCTS,
   sessions: [...TODAY_SESSIONS, ...PAST.map((entry) => entry.session)],

@@ -14,6 +14,7 @@ import {
   PAYMENT_METHODS,
   REQUEST_MODES,
   SERVICE_DAY,
+  TABLE_SECTORS,
   TABLES_BOARD,
   minutesBetween,
 } from "./index";
@@ -290,6 +291,73 @@ describe("bill requests (04) and collections (05)", () => {
   it("confirms collections with members of the staff", () => {
     for (const collection of day.collections) {
       expect(day.staff.map((member) => member.name)).toContain(collection.confirmedBy);
+    }
+  });
+});
+
+describe("venue tables (09)", () => {
+  const tables = day.tables;
+
+  it("configures the twelve tables of 02 with the 09A sectors and capacities", () => {
+    expect(tables.map((table) => table.label)).toEqual(
+      Array.from({ length: 12 }, (_, index) => `Mesa ${String(index + 1).padStart(2, "0")}`),
+    );
+    expect(tables.map((table) => table.sector)).toEqual([
+      "interior", "interior", "interior", "interior", "terraza", "terraza",
+      "interior", "terraza", "patio", "patio", "patio", "patio",
+    ]);
+    expect(tables.map((table) => table.capacity)).toEqual([2, 4, 4, 2, 4, 2, 4, 6, 4, 6, 4, 2]);
+    expect(TABLE_SECTORS.map((sector) => sector.label)).toEqual(["Interior", "Terraza", "Patio"]);
+  });
+
+  it("uses unique, stable ids, numbers and labels", () => {
+    for (const values of <unknown[][]>[
+      tables.map((table) => table.id),
+      tables.map((table) => table.number),
+      tables.map((table) => table.label.toLowerCase()),
+    ]) {
+      expect(new Set(values).size).toBe(values.length);
+    }
+    for (const table of tables) expect(table.id).toBe(`tbl_${String(table.number).padStart(2, "0")}`);
+  });
+
+  it("shows exactly the enabled tables on the live screens", () => {
+    expect(day.tableNumbers).toEqual(tables.filter((table) => table.enabled).map((table) => table.number));
+    expect(TABLES_BOARD.tables.map((table) => table.number)).toEqual(day.tableNumbers);
+  });
+
+  it("seats sessions only at configured tables", () => {
+    const numbers = new Set(tables.map((table) => table.number));
+    for (const session of day.sessions) expect(numbers.has(session.tableNumber), session.id).toBe(true);
+  });
+
+  it("never reuses a QR token, active or revoked", () => {
+    const tokens = tables.flatMap((table) => [
+      ...(table.qr ? [table.qr.token] : []),
+      ...table.revokedQrs.map((credential) => credential.token),
+    ]);
+    expect(new Set(tokens).size).toBe(tokens.length);
+    for (const token of tokens) expect(token).toMatch(/^[A-Za-z0-9]{10}$/);
+  });
+
+  it("gives Mesa 07 the 09B/09C credential and its rotation history", () => {
+    const table = tables.find((candidate) => candidate.id === "tbl_07");
+    expect(table).toMatchObject({ label: "Mesa 07", description: "Cerca de la ventana", version: 18 });
+    expect(table?.qr).toEqual({ token: "4pX9kR2mL7", generatedOn: day.date, generatedBy: "Sofía M." });
+    expect(table?.revokedQrs.map((credential) => credential.auditId)).toEqual(["QR-118"]);
+  });
+
+  it("generates and rotates credentials with members of the staff, never in the future", () => {
+    const staff = day.staff.map((member) => member.name);
+    for (const table of tables) {
+      for (const credential of [...(table.qr ? [table.qr] : []), ...table.revokedQrs]) {
+        expect(staff, table.id).toContain(credential.generatedBy);
+        expect(credential.generatedOn <= day.date, table.id).toBe(true);
+      }
+      for (const credential of table.revokedQrs) {
+        expect(credential.generatedOn <= credential.revokedOn, table.id).toBe(true);
+        expect(credential.revokedOn <= (table.qr?.generatedOn ?? day.date), table.id).toBe(true);
+      }
     }
   });
 });
