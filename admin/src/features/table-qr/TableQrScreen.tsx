@@ -3,9 +3,11 @@
 import { useReducer } from "react";
 import { Plus, Printer } from "lucide-react";
 import { useScreenState } from "@/shared/lib/use-screen-state";
+import { BulkPrintModal } from "./BulkPrintModal";
 import { buildCardSvgMarkup, getQrFileName } from "./print-card";
 import { PrintableCard } from "./PrintCards";
 import { PrintPortal, printDocument } from "./PrintPortal";
+import { PrintSheets } from "./PrintSheets";
 import { copyText, downloadPng, downloadSvg } from "./qr-download";
 import { buildQrSvgMarkup } from "./qr-matrix";
 import { createUniqueQrToken } from "./qr-token";
@@ -16,6 +18,7 @@ import { RegenerateDialog } from "./RegenerateDialog";
 import { getUsedTokens } from "./table-config";
 import {
   createTableQrState,
+  getBulkView,
   getDetailView,
   getEditorView,
   getListView,
@@ -31,9 +34,10 @@ import { HeaderButton, MetricCards, PageHeader } from "./TableQrParts";
 /**
  * Forced variants: `edit` (09B: Mesa 07), `new` (empty "Nueva mesa" form), `errors` (Mesa 07
  * renamed "Mesa 05" with capacity 0 after a save attempt; not in the exports), `detail` (09C:
- * Mesa 07), `regenerate` (09F over 09C) and `material` (09D: Mesa 07).
+ * Mesa 07), `regenerate` (09F over 09C), `material` (09D: Mesa 07) and `bulk-print` (09E over
+ * 09A with every printable table selected).
  */
-export const TABLE_QR_FORCED_STATES = ["edit", "new", "errors", "detail", "regenerate", "material"] as const;
+export const TABLE_QR_FORCED_STATES = ["edit", "new", "errors", "detail", "regenerate", "material", "bulk-print"] as const;
 
 type ForcedState = (typeof TABLE_QR_FORCED_STATES)[number];
 
@@ -49,6 +53,7 @@ const FORCED_ACTIONS: Record<ForcedState, TableQrAction[]> = {
   detail: [{ type: "open-detail", id: "tbl_07" }],
   regenerate: [{ type: "open-detail", id: "tbl_07" }, { type: "open-regenerate" }],
   material: [{ type: "open-material", id: "tbl_07" }],
+  "bulk-print": [{ type: "open-bulk" }],
 };
 
 function initState(forcedState: ForcedState | null): TableQrState {
@@ -64,8 +69,8 @@ const CARD_PNG_WIDTH = 960;
 /**
  * 09 · Mesas y códigos QR. Container: owns the venue tables as edited in this session (pure
  * `tableQrReducer`, seeded from the canonical service day) and which view is open: the 09A
- * list, the 09B editor, the 09C QR detail (with the 09F confirmation) or the 09D printable
- * material. New and rotated credentials get a secure token no table has ever used.
+ * list (with the 09E bulk print modal), the 09B editor, the 09C QR detail (with the 09F
+ * confirmation) or the 09D printable material. New and rotated credentials get a secure token no table has ever used.
  */
 export function TableQrScreen() {
   const forcedState = useScreenState(TABLE_QR_FORCED_STATES);
@@ -94,6 +99,8 @@ export function TableQrScreen() {
     if (format === "svg") downloadSvg(svg, fileName);
     else void downloadPng(svg, fileName, CARD_PNG_WIDTH);
   };
+
+  const bulkView = state.view === "list" ? getBulkView(state) : null;
 
   let content;
   const editorView = getEditorView(state);
@@ -130,7 +137,12 @@ export function TableQrScreen() {
           subtitle="Configurá tus mesas y los accesos a la carta digital."
           actions={
             <>
-              <HeaderButton label="Imprimir códigos QR" icon={Printer} tone="neutral" onClick={() => {}} />
+              <HeaderButton
+                label="Imprimir códigos QR"
+                icon={Printer}
+                tone="neutral"
+                onClick={() => dispatch({ type: "open-bulk" })}
+              />
               <HeaderButton label="Nueva mesa" icon={Plus} tone="primary" onClick={() => dispatch({ type: "open-new" })} />
             </>
           }
@@ -175,6 +187,14 @@ export function TableQrScreen() {
           onCancel={() => dispatch({ type: "cancel-regenerate" })}
           onConfirm={() => dispatch({ type: "confirm-regenerate", token: newToken() })}
         />
+      )}
+      {bulkView && (
+        <>
+          <BulkPrintModal view={bulkView} onAction={dispatch} onExport={printDocument} />
+          <PrintPortal>
+            <PrintSheets sheets={bulkView.sheets} perSheet={bulkView.perSheet} />
+          </PrintPortal>
+        </>
       )}
       {material?.card && (
         <PrintPortal>

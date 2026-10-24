@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createTableQrState,
+  getBulkView,
   getDetailView,
   getEditorView,
   getListView,
@@ -201,5 +202,48 @@ describe("printable material (09D)", () => {
     const state = run({ type: "toggle-enabled", id: "tbl_01" }, { type: "open-material", id: "tbl_01" });
     expect(getMaterialView(state)?.card).toBeNull();
     expect(getMaterialView(state)?.sheet[0].title).toBe("MESA 02");
+  });
+});
+
+describe("bulk print (09E)", () => {
+  it("opens over the list with every printable table selected and A6 cards", () => {
+    const state = run({ type: "open-bulk" });
+    expect(state.view).toBe("list");
+    const view = getBulkView(state);
+    expect(view).toMatchObject({ countLabel: "12 seleccionados", allSelected: true, size: "a6", canExport: true });
+    expect(view?.rows[0]).toEqual({ id: "tbl_01", label: "Mesa 01 · Interior", selected: true });
+    expect(view?.sheets.map((sheet) => sheet.length)).toEqual([4, 4, 4]);
+    expect(view?.preview.map((card) => card.title)).toEqual(["MESA 01", "MESA 02", "MESA 03", "MESA 04"]);
+  });
+
+  it("selects a whole sector and lists only its tables", () => {
+    const view = getBulkView(run({ type: "open-bulk" }, { type: "bulk-set-sector", sector: "terraza" }));
+    expect(view?.rows.map((row) => row.label)).toEqual(["Mesa 05 · Terraza", "Mesa 06 · Terraza", "Mesa 08 · Terraza"]);
+    expect(view?.countLabel).toBe("3 seleccionados");
+  });
+
+  it("toggles one table and all visible tables", () => {
+    const one = run({ type: "open-bulk" }, { type: "bulk-toggle", id: "tbl_02" });
+    expect(getBulkView(one)?.countLabel).toBe("11 seleccionados");
+    expect(getBulkView(one)?.allSelected).toBe(false);
+    const none = tableQrReducer(tableQrReducer(one, { type: "bulk-toggle-all" }), { type: "bulk-toggle-all" });
+    expect(getBulkView(none)).toMatchObject({ countLabel: "0 seleccionados", canExport: false, sheets: [] });
+    expect(getBulkView(tableQrReducer(none, { type: "bulk-toggle", id: "tbl_09" }))?.countLabel).toBe("1 seleccionado");
+  });
+
+  it("lays out six compact cards per sheet", () => {
+    const view = getBulkView(run({ type: "open-bulk" }, { type: "bulk-set-size", size: "compact" }));
+    expect(view?.sheets.map((sheet) => sheet.length)).toEqual([6, 6]);
+    expect(view?.preview).toHaveLength(6);
+  });
+
+  it("only offers enabled tables with an active QR", () => {
+    const view = getBulkView(run({ type: "toggle-enabled", id: "tbl_01" }, { type: "open-bulk" }));
+    expect(view?.rows.map((row) => row.id)).not.toContain("tbl_01");
+    expect(view?.countLabel).toBe("11 seleccionados");
+  });
+
+  it("closes the modal", () => {
+    expect(run({ type: "open-bulk" }, { type: "close-bulk" }).bulk).toBeNull();
   });
 });
