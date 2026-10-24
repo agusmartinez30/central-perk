@@ -5,8 +5,9 @@ import clsx from "clsx";
 import { Armchair } from "lucide-react";
 import { SERVICE_DAY, TABLES_BOARD } from "@/mocks/service-day";
 import { useScreenState } from "@/shared/lib/use-screen-state";
+import { useVenue } from "@/features/venue/venue-store";
 import { FloorPlan } from "./FloorPlan";
-import { getPlanSummary, getSpacePlan, getSpaceTabs, type PlanTransform } from "./floor-plan";
+import { getLiveTables, getPlanSummary, getSpacePlan, getSpaceTabs, type PlanTransform } from "./floor-plan";
 import { TableBoard } from "./TableBoard";
 import { TableDetailPanel } from "./TableDetailPanel";
 import { PlanToolbar, TablesHeader, type TablesView } from "./TablesHeader";
@@ -25,16 +26,18 @@ const NO_RESULTS_QUERY = "Mesa 99";
 const DEFAULT_TRANSFORM: PlanTransform = { scale: 1, x: 0, y: 0 };
 
 /**
- * 02 · Gestión de mesas. Container: owns the active space, view, search, zoom and the selected
- * table. Spaces, layout and capacities come from the 09 configuration of the service day; the
- * live state (status, account, time seated, kitchen) from `TABLES_BOARD`.
+ * 02 · Mesas (live operation). Container: owns the active space, view, search, zoom and the
+ * selected table. Spaces, layout and capacities come from the shared venue store (configured in
+ * Gestión de mesas); the live state (status, account, time seated, kitchen) is derived from the
+ * service day, so tables created in this session show as free.
  */
 export function TablesScreen() {
   const forcedState = useScreenState(TABLES_FORCED_STATES);
   const board = TABLES_BOARD;
-  const { spaces } = SERVICE_DAY;
-  const config = useMemo(() => (forcedState === "empty" ? [] : SERVICE_DAY.tables), [forcedState]);
-  const live = useMemo(() => (forcedState === "empty" ? [] : board.tables), [forcedState, board.tables]);
+  const venue = useVenue();
+  const { spaces } = venue;
+  const config = useMemo(() => (forcedState === "empty" ? [] : venue.tables), [forcedState, venue.tables]);
+  const live = useMemo(() => getLiveTables(config, SERVICE_DAY), [config]);
 
   const [spaceId, setSpaceId] = useState(() => (forcedState === "terraza" ? "terraza" : (spaces[0]?.id ?? "")));
   const [view, setView] = useState<TablesView>(() => (forcedState === "list" ? "list" : "plan"));
@@ -111,7 +114,7 @@ export function TablesScreen() {
                 ? {
                     icon: Armchair,
                     title: "Todavía no hay mesas habilitadas",
-                    description: "Cuando habilites mesas desde Mesas y códigos QR, vas a verlas acá.",
+                    description: "Cuando habilites mesas desde Gestión de mesas, vas a verlas acá.",
                   }
                 : {
                     title: "No encontramos mesas",

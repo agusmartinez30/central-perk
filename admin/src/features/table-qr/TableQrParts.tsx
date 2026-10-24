@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -42,6 +43,24 @@ export function HeaderButton({ label, icon: Icon, tone, onClick }: HeaderButtonP
       <Icon size={14} aria-hidden="true" className="shrink-0" />
       <span className="text-[12px] font-bold whitespace-nowrap">{label}</span>
     </button>
+  );
+}
+
+type HeaderLinkProps = { href: string; label: string; icon: LucideIcon; tone?: "primary" | "neutral" };
+
+/** A 40px header action that navigates (to the sibling table screens). */
+export function HeaderLink({ href, label, icon: Icon, tone = "neutral" }: HeaderLinkProps) {
+  return (
+    <Link
+      href={href}
+      className={clsx(
+        "flex h-10 items-center gap-[7px] rounded-field px-[13px] outline-1 -outline-offset-[0.5px]",
+        tone === "primary" ? "bg-brand text-white outline-brand hover:bg-brand/92" : "bg-surface text-ink outline-line hover:bg-cream",
+      )}
+    >
+      <Icon size={14} aria-hidden="true" className="shrink-0" />
+      <span className="text-[12px] font-bold whitespace-nowrap">{label}</span>
+    </Link>
   );
 }
 

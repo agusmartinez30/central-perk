@@ -1,10 +1,9 @@
 "use client";
 
 import clsx from "clsx";
-import Link from "next/link";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Armchair, Plus, QrCode, type LucideIcon } from "lucide-react";
+import { Armchair, Plus, QrCode } from "lucide-react";
 import { SERVICE_DAY } from "@/mocks/service-day";
 import { DEMO_STAFF } from "@/mocks/staff";
 import { useScreenState } from "@/shared/lib/use-screen-state";
@@ -12,7 +11,7 @@ import { ConfirmDialog } from "@/shared/ui";
 import type { PlanTransform } from "@/features/tables/floor-plan";
 import { getUsedTokens } from "@/features/table-qr/qr-config";
 import { createUniqueQrToken } from "@/features/table-qr/qr-token";
-import { HeaderButton, PageHeader } from "@/features/table-qr/TableQrParts";
+import { HeaderButton, HeaderLink, PageHeader } from "@/features/table-qr/TableQrParts";
 import { resolveMove } from "@/features/venue/table-layout";
 import { dispatchVenue, useVenue } from "@/features/venue/venue-store";
 import type { VenueState } from "@/features/venue/venue-state";
@@ -68,21 +67,6 @@ const FORCED_ACTIONS: Record<ForcedState, ManagementAction[]> = {
     { type: "save-table", credential: NO_CREDENTIAL },
   ],
 };
-
-type HeaderLinkProps = { href: string; label: string; icon: LucideIcon };
-
-/** Neutral 40px header action (like "Imprimir códigos QR") linking to the sibling table screens. */
-function HeaderLink({ href, label, icon: Icon }: HeaderLinkProps) {
-  return (
-    <Link
-      href={href}
-      className="flex h-10 items-center gap-[7px] rounded-field bg-surface px-[13px] text-ink outline-1 -outline-offset-[0.5px] outline-line hover:bg-cream"
-    >
-      <Icon size={14} aria-hidden="true" className="shrink-0" />
-      <span className="text-[12px] font-bold whitespace-nowrap">{label}</span>
-    </Link>
-  );
-}
 
 type SpaceTabsProps = { tabs: readonly SpaceTab[]; activeId: string; onSelect: (id: string) => void; onNew: () => void };
 

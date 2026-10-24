@@ -1,4 +1,4 @@
-import type { SpaceId, VenueSpace, VenueTable } from "@/mocks/service-day";
+import { deriveTable, type ServiceDay, type SpaceId, type VenueSpace, type VenueTable } from "@/mocks/service-day";
 import type { ManagedTable } from "@/mocks/types";
 import { TABLE_BOX } from "@/features/venue/table-layout";
 import { formatPrice } from "@/shared/lib/format-price";
@@ -116,6 +116,18 @@ export function getSpacePlan(
     });
   }
   return plan;
+}
+
+/**
+ * Live state of the enabled tables of the venue configuration (the shared store), by number:
+ * sessions, accounts and kitchen come from the service day; a table with no session is free.
+ */
+export function getLiveTables(config: readonly VenueTable[], day: ServiceDay): ManagedTable[] {
+  return config
+    .filter((table) => table.enabled)
+    .map((table) => table.number)
+    .sort((a, b) => a - b)
+    .map((number) => deriveTable(day, number));
 }
 
 export type SpaceTab = { id: SpaceId; name: string; count: number };

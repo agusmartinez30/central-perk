@@ -1,7 +1,11 @@
 "use client";
 
-import { useReducer } from "react";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Printer } from "lucide-react";
+import { dispatchVenue, useVenue } from "@/features/venue/venue-store";
+import type { VenueState } from "@/features/venue/venue-state";
+import { parseScreenState } from "@/shared/lib/screen-state";
 import { useScreenState } from "@/shared/lib/use-screen-state";
 import { BulkPrintModal } from "./BulkPrintModal";
 import { buildCardSvgMarkup, getQrFileName } from "./print-card";
@@ -20,52 +24,47 @@ import {
   createTableQrState,
   getBulkView,
   getDetailView,
-  getEditorView,
   getListView,
   getMaterialView,
-  getSpaceEditorView,
   tableQrReducer,
   type TableQrAction,
   type TableQrState,
 } from "./table-qr-state";
-import { TableEditor } from "./TableEditor";
 import { TableConfigurationList, TableToolbar } from "./TableList";
-import { HeaderButton, PageHeader } from "./TableQrParts";
+import { HeaderButton, HeaderLink, PageHeader } from "./TableQrParts";
 import { SpacesManagement } from "./SpacesManagement";
 
 /**
- * Forced variants: `edit` (09B: Mesa 07), `new` (empty "Nueva mesa" form), `errors` (Mesa 07
- * renamed "Mesa 05" with capacity 0 after a save attempt; not in the exports), `detail` (09C:
- * Mesa 07), `regenerate` (09F over 09C), `material` (09D: Mesa 07) and `bulk-print` (09E over
- * 09A with every printable table selected), `space-edit` (Salón renamed inline) and `space-new`
- * ("Crear espacio" form with a duplicate name after saving; not in the exports).
+ * Forced variants: `detail` (09C: Mesa 07), `regenerate` (09F over 09C), `material` (09D:
+ * Mesa 07) and `bulk-print` (09E over 09A with every printable table selected).
  */
-export const TABLE_QR_FORCED_STATES = ["edit", "new", "errors", "detail", "regenerate", "material", "bulk-print", "space-edit", "space-new"] as const;
+export const TABLE_QR_FORCED_STATES = ["detail", "regenerate", "material", "bulk-print"] as const;
 
 type ForcedState = (typeof TABLE_QR_FORCED_STATES)[number];
 
 const FORCED_ACTIONS: Record<ForcedState, TableQrAction[]> = {
-  edit: [{ type: "open-edit", id: "tbl_07" }],
-  new: [{ type: "open-new" }],
-  errors: [
-    { type: "open-edit", id: "tbl_07" },
-    { type: "editor-set-field", field: "label", value: "Mesa 05" },
-    { type: "editor-set-field", field: "capacity", value: "0" },
-    { type: "editor-save", token: "" },
-  ],
   detail: [{ type: "open-detail", id: "tbl_07" }],
   regenerate: [{ type: "open-detail", id: "tbl_07" }, { type: "open-regenerate" }],
   material: [{ type: "open-material", id: "tbl_07" }],
   "bulk-print": [{ type: "open-bulk" }],
-  "space-edit": [
-    { type: "open-space-editor", id: "salon" },
-    { type: "space-set-name", name: "Salón principal" },
-  ],
-  "space-new": [{ type: "open-space-editor" }, { type: "space-set-name", name: "Terraza" }, { type: "space-save" }],
 };
 
-function initState(forcedState: ForcedState | null): TableQrState {
-  const state = createTableQrState();
+/** Table and space editing moved to Gestión de mesas: its old `?state=` values redirect there. */
+export const MOVED_STATES = {
+  edit: "/tables/management?state=table-edit",
+  new: "/tables/management?state=table-new",
+  errors: "/tables/management?state=errors",
+  "space-edit": "/tables/management?state=space-edit",
+  "space-new": "/tables/management?state=space-new",
+} as const;
+
+const MOVED_STATE_IDS = Object.keys(MOVED_STATES) as (keyof typeof MOVED_STATES)[];
+
+/** Gestión de mesas opened on a table (`new` for the creation form). */
+const tableManagementHref = (id: string) => `/tables/management?table=${encodeURIComponent(id)}`;
+
+function initState(venue: VenueState, forcedState: ForcedState | null): TableQrState {
+  const state = createTableQrState(venue);
   if (!forcedState) return state;
   return { ...FORCED_ACTIONS[forcedState].reduce(tableQrReducer, state), notice: null };
 }
@@ -75,15 +74,38 @@ const QR_PNG_WIDTH = 1024;
 const CARD_PNG_WIDTH = 960;
 
 /**
- * 09 · Mesas y códigos QR. Container: owns the venue tables as edited in this session (pure
- * `tableQrReducer`, seeded from the canonical service day) and which view is open: the 09A
- * list (with the 09E bulk print modal), the 09B editor, the 09C QR detail (with the 09F
- * confirmation) or the 09D printable material. New and rotated credentials get a secure token no table has ever used.
+ * 09 · Mesas y códigos QR. Container: spaces and tables come from the shared venue store (they
+ * are configured in Gestión de mesas); this screen owns which view is open: the 09A list (with
+ * the 09E bulk print modal), the 09C QR detail (with the 09F confirmation) or the 09D printable
+ * material. Enabling/disabling and rotated credentials (a secure token no table has ever used)
+ * are written back to the store.
  */
 export function TableQrScreen() {
   const forcedState = useScreenState(TABLE_QR_FORCED_STATES);
-  const [state, dispatch] = useReducer(tableQrReducer, forcedState, initState);
+  const movedState = parseScreenState(useSearchParams().get("state"), MOVED_STATE_IDS);
+  const router = useRouter();
+  const venue = useVenue();
+  const [ui, setUi] = useState(() => initState(venue, forcedState));
+  const state: TableQrState = { ...ui, spaces: venue.spaces, tables: venue.tables, sessions: venue.sessions };
   const newToken = () => createUniqueQrToken(getUsedTokens(state.tables));
+
+  useEffect(() => {
+    if (movedState) router.replace(MOVED_STATES[movedState]);
+  }, [movedState, router]);
+
+  /** Runs the pure reducer over the store's tables and mirrors table changes into the store. */
+  const dispatch = (action: TableQrAction) => {
+    const next = tableQrReducer(state, action);
+    if (next.tables !== state.tables) {
+      if (action.type === "toggle-enabled") {
+        const table = state.tables.find((candidate) => candidate.id === action.id);
+        if (table) dispatchVenue({ type: "set-table-enabled", id: table.id, enabled: !table.enabled });
+      } else if (action.type === "confirm-regenerate" && state.detailId) {
+        dispatchVenue({ type: "regenerate-qr", id: state.detailId, token: action.token, today: state.today, staffName: state.staffName });
+      }
+    }
+    setUi(next);
+  };
 
   const downloadQr = (id: string, format: "png" | "svg") => {
     const table = state.tables.find((candidate) => candidate.id === id);
@@ -111,19 +133,8 @@ export function TableQrScreen() {
   const bulkView = state.view === "list" ? getBulkView(state) : null;
 
   let content;
-  const editorView = getEditorView(state);
   const detailView = getDetailView(state);
-  if (state.view === "editor" && state.editor && editorView) {
-    content = (
-      <TableEditor
-        editor={state.editor}
-        view={editorView}
-        spaces={state.spaces}
-        onAction={dispatch}
-        onSave={() => dispatch({ type: "editor-save", token: newToken() })}
-      />
-    );
-  } else if (state.view === "detail" && detailView) {
+  if (state.view === "detail" && detailView) {
     content = (
       <QrDetail
         view={detailView}
@@ -144,7 +155,7 @@ export function TableQrScreen() {
         <PageHeader
           breadcrumb="Mesas / Espacios / Códigos QR"
           title="Mesas y códigos QR"
-          subtitle="Organizá espacios, asigná mesas y administrá los accesos a la carta digital."
+          subtitle="Administrá los accesos a la carta digital. Las mesas y los espacios se configuran en Gestión de mesas."
           actions={
             <>
               <HeaderButton
@@ -153,15 +164,11 @@ export function TableQrScreen() {
                 tone="neutral"
                 onClick={() => dispatch({ type: "open-bulk" })}
               />
-              <HeaderButton label="Nueva mesa" icon={Plus} tone="primary" onClick={() => dispatch({ type: "open-new" })} />
+              <HeaderLink href={tableManagementHref("new")} label="Nueva mesa" icon={Plus} tone="primary" />
             </>
           }
         />
-        <SpacesManagement
-          cards={list.spaces}
-          editor={getSpaceEditorView(state)}
-          onAction={dispatch}
-        />
+        <SpacesManagement cards={list.spaces} />
         <TableToolbar
           query={state.query}
           spaces={state.spaces}
@@ -175,7 +182,7 @@ export function TableQrScreen() {
           rows={list.rows}
           filtered={list.rows.length < list.total}
           actions={{
-            onEdit: (id) => dispatch({ type: "open-edit", id }),
+            editHref: tableManagementHref,
             onToggleEnabled: (id) => dispatch({ type: "toggle-enabled", id }),
             onViewQr: (id) => dispatch({ type: "open-detail", id }),
             onDownload: (id) => downloadQr(id, "png"),

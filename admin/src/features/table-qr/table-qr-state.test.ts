@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { createVenueState, venueReducer, type VenueAction } from "@/features/venue/venue-state";
 import {
   createTableQrState,
   getBulkView,
   getDetailView,
-  getEditorView,
   getListView,
   getMaterialView,
-  getSpaceEditorView,
   tableQrReducer,
   type TableQrAction,
   type TableQrState,
@@ -40,93 +39,6 @@ describe("list (09A)", () => {
     const enabledAgain = run({ type: "toggle-enabled", id: "tbl_01" }, { type: "toggle-enabled", id: "tbl_01" });
     expect(tableOf(enabledAgain, "tbl_01").enabled).toBe(true);
     expect(enabledAgain.notice).toBe("Mesa 01 habilitada.");
-  });
-});
-
-describe("editor (09B)", () => {
-  it("opens Mesa 07 with its stable id, version and the active-session warning", () => {
-    const state = run({ type: "open-edit", id: "tbl_07" });
-    expect(state.view).toBe("editor");
-    expect(getEditorView(state)).toMatchObject({
-      title: "Editar mesa",
-      idLabel: "ID estable · tbl_07 · versión 18",
-      activeSession: true,
-      errors: {},
-    });
-    expect(state.editor?.draft).toEqual({
-      label: "Mesa 07",
-      spaceId: "salon",
-      capacity: "4",
-      description: "Cerca de la ventana",
-      enabled: true,
-    });
-  });
-
-  it("hides the active-session warning for a free table", () => {
-    expect(getEditorView(run({ type: "open-edit", id: "tbl_01" }))?.activeSession).toBe(false);
-  });
-
-  it("shows errors only after a blocked save and keeps the editor open", () => {
-    const typed = run(
-      { type: "open-edit", id: "tbl_07" },
-      { type: "editor-set-field", field: "label", value: "Mesa 05" },
-      { type: "editor-set-field", field: "capacity", value: "0" },
-    );
-    expect(getEditorView(typed)?.errors).toEqual({});
-    const saved = tableQrReducer(typed, { type: "editor-save", token: "N3wT0k3nAa" });
-    expect(saved.view).toBe("editor");
-    expect(getEditorView(saved)?.errors).toEqual({
-      label: "Ya existe una mesa con ese nombre.",
-      capacity: "Ingresá un número entero entre 1 y 20.",
-    });
-    expect(tableOf(saved, "tbl_07").label).toBe("Mesa 07");
-  });
-
-  it("saves a valid edit, bumps the version and goes back to the list", () => {
-    const state = run(
-      { type: "open-edit", id: "tbl_07" },
-      { type: "editor-set-field", field: "capacity", value: "6" },
-      { type: "editor-set-field", field: "enabled", value: false },
-      { type: "editor-save", token: "N3wT0k3nAa" },
-    );
-    expect(state.view).toBe("list");
-    expect(tableOf(state, "tbl_07")).toMatchObject({ capacity: 6, enabled: false, version: 19 });
-    expect(tableOf(state, "tbl_07").qr?.token).toBe("4pX9kR2mL7");
-    expect(state.notice).toBe("Mesa 07 guardada.");
-  });
-
-  it("closes without changes when nothing was edited", () => {
-    const state = run({ type: "open-edit", id: "tbl_02" }, { type: "editor-save", token: "N3wT0k3nAa" });
-    expect(state.view).toBe("list");
-    expect(tableOf(state, "tbl_02").version).toBe(tableOf(createTableQrState(), "tbl_02").version);
-    expect(state.notice).toBe("Sin cambios en Mesa 02.");
-  });
-
-  it("creates a new table with the next number and a fresh QR", () => {
-    const opened = run({ type: "open-new" });
-    expect(getEditorView(opened)).toMatchObject({
-      title: "Nueva mesa",
-      idLabel: "ID estable · tbl_13 · se asigna al guardar",
-      activeSession: false,
-    });
-    const state = tableQrReducer(
-      tableQrReducer(opened, { type: "editor-set-field", field: "spaceId", value: "terraza" }),
-      { type: "editor-save", token: "N3wT0k3nAa" },
-    );
-    expect(tableOf(state, "tbl_13")).toMatchObject({ label: "Mesa 13", spaceId: "terraza", qr: { token: "N3wT0k3nAa" } });
-    expect(getListView(state).metrics.total).toBe(13);
-    expect(getListView(state).rows.at(-1)?.session.label).toBe("Disponible");
-  });
-
-  it("cancels without touching the tables", () => {
-    const state = run(
-      { type: "open-edit", id: "tbl_07" },
-      { type: "editor-set-field", field: "label", value: "Ventana" },
-      { type: "close-editor" },
-    );
-    expect(state.view).toBe("list");
-    expect(state.editor).toBeNull();
-    expect(tableOf(state, "tbl_07").label).toBe("Mesa 07");
   });
 });
 
@@ -257,37 +169,30 @@ describe("spaces (09A)", () => {
       ["Patio", "4 mesas"],
     ]);
   });
+});
 
-  it("renames a space; its tables follow it", () => {
-    const state = run(
-      { type: "open-space-editor", id: "salon" },
-      { type: "space-set-name", name: "Salón principal" },
-      { type: "space-save" },
+describe("shared venue (Gestión de mesas)", () => {
+  it("lists a space and a table created in Gestión de mesas, with its QR and no session", () => {
+    const credential = { token: "N3wT0k3nAa", today: "2026-10-21", staffName: "Sofía M." };
+    const venue = [
+      { type: "save-space", editingId: null, name: "Barra" },
+      {
+        type: "save-table",
+        editingId: null,
+        draft: { label: "Mesa 13", spaceId: "barra", capacity: "2", description: "", enabled: true },
+        credential,
+      },
+    ].reduce((state, action) => venueReducer(state, action as VenueAction), createVenueState());
+    const view = getListView(createTableQrState(venue));
+    expect(view.spaces.at(-1)).toMatchObject({ name: "Barra", countLabel: "1 mesa" });
+    expect(view.rows.at(-1)).toMatchObject({
+      label: "Mesa 13",
+      spaceName: "Barra",
+      session: { label: "Disponible" },
+      qr: { status: "active" },
+    });
+    expect(getDetailView(tableQrReducer(createTableQrState(venue), { type: "open-detail", id: "tbl_13" }))?.url).toBe(
+      "http://localhost:3000/?mesa=13&qr=N3wT0k3nAa",
     );
-    expect(state.spaceEditor).toBeNull();
-    expect(getListView(state).spaces[0]).toMatchObject({ id: "salon", name: "Salón principal", countLabel: "5 mesas" });
-    expect(getListView(state).rows[0].spaceName).toBe("Salón principal");
-    expect(state.notice).toBe("Espacio Salón principal guardado.");
-  });
-
-  it("creates a space that tables can then use", () => {
-    const state = run({ type: "open-space-editor" }, { type: "space-set-name", name: "Barra" }, { type: "space-save" });
-    expect(getListView(state).spaces.at(-1)).toMatchObject({ id: "barra", name: "Barra", icon: "map-pin", countLabel: "0 mesas" });
-    const moved = (
-      [
-        { type: "open-edit", id: "tbl_01" },
-        { type: "editor-set-field", field: "spaceId", value: "barra" },
-        { type: "editor-save", token: "x" },
-      ] as TableQrAction[]
-    ).reduce(tableQrReducer, state);
-    expect(getListView(moved).spaces.map((card) => card.countLabel)).toEqual(["4 mesas", "3 mesas", "4 mesas", "1 mesa"]);
-  });
-
-  it("keeps the editor open with an error for a duplicate or empty name", () => {
-    const duplicate = run({ type: "open-space-editor" }, { type: "space-set-name", name: " terraza " }, { type: "space-save" });
-    expect(getSpaceEditorView(duplicate)).toEqual({ id: null, name: " terraza ", error: "Ese espacio ya existe." });
-    const empty = run({ type: "open-space-editor", id: "patio" }, { type: "space-set-name", name: "" }, { type: "space-save" });
-    expect(getSpaceEditorView(empty)?.error).toBe("Ingresá el nombre del espacio.");
-    expect(run({ type: "open-space-editor", id: "patio" }, { type: "space-cancel" }).spaceEditor).toBeNull();
   });
 });

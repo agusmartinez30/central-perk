@@ -1,5 +1,7 @@
 # Feature: admin-table-qr
 
+> **Note (2026-10-24, feature `admin-table-management`):** table and space configuration (09A "Nueva mesa", row "Editar", space create/rename, the 09B editor) moved to Gestión de mesas (`/tables/management`). `/tables/qr` is now QR-only (detail, regenerate, download, print, bulk print, quick enable/disable) and links there; spaces and tables come from the shared venue store (`src/features/venue`). The `?state=` values `edit`, `new`, `errors`, `space-edit`, `space-new` redirect to the Gestión de mesas variants. See `odd/tasks/admin-table-management.md`.
+
 ## Objective
 Implement module 09 "Mesas y códigos QR" from the exports:
 - `exports/ADMIN 09A · Mesas y códigos QR · Desktop-export.html`

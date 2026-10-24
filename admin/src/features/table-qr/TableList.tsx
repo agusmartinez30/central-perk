@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Download, Ellipsis, Pencil, QrCode as QrCodeIcon, Search } from "lucide-react";
 import type { VenueSpace } from "@/mocks/service-day";
@@ -93,7 +94,8 @@ const SESSION_TONES: Record<SessionStatus, ChipTone> = {
 const QR_TONES: Record<QrStatus, ChipTone> = { active: "brand", paused: "neutral", missing: "warning" };
 
 export type RowActions = {
-  onEdit: (id: string) => void;
+  /** "Editar" opens the table in Gestión de mesas. */
+  editHref: (id: string) => string;
   onToggleEnabled: (id: string) => void;
   onViewQr?: (id: string) => void;
   onDownload?: (id: string) => void;
@@ -256,7 +258,14 @@ export function TableConfigurationList({ rows, filtered, actions }: TableConfigu
                 <StatusChip label={row.qr.label} tone={QR_TONES[row.qr.status]} className="w-fit" />
               </span>
               <span role="cell" className="relative flex flex-1 items-center justify-end">
-                <IconAction label={`Editar ${row.label}`} icon={Pencil} onClick={() => actions.onEdit(row.id)} />
+                <Link
+                  href={actions.editHref(row.id)}
+                  aria-label={`Editar ${row.label} en Gestión de mesas`}
+                  title="Editar en Gestión de mesas"
+                  className="flex size-[26px] items-center justify-center rounded-chip text-ink hover:bg-cream"
+                >
+                  <Pencil size={15} aria-hidden="true" />
+                </Link>
                 {actions.onViewQr && (
                   <IconAction
                     label={`Ver QR de ${row.label}`}

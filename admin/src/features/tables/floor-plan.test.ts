@@ -6,6 +6,7 @@ import {
   ZOOM,
   formatDuration,
   getChairs,
+  getLiveTables,
   getFitTransform,
   getPlanSummary,
   getSpacePlan,
@@ -148,5 +149,20 @@ describe("zoomAround", () => {
     expect(zoomAround(zoomed, -1, { x: 400, y: 300 })).toEqual({ scale: 1, x: 0, y: 0 });
     const max = { scale: ZOOM.max, x: 5, y: 5 };
     expect(zoomAround(max, 1, { x: 400, y: 300 })).toBe(max);
+  });
+});
+
+describe("getLiveTables", () => {
+  it("derives the board of the enabled configured tables, like TABLES_BOARD for the seed", () => {
+    expect(getLiveTables(SERVICE_DAY.tables, SERVICE_DAY)).toEqual(TABLES_BOARD.tables);
+  });
+
+  it("shows a table created in Gestión de mesas as free and leaves disabled ones out", () => {
+    const created = { ...SERVICE_DAY.tables[0], id: "tbl_13", number: 13, label: "Mesa 13", spaceId: "barra" };
+    const config = [...SERVICE_DAY.tables.map((table) => (table.number === 1 ? { ...table, enabled: false } : table)), created];
+    const live = getLiveTables(config, SERVICE_DAY);
+    expect(live.map((table) => table.number)).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+    expect(live.at(-1)).toMatchObject({ id: "table-13", status: "available", accountTotal: 0 });
+    expect(getSpacePlan("barra", config, live, "").map((table) => table.label)).toEqual(["Mesa 13"]);
   });
 });
