@@ -48,16 +48,56 @@ export function createSpaceId(name: string, spaces: readonly VenueSpace[]): Spac
   return id;
 }
 
-/** Renames a space (keeping id, icon and tone) or creates one with the default map-pin icon. */
+export type SpaceStyle = { icon: SpaceIcon; tone: SpaceTone };
+
+/** New spaces get the map-pin icon on the neutral wash unless a style is chosen. */
+export const DEFAULT_SPACE_STYLE: SpaceStyle = { icon: "map-pin", tone: "neutral" };
+
+/** Renames (and optionally restyles) a space keeping its id, or creates one. */
 export function saveSpace(
   spaces: readonly VenueSpace[],
   editingId: SpaceId | null,
   name: string,
+  style?: SpaceStyle,
 ): { spaces: VenueSpace[]; id: SpaceId } {
   const trimmed = name.trim();
   if (editingId && spaces.some((space) => space.id === editingId)) {
-    return { id: editingId, spaces: spaces.map((space) => (space.id === editingId ? { ...space, name: trimmed } : space)) };
+    return {
+      id: editingId,
+      spaces: spaces.map((space) => (space.id === editingId ? { ...space, ...style, name: trimmed } : space)),
+    };
   }
   const id = createSpaceId(trimmed, spaces);
-  return { id, spaces: [...spaces, { id, name: trimmed, icon: "map-pin", tone: "neutral" }] };
+  return { id, spaces: [...spaces, { id, name: trimmed, ...(style ?? DEFAULT_SPACE_STYLE) }] };
+}
+
+/** Moves a space one place earlier (-1) or later (1) in the tabs and filters. */
+export function moveSpace(spaces: readonly VenueSpace[], id: SpaceId, direction: -1 | 1): readonly VenueSpace[] {
+  const index = spaces.findIndex((space) => space.id === id);
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= spaces.length) return spaces;
+  const next = [...spaces];
+  [next[index], next[target]] = [next[target], next[index]];
+  return next;
+}
+
+export type SpaceRemoval = { allowed: true } | { allowed: false; reason: string };
+
+/** A space can be deleted only when it has no tables and is not the last one (messages invented). */
+export function getSpaceRemoval(spaces: readonly VenueSpace[], tables: readonly VenueTable[], id: SpaceId): SpaceRemoval {
+  const count = tables.filter((table) => table.spaceId === id).length;
+  if (count > 0) {
+    const name = getSpaceName(spaces, id);
+    return {
+      allowed: false,
+      reason: `${name} tiene ${count} ${count === 1 ? "mesa" : "mesas"}. Mové o eliminá sus mesas antes de eliminar el espacio.`,
+    };
+  }
+  if (spaces.length <= 1) return { allowed: false, reason: "El local necesita al menos un espacio." };
+  return { allowed: true };
+}
+
+export function deleteSpace(spaces: readonly VenueSpace[], tables: readonly VenueTable[], id: SpaceId): readonly VenueSpace[] {
+  if (!spaces.some((space) => space.id === id) || !getSpaceRemoval(spaces, tables, id).allowed) return spaces;
+  return spaces.filter((space) => space.id !== id);
 }

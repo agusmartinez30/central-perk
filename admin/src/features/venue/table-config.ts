@@ -3,11 +3,11 @@ import {
   type QrCredential,
   type ServiceDay,
   type SpaceId,
-  type TableLayout,
   type VenueSpace,
   type VenueTable,
 } from "@/mocks/service-day";
 import { normalizeName as normalize } from "./normalize";
+import { getFreeLayout } from "./table-layout";
 
 /** 09A "SESIÓN": the live state of the table's open session. */
 export type SessionStatus = "available" | "occupied" | "bill-requested";
@@ -196,23 +196,6 @@ export function applyTableDraft(
   return { id: created.id, tables: [...tables, created] };
 }
 
-// 02 floor plan
-
-const PLAN_COLUMNS = [38, 222, 406, 590];
-const PLAN_FIRST_ROW = 64;
-const PLAN_ROW_STEP = 172;
-
-/** First spot of the space's 4-column plan grid (row by row) that no table of the space uses. */
-export function getFreeLayout(tables: readonly VenueTable[], spaceId: SpaceId): TableLayout {
-  const used = tables.filter((table) => table.spaceId === spaceId);
-  for (let row = 0; ; row += 1) {
-    const y = PLAN_FIRST_ROW + row * PLAN_ROW_STEP;
-    for (const x of PLAN_COLUMNS) {
-      if (!used.some((table) => table.layout.x === x && table.layout.y === y)) return { x, y, shape: "rect" };
-    }
-  }
-}
-
 // Enable / disable
 
 export type QuickToggle = { enabled: boolean; label: string; allowed: boolean; reason?: string };
@@ -234,7 +217,7 @@ export function getQuickToggle(table: VenueTable, session: SessionStatus): Quick
   return { enabled: true, label: "Deshabilitar mesa", allowed: true };
 }
 
-export function setTableEnabled(tables: VenueTable[], id: string, enabled: boolean): VenueTable[] {
+export function setTableEnabled(tables: readonly VenueTable[], id: string, enabled: boolean): readonly VenueTable[] {
   const target = tables.find((table) => table.id === id);
   if (!target || target.enabled === enabled) return tables;
   return tables.map((table) => (table.id === id ? { ...table, enabled, version: table.version + 1 } : table));

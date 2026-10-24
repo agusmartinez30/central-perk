@@ -113,7 +113,7 @@ export function nextAuditId(tables: readonly VenueTable[]): string {
 }
 
 /** Revokes the active token (its printed code stops working) and issues a new one. */
-export function regenerateTableQr(tables: VenueTable[], id: string, context: CredentialContext): VenueTable[] {
+export function regenerateTableQr(tables: readonly VenueTable[], id: string, context: CredentialContext): VenueTable[] {
   const auditId = nextAuditId(tables);
   return tables.map((table) => {
     if (table.id !== id) return table;

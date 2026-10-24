@@ -4,7 +4,6 @@ import {
   applyTableDraft,
   createEmptyTableDraft,
   formatCapacity,
-  getFreeLayout,
   getQuickToggle,
   getSessionStatuses,
   getTableChanges,
@@ -135,10 +134,6 @@ describe("table drafts", () => {
     expect(table("tbl_01", same.tables).layout).toEqual(table("tbl_01").layout);
   });
 
-  it("finds the first free spot of a space, row by row", () => {
-    expect(getFreeLayout(tables, "salon")).toEqual({ x: 38, y: 236, shape: "rect" });
-    expect(getFreeLayout(tables, "barra")).toEqual({ x: 38, y: 64, shape: "rect" });
-  });
 });
 
 describe("enable / disable", () => {

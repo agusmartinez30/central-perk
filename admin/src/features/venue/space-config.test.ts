@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { SERVICE_DAY } from "@/mocks/service-day";
-import { createSpaceId, getSpaceCards, getSpaceName, saveSpace, validateSpaceName } from "./space-config";
+import {
+  createSpaceId,
+  deleteSpace,
+  getSpaceCards,
+  getSpaceName,
+  getSpaceRemoval,
+  moveSpace,
+  saveSpace,
+  validateSpaceName,
+} from "./space-config";
 
 const { spaces, tables } = SERVICE_DAY;
 
@@ -46,5 +55,43 @@ describe("saving spaces", () => {
     expect(renamed.id).toBe("patio");
     expect(renamed.spaces[2]).toEqual({ id: "patio", name: "Patio interno", icon: "trees", tone: "success" });
     expect(renamed.spaces).toHaveLength(3);
+  });
+});
+
+describe("space style", () => {
+  it("creates or restyles a space with the chosen icon and tone", () => {
+    const created = saveSpace(spaces, null, "Barra", { icon: "store", tone: "warning" });
+    expect(created.spaces.at(-1)).toEqual({ id: "barra", name: "Barra", icon: "store", tone: "warning" });
+    const restyled = saveSpace(spaces, "salon", "Salón", { icon: "sun", tone: "neutral" });
+    expect(restyled.spaces[0]).toEqual({ id: "salon", name: "Salón", icon: "sun", tone: "neutral" });
+  });
+});
+
+describe("reordering spaces", () => {
+  it("moves a space one place up or down, keeping the ends in place", () => {
+    expect(moveSpace(spaces, "patio", -1).map((space) => space.id)).toEqual(["salon", "patio", "terraza"]);
+    expect(moveSpace(spaces, "salon", 1).map((space) => space.id)).toEqual(["terraza", "salon", "patio"]);
+    expect(moveSpace(spaces, "salon", -1)).toBe(spaces);
+    expect(moveSpace(spaces, "patio", 1)).toBe(spaces);
+    expect(moveSpace(spaces, "nope", 1)).toBe(spaces);
+  });
+});
+
+describe("deleting spaces", () => {
+  it("only deletes a space without tables", () => {
+    expect(getSpaceRemoval(spaces, tables, "patio")).toEqual({
+      allowed: false,
+      reason: "Patio tiene 4 mesas. Mové o eliminá sus mesas antes de eliminar el espacio.",
+    });
+    const withBarra = saveSpace(spaces, null, "Barra").spaces;
+    expect(getSpaceRemoval(withBarra, tables, "barra")).toEqual({ allowed: true });
+    expect(deleteSpace(withBarra, tables, "barra")).toEqual(spaces);
+    expect(deleteSpace(spaces, tables, "patio")).toBe(spaces);
+  });
+
+  it("never deletes the last space", () => {
+    const only = [spaces[0]];
+    expect(getSpaceRemoval(only, [], "salon")).toEqual({ allowed: false, reason: "El local necesita al menos un espacio." });
+    expect(deleteSpace(only, [], "salon")).toBe(only);
   });
 });

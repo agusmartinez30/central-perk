@@ -1,10 +1,12 @@
 import type { SpaceId, VenueSpace, VenueTable } from "@/mocks/service-day";
 import type { ManagedTable } from "@/mocks/types";
+import { TABLE_BOX } from "@/features/venue/table-layout";
 import { formatPrice } from "@/shared/lib/format-price";
 import { filterTables } from "./tables-view";
 
-/** A table and its chairs on the 02 plan ("Mesa 01 · free": 150×132, body 120×110 at 15/8). */
-export const TABLE_BOX = { width: 150, height: 132 } as const;
+export { TABLE_BOX };
+
+/** Body of a table inside its 150×132 box ("Mesa 01 · free": 120×110 at 15/8). */
 export const TABLE_BODY = { x: 15, y: 8, width: 120, height: 110 } as const;
 
 export type ChairSide = "top" | "bottom" | "left" | "right";

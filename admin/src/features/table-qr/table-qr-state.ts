@@ -63,8 +63,8 @@ export type SpaceEditorState = { id: SpaceId | null; name: string; submitted: bo
 
 export type TableQrState = {
   /** 09A "Espacios" as edited in this session. */
-  spaces: VenueSpace[];
-  tables: VenueTable[];
+  spaces: readonly VenueSpace[];
+  tables: readonly VenueTable[];
   sessions: Record<number, SessionStatus>;
   /** ISO date of the service day ("Generado hoy"). */
   today: string;
@@ -414,7 +414,7 @@ export type BulkView = {
   rows: BulkRow[];
   /** Every visible table is selected ("✓ Seleccionar todos" clears them). */
   allSelected: boolean;
-  spaces: VenueSpace[];
+  spaces: readonly VenueSpace[];
   space: SpaceFilter;
   size: PrintSizeId;
   sizes: readonly PrintSize[];
