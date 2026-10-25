@@ -1,0 +1,37 @@
+# Feature: orders-optimized
+
+## Objective
+Update the admin `/orders` screen to the optimized proposal in `web/exports/ADMIN 03 · Propuesta optimizada · Desktop-export.html`.
+
+## Problem / Why
+The current `/orders` screen follows the original 03 exports. The new proposal reorganizes it: alert metrics with context sublabels, quick filter chips (Todos, Demorados), delay detection against a 20-minute target, "NUEVO" badge, per-item notes, and a persistent detail panel with a timeline.
+
+## Scope
+- In: `admin/src/features/orders/**`, `admin/src/mocks/**` (orders/service-day data), `admin/src/app/(admin)/orders/**`, related tests and README.
+- Out: shared sidebar/shell (keeps the shared admin navigation, consistent with previous screens), other admin screens.
+
+## Constraints
+- English identifiers/comments; UI copy in Spanish as in the export.
+- Test-first for pure helpers (vitest).
+- Existing interactions (advance status, cancel with reason, empty/no-results states) keep working.
+
+## Delivery strategy
+`ask-on-risk`. Forecast ~500–700 authored lines; chain strategy for PRs is asked before opening PRs (local work-unit commits only).
+
+## Tasks
+- [ ] T1 Pure helpers + mock data test-first: delay detection (20 min target, "+N min"), "new" order flag, quick filters (all / delayed) and delivered visibility, search by order, table or customer, item notes, column sublabels, timeline entries. Route: delegated (preparation + 2+ non-trivial files).
+- [ ] T2 Screen redesign: header + "Alertas activas" metrics, toolbar (search, chips, delivered toggle, "Actualizado ahora"), redesigned kanban cards, persistent detail panel (selected order, products with notes, timeline, delay alert, cancel / advance actions). Route: delegated (2+ non-trivial files).
+
+## Acceptance criteria
+- `/orders` visually matches the optimized export at 1440×900.
+- Selecting an order shows it in the detail panel; advance and cancel (after confirming) update columns, metrics and alerts.
+- `npm run lint`, `npx tsc --noEmit`, `npx vitest run` and `npm run build` pass in `admin/`.
+
+## Checks
+lint, tsc, vitest, build.
+
+## Progress / Evidence
+- Branch `feat/orders-optimized` from main `ef0f81d`.
+
+## Next step
+T1.
