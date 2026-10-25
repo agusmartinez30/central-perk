@@ -1,7 +1,7 @@
 import type { CancellationReason, ManagedOrder } from "@/mocks/types";
 import { advanceOrder, canCancelOrder, cancelOrder } from "./orders-view";
 
-/** In-memory state of 03: the orders, the order open in the drawer and the pending cancellation. */
+/** In-memory state of 03: the orders, the order shown in the detail panel and the pending cancellation. */
 export type OrdersState = {
   orders: ManagedOrder[];
   selectedId: number | null;
@@ -62,16 +62,10 @@ export function ordersReducer(state: OrdersState, action: OrdersAction): OrdersS
       if (id === null) return state;
       return {
         orders: updateOrder(state, id, (order) => cancelOrder(order, action.reason, action.at)),
-        // A cancelled order leaves the board, so its drawer closes with the dialog.
+        // A cancelled order leaves the board, so the panel clears with the dialog.
         selectedId: state.selectedId === id ? null : state.selectedId,
         cancelTargetId: null,
       };
     }
   }
-}
-
-/** Local "HH:MM" for the status history. */
-export function formatClock(date: Date): string {
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }

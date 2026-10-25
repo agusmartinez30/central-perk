@@ -37,7 +37,7 @@ clear the site storage.
 | `/` | 10A · Resumen general |
 | `/tables` | 02 · Mesas (live operation): floor plan per space (tables with chairs by capacity, live account and time seated, zoom and fit, space tabs), Plano / Lista switch, search, quick-detail panel; spaces, tables and positions come from the shared venue store |
 | `/tables/management` | Gestión de mesas (no export, built from 02/09): space tabs with "Nuevo espacio", the active space's plan in edit mode (drag tables with snapping to an 8px grid and clamping, arrow keys move the focused table 8px / Shift 40px, overlapping drops are refused), side panel with the table form (09B fields plus shape; "Eliminar mesa" deletes only tables that never had a session, otherwise offers to disable) or the space form (name, icon, color, delete when empty) with the ordered space list (reorder); deep links `?table=<id>|new`, `?space=<id>|new` |
-| `/orders` | 03 · Gestión de pedidos (kanban, order drawer, cancel confirmation) |
+| `/orders` | 03 · Gestión de pedidos, optimized proposal (alert metrics, search + quick filters, kanban with delay/new badges, persistent order detail panel with timeline, cancel confirmation) |
 | `/bill-requests` | 04 · Solicitudes de cuenta (requests table, quick-detail drawer) |
 | `/history` | 05 · Historial de cobros (collections table with period, filters and pagination; read-only collection drawer) |
 | `/payments` | 06 · Configuración de pagos (methods, request modes and bank details tabs, live customer preview, in-memory save after confirming) |
@@ -57,7 +57,7 @@ clear the site storage.
 | `/tables` | `empty` (no tables), `no-results` (search for "Mesa 99"), `list` ("Lista" view), `terraza` (Terraza plan) |
 | `/tables/management` | `table-edit` (Mesa 07), `table-new`, `space-edit` (Salón renamed, unsaved), `space-new` ("Barra" typed), `delete-table` (Mesa 01 has history: offers to disable), `delete-space` (Patio has tables: blocked), `errors` (Mesa 07 renamed "Mesa 05" with capacity 0 after saving) |
 | `/tables/qr` | `detail` (09C: Mesa 07), `regenerate` (09F), `material` (09D: Mesa 07), `bulk-print` (09E); the old `edit`, `new`, `errors`, `space-edit`, `space-new` redirect to their Gestión de mesas variants |
-| `/orders` | `detail` (drawer of #1051), `cancel` (cancel dialog of #1051), `empty` (no orders), `no-results` (search for "9999") |
+| `/orders` | `detail` (panel on #1051; by default it opens on the delayed #1048), `cancel` (cancel dialog of #1051), `empty` (no orders), `no-results` (search for "9999") |
 | `/bill-requests` | `selected` (drawer of Mesa 10), `empty` (no requests), `no-results` (search for "Mesa 99") |
 | `/history` | `selected` (drawer of COB-0026), `empty` (no collections), `no-results` (search for "Mesa 99") |
 | `/payments` | `bank` ("Datos bancarios" tab), `bank-errors` (invalid alias and CBU after a save attempt), `confirm` (save confirmation with a pending change) |

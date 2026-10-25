@@ -3,7 +3,6 @@ import { ORDERS_BOARD } from "@/mocks/service-day";
 import { countOrdersByColumn } from "./orders-view";
 import {
   createOrdersState,
-  formatClock,
   getCancelTarget,
   getSelectedOrder,
   ordersReducer,
@@ -22,14 +21,14 @@ describe("createOrdersState", () => {
 });
 
 describe("ordersReducer", () => {
-  it("opens and closes the detail drawer, ignoring unknown orders", () => {
+  it("selects and clears the detail panel, ignoring unknown orders", () => {
     const open = ordersReducer(initial, { type: "open-detail", id: 1052 });
     expect(getSelectedOrder(open)?.id).toBe(1052);
     expect(ordersReducer(open, { type: "close-detail" }).selectedId).toBeNull();
     expect(ordersReducer(initial, { type: "open-detail", id: 1 })).toBe(initial);
   });
 
-  it("advances an order and keeps the drawer on it", () => {
+  it("advances an order and keeps the panel on it", () => {
     const open = ordersReducer(initial, { type: "open-detail", id: 1051 });
     const next = ordersReducer(open, { type: "advance", id: 1051, at: "12:50" });
     expect(getSelectedOrder(next)?.status).toBe("preparing");
@@ -50,7 +49,7 @@ describe("ordersReducer", () => {
     expect(back.orders).toBe(initial.orders);
   });
 
-  it("cancels only after confirming, closing the dialog and its drawer", () => {
+  it("cancels only after confirming, closing the dialog and its panel", () => {
     const open = ordersReducer(initial, { type: "open-detail", id: 1051 });
     const asked = ordersReducer(open, { type: "request-cancel", id: 1051 });
     const done = ordersReducer(asked, { type: "confirm-cancel", reason: "customer-request", at: "12:52" });
@@ -62,7 +61,7 @@ describe("ordersReducer", () => {
     expect(countOrdersByColumn(done.orders)).toEqual({ received: 1, preparing: 2, delivered: 1 });
   });
 
-  it("keeps another open drawer when cancelling a different order", () => {
+  it("keeps another selected order when cancelling a different order", () => {
     const open = ordersReducer(initial, { type: "open-detail", id: 1052 });
     const asked = ordersReducer(open, { type: "request-cancel", id: 1051 });
     const done = ordersReducer(asked, { type: "confirm-cancel", reason: "order-error", at: "12:52" });
@@ -71,12 +70,5 @@ describe("ordersReducer", () => {
 
   it("ignores a confirmation without a pending dialog", () => {
     expect(ordersReducer(initial, { type: "confirm-cancel", reason: "order-error", at: "12:52" })).toBe(initial);
-  });
-});
-
-describe("formatClock", () => {
-  it("prints a local HH:MM time", () => {
-    expect(formatClock(new Date(2026, 9, 23, 9, 5))).toBe("09:05");
-    expect(formatClock(new Date(2026, 9, 23, 12, 42))).toBe("12:42");
   });
 });

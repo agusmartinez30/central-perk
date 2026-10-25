@@ -3,7 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, ShieldCheck, TriangleAlert } from "lucide-react";
 import type { CancellationReason, ManagedOrder } from "@/mocks/types";
-import { CANCELLATION_REASONS, formatOrderMeta } from "./orders-view";
+import { formatOrderLocation } from "./order-alerts";
+import { CANCELLATION_REASONS } from "./orders-view";
 
 type CancelOrderDialogProps = {
   order: ManagedOrder;
@@ -49,7 +50,7 @@ export function CancelOrderDialog({ order, onDismiss, onConfirm }: CancelOrderDi
         <h2 id={titleId} className="text-[20px] font-bold text-ink">
           Cancelar pedido #{order.id}
         </h2>
-        <p className="text-[12px] font-semibold text-muted">{formatOrderMeta(order)}</p>
+        <p className="text-[12px] font-semibold text-muted">{formatOrderLocation(order)}</p>
         <p id={descriptionId} className="w-full text-[12px]/[17px] text-muted">
           El pedido quedará en el historial y se descontará del total pendiente de la cuenta compartida.
         </p>

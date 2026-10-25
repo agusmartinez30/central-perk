@@ -19,6 +19,7 @@ import {
   getPanelAction,
   isNewOrder,
   isOrderDelayed,
+  sortNewestFirst,
 } from "./order-alerts";
 
 const NOW = SERVICE_DAY.now;
@@ -167,6 +168,13 @@ describe("quick filters and search", () => {
   it("combines the search with the quick filter", () => {
     expect(ids(filterBoardOrders(board, { ...base, query: "sofía", quickFilter: "delayed" }))).toEqual([]);
     expect(ids(filterBoardOrders(board, { ...base, query: "9999" }))).toEqual([]);
+  });
+});
+
+describe("sortNewestFirst", () => {
+  it("puts the latest orders on top of each column, like the export", () => {
+    expect(ids(sortNewestFirst(board))).toEqual([1052, 1051, 1050, 1048, 1047]);
+    expect(ids(board)).toEqual([1047, 1048, 1050, 1051, 1052]);
   });
 });
 

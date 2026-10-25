@@ -7,16 +7,7 @@ import {
   canCancelOrder,
   cancelOrder,
   countOrdersByColumn,
-  filterOrders,
-  formatOrderMeta,
-  getBillRequestedTables,
-  getCardNotice,
-  formatOrderTotal,
-  getHistoryLabel,
-  getHistoryTone,
   getNextStatus,
-  getOrderMetrics,
-  getOrderTableOptions,
   getOrderTotal,
   getPrimaryAction,
   getStatusBadge,
@@ -72,16 +63,6 @@ describe("ORDERS_BOARD of the service day", () => {
   });
 });
 
-describe("getOrderMetrics", () => {
-  it("counts the three kitchen stages and ignores cancelled orders", () => {
-    expect(getOrderMetrics(ALL)).toEqual([
-      { id: "received", label: "Recibidos", value: 1, tone: "brand" },
-      { id: "preparing", label: "En preparación", value: 1, tone: "warning" },
-      { id: "delivered", label: "Entregados", value: 1, tone: "success" },
-    ]);
-  });
-});
-
 describe("groupOrdersByColumn", () => {
   it("keeps each column in board order and drops cancelled orders", () => {
     const groups = groupOrdersByColumn([preparing, received, cancelled, delivered]);
@@ -95,39 +76,6 @@ describe("groupOrdersByColumn", () => {
   it("can hide the delivered column", () => {
     const groups = groupOrdersByColumn(ALL, { showDelivered: false });
     expect(groups.map((g) => g.id)).toEqual(["received", "preparing"]);
-  });
-});
-
-describe("filterOrders", () => {
-  it("filters by table", () => {
-    expect(filterOrders(ALL, { table: 8, query: "" }).map((o) => o.id)).toEqual([2]);
-  });
-
-  it("searches by order number, with or without #", () => {
-    const orders = ORDERS_BOARD.orders;
-    expect(filterOrders(orders, { table: "all", query: "1051" }).map((o) => o.id)).toEqual([1051]);
-    expect(filterOrders(orders, { table: "all", query: " #105 " }).map((o) => o.id)).toEqual([1050, 1051, 1052]);
-  });
-
-  it("searches by table number", () => {
-    const orders = ORDERS_BOARD.orders;
-    expect(filterOrders(orders, { table: "all", query: "Mesa 3" }).map((o) => o.id)).toEqual([1051]);
-    expect(filterOrders(orders, { table: "all", query: "mesa 07" }).map((o) => o.id)).toEqual([1048]);
-  });
-
-  it("returns nothing for an unknown number", () => {
-    expect(filterOrders(ALL, { table: "all", query: "9999" })).toEqual([]);
-  });
-});
-
-describe("getOrderTableOptions", () => {
-  it("lists every table with active orders, sorted, after 'Todas las mesas'", () => {
-    expect(getOrderTableOptions(ALL)).toEqual([
-      { value: "all", label: "Todas las mesas" },
-      { value: 3, label: "Mesa 03" },
-      { value: 6, label: "Mesa 06" },
-      { value: 8, label: "Mesa 08" },
-    ]);
   });
 });
 
@@ -182,67 +130,10 @@ describe("status transitions", () => {
 });
 
 describe("copy helpers", () => {
-  it("formats the card meta line and total", () => {
-    const first = ORDERS_BOARD.orders.find((o) => o.id === 1051)!;
-    expect(formatOrderMeta(first)).toBe("Mesa 03 · Martina");
-    expect(formatOrderTotal(first)).toBe("$13.000");
-  });
-
   it("maps statuses to badges", () => {
     expect(getStatusBadge("received")).toEqual({ label: "Recibido", tone: "brand" });
     expect(getStatusBadge("preparing")).toEqual({ label: "En preparación", tone: "warning" });
     expect(getStatusBadge("delivered")).toEqual({ label: "Entregado", tone: "success" });
     expect(getStatusBadge("cancelled")).toEqual({ label: "Cancelado", tone: "danger" });
-  });
-
-  it("labels the history entries of the drawer", () => {
-    expect(getHistoryLabel("confirmed")).toBe("Pedido confirmado");
-    expect(getHistoryLabel("received")).toBe("Recibido en cocina");
-  });
-
-  it("colors history dots like the stage they reached", () => {
-    expect(getHistoryTone("confirmed")).toBe("brand");
-    expect(getHistoryTone("received")).toBe("brand");
-    expect(getHistoryTone("preparing")).toBe("warning");
-    expect(getHistoryTone("delivered")).toBe("success");
-    expect(getHistoryTone("cancelled")).toBe("danger");
-  });
-});
-
-describe("getCardNotice", () => {
-  const withCustomization = order({
-    id: 9,
-    items: [
-      { id: "a", quantity: 1, name: "Té", unitPrice: 2000 },
-      { id: "b", quantity: 1, name: "Latte", unitPrice: 4000, customization: "Leche de almendras" },
-    ],
-    note: "Sin azúcar.",
-  });
-
-  it("shows the first product customization in the warning tone", () => {
-    expect(getCardNotice(withCustomization, false)).toEqual({
-      label: "Personalización",
-      value: "Leche de almendras",
-      tone: "warning",
-    });
-  });
-
-  it("turns green once delivered and red when the table asked for the bill", () => {
-    expect(getCardNotice({ ...withCustomization, status: "delivered" }, false)?.tone).toBe("success");
-    expect(getCardNotice(withCustomization, true)).toEqual({
-      label: "Personalización · Cuenta solicitada",
-      value: "Leche de almendras",
-      tone: "danger",
-    });
-  });
-
-  it("has nothing to show without customizations", () => {
-    expect(getCardNotice(received, false)).toBeNull();
-  });
-});
-
-describe("getBillRequestedTables", () => {
-  it("collects the 02 tables that requested the bill", () => {
-    expect([...getBillRequestedTables(TABLES_BOARD.tables)].sort((a, b) => a - b)).toEqual([4, 5, 7, 10, 12]);
   });
 });

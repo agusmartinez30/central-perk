@@ -149,6 +149,11 @@ export function filterBoardOrders(
   );
 }
 
+/** Column order of the optimized export: the latest order on top. Returns a new array. */
+export function sortNewestFirst(orders: readonly ManagedOrder[]): ManagedOrder[] {
+  return [...orders].sort((a, b) => b.receivedAt.localeCompare(a.receivedAt) || b.id - a.id);
+}
+
 /** "Mesa 03 - Salón · Martina"; tables without a space drop the space. */
 export function formatOrderLocation(order: ManagedOrder): string {
   const table = formatTableLabel(order.tableNumber);

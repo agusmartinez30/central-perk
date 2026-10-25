@@ -1,115 +1,176 @@
+"use client";
+
+import { useEffect, useRef, useState, type RefObject } from "react";
 import clsx from "clsx";
-import { ChefHat, SearchX, type LucideIcon } from "lucide-react";
+import { CornerDownRight, PanelRightOpen, SearchX, type LucideIcon } from "lucide-react";
 import type { ManagedOrder } from "@/mocks/types";
-import { Card } from "@/shared/ui";
-import {
-  formatOrderMeta,
-  formatOrderTotal,
-  getCardNotice,
-  getPrimaryAction,
-  getStatusBadge,
-  type OrderColumn,
-} from "./orders-view";
-import { CustomizationNotice, ORDER_TONE_CLASSES, StatusPill } from "./OrderTags";
+import { formatOrderLocation, getElapsedBadge, getItemNote, isNewOrder } from "./order-alerts";
+import { getPrimaryAction, type OrderColumn, type OrderColumnId } from "./orders-view";
+import { Badge, ORDER_TONE_CLASSES } from "./OrderTags";
 
 type OrderCardProps = {
   order: ManagedOrder;
-  billRequested: boolean;
-  onOpen: (id: number) => void;
+  now: string;
+  selected: boolean;
+  onSelect: (id: number) => void;
   onAdvance: (id: number) => void;
 };
 
-/** "Pedido #NNNN · Mesa NN": kitchen card; the order number opens the detail drawer. */
-function OrderCard({ order, billRequested, onOpen, onAdvance }: OrderCardProps) {
-  const notice = getCardNotice(order, billRequested);
+/** "Pedido #NNNN": kitchen card. The whole card selects the order for the detail panel. */
+function OrderCard({ order, now, selected, onSelect, onAdvance }: OrderCardProps) {
   const action = getPrimaryAction(order);
+  const elapsed = getElapsedBadge(order, now);
+  const fresh = isNewOrder(order, now);
 
   return (
-    <Card as="article" aria-label={`Pedido #${order.id}`} className="relative flex w-full shrink-0 flex-col gap-[11px] p-3.5 hover:outline-ink/30">
-      <div className="flex w-full items-start justify-between">
-        <div className="flex flex-col gap-[3px]">
-          <h3 className="text-[15px] font-bold whitespace-nowrap text-ink">
-            {/* Stretched link: the whole card opens the drawer, the action button sits above it. */}
+    <article
+      aria-label={`Pedido #${order.id}`}
+      className={clsx(
+        "relative flex w-full shrink-0 flex-col gap-2.5 rounded-[10px] bg-surface p-3",
+        selected
+          ? "outline-2 -outline-offset-1 outline-brand"
+          : "outline-1 -outline-offset-[0.5px] outline-line hover:outline-ink/30",
+        fresh && "shadow-[0_3px_12px_#2f45ad22]",
+      )}
+    >
+      <div className="flex w-full items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <h3 className="text-[16px] leading-tight font-extrabold whitespace-nowrap text-ink">
+            {/* Stretched button: the whole card selects the order; the actions sit above it. */}
             <button
               type="button"
-              onClick={() => onOpen(order.id)}
-              className="text-left after:absolute after:inset-0 after:rounded-card focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-brand"
+              aria-pressed={selected}
+              onClick={() => onSelect(order.id)}
+              className="text-left after:absolute after:inset-0 after:rounded-[10px] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-brand"
             >
               Pedido #{order.id}
             </button>
           </h3>
-          <p className="text-[12px] font-medium whitespace-nowrap text-muted">{formatOrderMeta(order)}</p>
+          <p className="text-[12px] font-bold text-brand">{formatOrderLocation(order)}</p>
         </div>
-        <div className="flex flex-col items-end gap-[5px]">
-          <time className="text-[11px] font-semibold text-muted">{order.receivedAt}</time>
-          <StatusPill {...getStatusBadge(order.status)} />
-        </div>
+        <Badge tone={elapsed.tone}>{elapsed.label}</Badge>
       </div>
-      <hr className="h-px w-full border-0 bg-line" />
-      <ul className="flex w-full flex-col gap-[11px]">
-        {order.items.map((item) => (
-          <li key={item.id} className="flex w-full items-start gap-[9px] text-[13px] text-ink">
-            <span className="font-bold">{item.quantity}×</span>
-            <span className="font-semibold">{item.name}</span>
-          </li>
-        ))}
+      {fresh && <Badge tone="brand">NUEVO</Badge>}
+      <ul className="flex w-full flex-col gap-[7px]">
+        {order.items.map((item) => {
+          const note = getItemNote(item);
+          return (
+            <li key={item.id} className="flex w-full flex-col items-start gap-[3px]">
+              <div className="flex w-full items-start gap-[7px] text-[12px] text-ink">
+                <span className="font-extrabold whitespace-nowrap">{item.quantity}×</span>
+                <span className="flex-1 font-bold">{item.name}</span>
+              </div>
+              {note && (
+                <p className="flex items-center gap-[5px] rounded-[5px] bg-warning-bg px-[7px] py-1 text-[10px] text-warning">
+                  <CornerDownRight size={11} aria-hidden="true" className="shrink-0" />
+                  {note}
+                </p>
+              )}
+            </li>
+          );
+        })}
       </ul>
-      {notice && <CustomizationNotice {...notice} />}
-      <div className="flex w-full items-center justify-between">
-        <span className="text-[12px] font-semibold text-muted">Total</span>
-        <span className="text-[17px] font-bold text-ink">{formatOrderTotal(order)}</span>
-      </div>
-      {action && (
+      <div className="flex w-full items-center gap-[7px]">
+        {action ? (
+          <button
+            type="button"
+            onClick={() => onAdvance(order.id)}
+            className={clsx(
+              "relative z-[1] flex h-[34px] flex-1 items-center justify-center rounded-[7px] text-[11px] font-extrabold whitespace-nowrap text-white",
+              ORDER_TONE_CLASSES[action.tone].solid,
+            )}
+          >
+            {action.label}
+          </button>
+        ) : (
+          <span className="flex h-[34px] flex-1 items-center justify-center rounded-[7px] bg-success-bg text-[11px] font-extrabold text-success">
+            Entregado
+          </span>
+        )}
         <button
           type="button"
-          onClick={() => onAdvance(order.id)}
-          className={clsx(
-            "relative z-[1] flex h-[38px] w-full items-center justify-center gap-2 rounded-[9px] text-white",
-            ORDER_TONE_CLASSES[action.tone].solid,
-          )}
+          aria-label={`Ver detalle del pedido #${order.id}`}
+          onClick={() => onSelect(order.id)}
+          className="relative z-[1] flex size-[34px] shrink-0 items-center justify-center rounded-[7px] text-muted outline-1 -outline-offset-[0.5px] outline-line hover:bg-cream"
         >
-          <ChefHat size={15} aria-hidden="true" className="shrink-0" />
-          <span className="text-[12px] font-bold whitespace-nowrap">{action.label}</span>
+          <PanelRightOpen size={15} aria-hidden="true" />
         </button>
-      )}
-    </Card>
+      </div>
+    </article>
   );
 }
 
-type KanbanColumnProps = Omit<OrderCardProps, "order" | "billRequested"> & {
-  column: OrderColumn;
-  billRequestedTables: ReadonlySet<number>;
+const COLUMN_BACKGROUNDS: Record<OrderColumnId, string> = {
+  received: "bg-[#f0f2fb]",
+  preparing: "bg-[#fbf5e9]",
+  delivered: "bg-[#eef6f0]",
 };
 
-/** "Columna · …": sand column with its accent, title, count and scrolling cards. */
-function KanbanColumn({ column, billRequestedTables, ...cardProps }: KanbanColumnProps) {
+/** True while the list overflows and is not scrolled to its end. */
+function useMoreBelow(ref: RefObject<HTMLElement | null>): boolean {
+  const [moreBelow, setMoreBelow] = useState(false);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const update = () => setMoreBelow(element.scrollTop + element.clientHeight < element.scrollHeight - 1);
+    // The observer reports the first size right away, so no synchronous measure is needed.
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    for (const child of element.children) observer.observe(child);
+    element.addEventListener("scroll", update, { passive: true });
+    return () => {
+      observer.disconnect();
+      element.removeEventListener("scroll", update);
+    };
+  }, [ref]);
+  return moreBelow;
+}
+
+type KanbanColumnProps = Omit<OrderCardProps, "order" | "selected"> & {
+  column: OrderColumn;
+  selectedId: number | null;
+};
+
+/** "Columna · …": tinted column with its dot, title, count and scrolling cards. */
+function KanbanColumn({ column, selectedId, ...cardProps }: KanbanColumnProps) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const moreBelow = useMoreBelow(listRef);
+  const tone = ORDER_TONE_CLASSES[column.tone];
+
   return (
     <section
       aria-labelledby={`orders-column-${column.id}`}
-      className="flex h-full min-h-0 flex-1 flex-col gap-2.5 overflow-hidden rounded-[14px] bg-sand p-3"
+      className={clsx(
+        "flex h-full min-h-0 min-w-0 flex-1 flex-col gap-2.5 overflow-hidden rounded-card p-2.5",
+        COLUMN_BACKGROUNDS[column.id],
+      )}
     >
       <div className="flex w-full shrink-0 items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span aria-hidden="true" className={clsx("size-[9px] rounded-full", ORDER_TONE_CLASSES[column.tone].dot)} />
-          <h2 id={`orders-column-${column.id}`} className="text-[14px] font-bold whitespace-nowrap text-ink">
+        <div className="flex items-center gap-[7px]">
+          <span aria-hidden="true" className={clsx("size-[9px] rounded-full", tone.dot)} />
+          <h2 id={`orders-column-${column.id}`} className="text-[13px] font-extrabold whitespace-nowrap text-ink">
             {column.title}
           </h2>
         </div>
-        <span className="flex size-6 items-center justify-center rounded-full bg-surface text-[11px] font-bold text-ink">
+        <Badge tone={column.tone} className="bg-surface!">
           <span className="sr-only">Pedidos: </span>
           {column.orders.length}
-        </span>
+        </Badge>
       </div>
-      <div className="-m-1 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-1">
+      <div ref={listRef} className="-m-1 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-1">
         {column.orders.map((order) => (
-          <OrderCard
-            key={order.id}
-            order={order}
-            billRequested={billRequestedTables.has(order.tableNumber)}
-            {...cardProps}
-          />
+          <OrderCard key={order.id} order={order} selected={order.id === selectedId} {...cardProps} />
         ))}
       </div>
+      {moreBelow && (
+        <button
+          type="button"
+          onClick={() => listRef.current?.scrollBy({ top: listRef.current.clientHeight * 0.8, behavior: "smooth" })}
+          className="flex h-7 w-full shrink-0 items-center justify-center rounded-[7px] bg-surface/80 text-[10px] font-bold text-muted hover:bg-surface"
+        >
+          Desplazar para ver más ↓
+        </button>
+      )}
     </section>
   );
 }
@@ -126,12 +187,12 @@ type KanbanBoardProps = Omit<KanbanColumnProps, "column"> & {
   emptyState: BoardEmptyState | null;
 };
 
-/** "Kanban Board": one column per kitchen stage, or an empty state when nothing matches. */
+/** "Tablero de estados": one column per kitchen stage, or an empty state when nothing matches. */
 export function KanbanBoard({ columns, emptyState, ...columnProps }: KanbanBoardProps) {
   if (emptyState) {
     const EmptyIcon = emptyState.icon ?? SearchX;
     return (
-      <Card className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-2 p-10 text-center">
+      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-card bg-surface p-10 text-center outline-1 -outline-offset-[0.5px] outline-line">
         <EmptyIcon size={28} aria-hidden="true" className="text-muted" />
         <p className="text-[14px] font-bold text-ink">{emptyState.title}</p>
         <p className="text-[12px] text-muted">{emptyState.description}</p>
@@ -144,12 +205,12 @@ export function KanbanBoard({ columns, emptyState, ...columnProps }: KanbanBoard
             {emptyState.action.label}
           </button>
         )}
-      </Card>
+      </div>
     );
   }
 
   return (
-    <div className="flex min-h-0 w-full flex-1 gap-3">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 gap-2.5">
       {columns.map((column) => (
         <KanbanColumn key={column.id} column={column} {...columnProps} />
       ))}
