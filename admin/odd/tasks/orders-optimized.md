@@ -20,7 +20,7 @@ The current `/orders` screen follows the original 03 exports. The new proposal r
 
 ## Tasks
 - [x] T1 Pure helpers + mock data test-first: delay detection (20 min target, "+N min"), "new" order flag, quick filters (all / delayed) and delivered visibility, search by order, table or customer, item notes, column sublabels, timeline entries. Route: delegated (preparation + 2+ non-trivial files). Commit: 9eb9a10
-- [x] T2 Screen redesign: header + "Alertas activas" metrics, toolbar (search, chips, delivered toggle, "Actualizado ahora"), redesigned kanban cards, persistent detail panel (selected order, products with notes, timeline, delay alert, cancel / advance actions). Route: delegated (2+ non-trivial files). Commit: see Progress (T2 entry).
+- [x] T2 Screen redesign: header + "Alertas activas" metrics, toolbar (search, chips, delivered toggle, "Actualizado ahora"), redesigned kanban cards, persistent detail panel (selected order, products with notes, timeline, delay alert, cancel / advance actions). Route: delegated (2+ non-trivial files). Commit: 4b3dcfa
 
 ## Acceptance criteria
 - `/orders` visually matches the optimized export at 1440×900.
@@ -39,4 +39,4 @@ lint, tsc, vitest, build.
 - T2 deviations: shared admin sidebar and the existing `live-location` top bar (no "Operación en línea · Turno mañana" footer, user "Sofía M." instead of "María · Encargada"); data deviations from T1 (times, NUEVO on #1052, spaces, customer, notes), so long locations like "Mesa 08 - Terraza · Tomás" wrap to two lines where the export fits one; "Desplazar para ver más ↓" hidden when the column does not overflow (the export always draws it); panel shows the product variant ("Grande · caliente") and the customer note ("Sin azúcar."), which the export does not include; no totals on cards or panel (as in the export); invented copy: "Alertas silenciadas", "Entregados ocultos", "sin nuevos", "a tiempo", panel placeholder, updated no-results description.
 
 ## Next step
-Human review; chain strategy before opening PRs (authored ~1,250 changed lines across T1+T2, above the ~400 budget).
+Human review; chain strategy before opening PRs (T1 9eb9a10: +467/−5; T2 4b3dcfa: +562/−685 code plus docs; above the ~400 budget, mostly replaced code).
