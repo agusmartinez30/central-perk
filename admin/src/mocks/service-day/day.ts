@@ -25,6 +25,9 @@ import type {
 const DATE = "2026-10-21";
 const NOW = "14:42";
 
+/** Encargada who confirms every order in the kitchen (03 "Confirmado por María"). */
+const KITCHEN_CONFIRMER = "María G.";
+
 const pad = (value: number) => String(value).padStart(2, "0");
 
 const sessionId = (date: string, table: number, index: number) => `S-${date}-${pad(table)}-${index}`;
@@ -65,7 +68,7 @@ function item(orderId: number, index: number, [productId, quantity, extras]: Lin
 function order({ id, session, customer, at, lines, note, status = "delivered", preparingAt, deliveredAt }: OrderSeed): ServiceOrder {
   const history: OrderHistoryEvent[] = [
     { kind: "confirmed", at },
-    { kind: "received", at },
+    { kind: "received", at, by: KITCHEN_CONFIRMER },
   ];
   if (status !== "received") history.push({ kind: "preparing", at: preparingAt ?? addMinutes(at, 3) });
   if (status === "delivered") history.push({ kind: "delivered", at: deliveredAt ?? addMinutes(at, 12) });

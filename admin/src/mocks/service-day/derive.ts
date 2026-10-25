@@ -64,10 +64,11 @@ function getTodaysOrders(day: ServiceDay): ServiceOrder[] {
 }
 
 /** Strips the catalogue reference so screens receive their own order shape. */
-function toManagedOrder(order: ServiceOrder): ManagedOrder {
+function toManagedOrder(order: ServiceOrder, spaceName?: string): ManagedOrder {
   return {
     id: order.id,
     tableNumber: order.tableNumber,
+    ...(spaceName && { spaceName }),
     customer: order.customer,
     receivedAt: order.receivedAt,
     items: order.items.map(({ id, quantity, name, variant, unitPrice, customization }) => ({
@@ -132,7 +133,11 @@ export function getOrdersBoard(day: ServiceDay): OrdersBoard {
       return minutesBetween(deliveredAt, day.now) <= DELIVERED_BOARD_WINDOW_MINUTES;
     })
     .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
-  return { orders: orders.map(toManagedOrder) };
+  const spaceOf = (tableNumber: number) => {
+    const spaceId = day.tables.find((table) => table.number === tableNumber)?.spaceId;
+    return day.spaces.find((space) => space.id === spaceId)?.name;
+  };
+  return { orders: orders.map((order) => toManagedOrder(order, spaceOf(order.tableNumber))) };
 }
 
 // 04 · Solicitudes de cuenta

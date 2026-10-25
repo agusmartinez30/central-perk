@@ -110,6 +110,8 @@ export type OrderHistoryEvent = {
   kind: OrderHistoryKind;
   /** Local "HH:MM" time. */
   at: string;
+  /** Staff member who confirmed the order in the kitchen ("received" entries). */
+  by?: string;
 };
 
 export type CancellationReason = "product-unavailable" | "customer-request" | "order-error";
@@ -130,6 +132,8 @@ export type ManagedOrder = {
   /** Order number shown as "Pedido #1051". */
   id: number;
   tableNumber: number;
+  /** 09A space of the table, e.g. "Salón". */
+  spaceName?: string;
   customer: string;
   /** Local "HH:MM" time the order was confirmed. */
   receivedAt: string;
