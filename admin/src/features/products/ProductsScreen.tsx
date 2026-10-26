@@ -83,8 +83,8 @@ export function ProductsScreen() {
   }, []);
 
   let content;
-  if (state.editor && editorView && state.screen === "preview") {
-    content = <CustomerPreview editor={state.editor} view={editorView} onAction={dispatch} />;
+  if (state.editor && state.screen === "preview") {
+    content = <CustomerPreview state={state} onAction={dispatch} />;
   } else if (state.editor && editorView && state.screen === "editor") {
     content = <ProductEditor editor={state.editor} view={editorView} onAction={dispatch} />;
   } else {
