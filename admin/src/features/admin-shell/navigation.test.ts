@@ -15,7 +15,6 @@ describe("NAV_ITEMS", () => {
       "Productos",
       "Categorías y momentos",
       "Configuración",
-      "Pagos",
       "Personal y permisos",
     ]);
   });
@@ -36,6 +35,7 @@ describe("findActiveNavItem", () => {
     expect(findActiveNavItem("/tables")?.id).toBe("tables");
     expect(findActiveNavItem("/tables/qr")?.id).toBe("table-qr");
     expect(findActiveNavItem("/menu/products/42")?.id).toBe("products");
+    expect(findActiveNavItem("/settings/payments")?.id).toBe("settings");
   });
 
   it("ignores trailing slashes and partial segment matches", () => {
@@ -58,17 +58,18 @@ describe("getSectionTitle", () => {
 describe("getTopbarConfig", () => {
   it("keeps the section title of 10A by default", () => {
     expect(getTopbarConfig("/")).toEqual({ variant: "section", title: "Café Central · Resumen" });
-    expect(getTopbarConfig("/settings")).toEqual({
+    expect(getTopbarConfig("/menu")).toEqual({
       variant: "section",
-      title: "Café Central · Configuración",
+      title: "Café Central · Carta digital",
     });
   });
 
   it("shows the branch without the shift and the administrator pill on the 06 payment settings", () => {
-    expect(getTopbarConfig("/payments")).toEqual({
+    expect(getTopbarConfig("/settings/payments")).toEqual({
       variant: "admin-location",
       title: "Café Central · Sede Centro",
     });
+    expect(getTopbarConfig("/settings").variant).toBe("admin-location");
   });
 
   it("adds the live pill and the compact profile on the 03 orders screen", () => {

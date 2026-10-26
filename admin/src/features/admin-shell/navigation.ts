@@ -2,7 +2,6 @@ import {
   Armchair,
   BookOpen,
   ClipboardList,
-  CreditCard,
   History,
   LayoutDashboard,
   LayoutGrid,
@@ -102,8 +101,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
     topbar: "catalog",
     topbarTitle: TOPBAR_MENU_ORGANIZATION,
   },
-  { id: "settings", label: "Configuración", href: "/settings", icon: Settings },
-  { id: "payments", label: "Pagos", href: "/payments", icon: CreditCard, topbar: "admin-location" },
+  // `/settings` redirects to its only section, `/settings/payments` (06), which uses the 06 top bar.
+  { id: "settings", label: "Configuración", href: "/settings", icon: Settings, topbar: "admin-location" },
   { id: "staff", label: "Personal y permisos", href: "/staff", icon: UsersRound },
 ];
 

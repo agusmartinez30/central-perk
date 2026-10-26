@@ -40,11 +40,11 @@ clear the site storage.
 | `/orders` | 03 · Gestión de pedidos, optimized proposal (alert metrics, search + quick filters, kanban with delay/new badges, persistent order detail panel with timeline, cancel confirmation) |
 | `/bill-requests` | 04 · Solicitudes de cuenta (requests table, quick-detail drawer) |
 | `/history` | 05 · Historial de cobros (collections table with period, filters and pagination; read-only collection drawer) |
-| `/payments` | 06 · Configuración de pagos (methods, request modes and bank details tabs, live customer preview, in-memory save after confirming) |
+| `/settings/payments` | 06 · Configuración de pagos under Configuración; `/settings` and `/payments` redirect here keeping `?state=` (methods, request modes and bank details tabs, live customer preview, in-memory save after confirming) |
 | `/menu/products` | 07 · Productos: list with metrics, search, filters and Duplicar / Archivar / availability (07A), editor (07B) and customer preview (07C) of the same draft, in-memory save |
 | `/menu/categories` | 08 · Categorías y momentos: "Organización de la carta" tabs with moments (08A, visibility and drag/keyboard reordering) and categories (08C, search and reordering), moment editor with live phone preview (08B), category editor with archive confirmation (08D) and customer explore preview (08E), in-memory save |
 | `/tables/qr` | 09 · Mesas y códigos QR: QR credentials only: tables list with filters and quick enable/disable (09A), space cards, "Nueva mesa" and row "Editar" linking to Gestión de mesas, QR detail with copy / PNG / SVG / PDF and token regeneration after confirming (09C, 09F), printable card and A4 sheet (09D), bulk print modal with A6 / compact A4 sheets (09E); real QR codes (`qrcode`) pointing to `NEXT_PUBLIC_CUSTOMER_APP_URL` (default `http://localhost:3000`) `/?mesa=NN&qr=<token>`; printing uses `window.print()` with print CSS |
-| `/menu`, `/settings`, `/staff` | "Próximamente" placeholder |
+| `/menu`, `/staff` | "Próximamente" placeholder |
 
 ### Forced variants (`?state=`)
 
@@ -60,7 +60,7 @@ clear the site storage.
 | `/orders` | `detail` (panel on #1051; by default it opens on the delayed #1048), `cancel` (cancel dialog of #1051), `empty` (no orders), `no-results` (search for "9999") |
 | `/bill-requests` | `selected` (drawer of Mesa 10), `empty` (no requests), `no-results` (search for "Mesa 99") |
 | `/history` | `selected` (drawer of COB-0026), `empty` (no collections), `no-results` (search for "Mesa 99") |
-| `/payments` | `bank` ("Datos bancarios" tab), `bank-errors` (invalid alias and CBU after a save attempt), `confirm` (save confirmation with a pending change) |
+| `/settings/payments` | `bank` ("Datos bancarios" tab), `bank-errors` (invalid alias and CBU after a save attempt), `confirm` (save confirmation with a pending change) |
 | `/menu/products` | `edit` (07B: Cappuccino with "Tomar" added, unsaved), `preview` (07C of that draft), `new` (empty new product), `errors` (Cappuccino after publishing without a name and with an invalid price) |
 | `/menu/categories` | `moment-edit` (08B: Para desayunar with Limonada added, unsaved), `moment-new`, `moment-errors` (saved without a name), `categories` (08C tab), `category-edit` (08D: Cafés with the export description, unsaved), `category-new`, `category-archive` (Cafés waiting for the archive confirmation), `preview` (08E of Para desayunar) |
 
