@@ -6,19 +6,12 @@ import {
   CircleEllipsis,
   ConciergeBell,
   CreditCard,
-  Info,
   Landmark,
-  Split,
   Store,
   type LucideIcon,
 } from "lucide-react";
 import type { AcceptedPaymentMethod, BillPaymentMethod, PaymentSettings } from "@/mocks/types";
-import {
-  MINIMUM_METHOD_RULE,
-  PAYMENT_METHOD_OPTIONS,
-  REQUEST_MODE_OPTIONS,
-  TRANSFER_MODE_RULE,
-} from "./payment-settings";
+import { PAYMENT_METHOD_OPTIONS, REQUEST_MODE_OPTIONS, TRANSFER_MODE_RULE } from "./payment-settings";
 
 export const METHOD_ICONS: Record<AcceptedPaymentMethod, LucideIcon> = {
   cash: Banknote,
@@ -33,46 +26,47 @@ export const REQUEST_MODE_ICONS: Record<BillPaymentMethod, LucideIcon> = {
   transfer: Landmark,
 };
 
-type SettingToggleProps = {
+type SettingRowProps = {
   label: string;
   description: string;
   icon: LucideIcon;
   checked: boolean;
   /** Locked switches stay on (the last enabled method). */
   locked?: boolean;
-  /** `method` cards are 68px tall with a 38px brand icon; `mode` cards 64px with a 36px cream icon. */
-  variant: "method" | "mode";
+  /** Method rows are 72px tall, request mode rows 64px. */
+  size: "method" | "mode";
   onToggle: () => void;
 };
 
-/** "Método · …" / "Modalidad · …" card: icon, copy and a 38×22 switch. */
-function SettingToggle({ label, description, icon: Icon, checked, locked, variant, onToggle }: SettingToggleProps) {
+/** "Efectivo · A" … row: 34px icon, name, description and a 42×24 switch, divided by a rule. */
+function SettingRow({ label, description, icon: Icon, checked, locked, size, onToggle }: SettingRowProps) {
   const labelId = useId();
   const descriptionId = useId();
-  const isMethod = variant === "method";
   return (
     <div
       className={clsx(
-        "flex flex-1 items-center rounded-[10px] bg-surface p-3 outline-1 -outline-offset-[0.5px] outline-line",
-        isMethod ? "min-h-[68px] gap-3" : "min-h-16 gap-[11px]",
+        "flex w-full shrink-0 items-center justify-between gap-3 border-b border-line px-1",
+        size === "method" ? "h-[72px]" : "h-16",
       )}
     >
-      <span
-        aria-hidden="true"
-        className={clsx(
-          "flex shrink-0 items-center justify-center rounded-[9px] text-brand",
-          isMethod ? "size-[38px] bg-brand-wash" : "size-9 bg-cream",
-        )}
-      >
-        <Icon size={isMethod ? 17 : 16} />
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
-        <p id={labelId} className="text-[13px] font-bold whitespace-nowrap text-ink">
-          {label}
-        </p>
-        <p id={descriptionId} className="text-[11px] text-muted">
-          {description}
-        </p>
+      <div className="flex min-w-0 items-center gap-3">
+        <span
+          aria-hidden="true"
+          className={clsx(
+            "flex size-[34px] shrink-0 items-center justify-center rounded-nav",
+            checked ? "bg-brand-wash text-brand" : "bg-cream text-muted",
+          )}
+        >
+          <Icon size={15} />
+        </span>
+        <div className="flex min-w-0 flex-col gap-[3px]">
+          <p id={labelId} className="text-[13px] font-bold whitespace-nowrap text-ink">
+            {label}
+          </p>
+          <p id={descriptionId} className="text-[11px] font-medium text-muted">
+            {description}
+          </p>
+        </div>
       </div>
       <button
         type="button"
@@ -81,25 +75,26 @@ function SettingToggle({ label, description, icon: Icon, checked, locked, varian
         aria-labelledby={labelId}
         aria-describedby={descriptionId}
         disabled={locked}
+        title={locked ? "Debe quedar al menos un medio de cobro habilitado" : undefined}
         onClick={onToggle}
         className={clsx(
-          "flex h-[22px] w-[38px] shrink-0 items-center rounded-[11px] p-[3px] disabled:cursor-not-allowed",
+          "flex h-6 w-[42px] shrink-0 items-center rounded-[12px] p-[3px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed",
           checked ? "justify-end bg-brand" : "justify-start bg-sand",
         )}
       >
-        <span aria-hidden="true" className="size-4 rounded-full bg-surface" />
+        <span aria-hidden="true" className="size-[18px] rounded-full bg-surface" />
       </button>
     </div>
   );
 }
 
-function PanelHeading({ id, title, description }: { id: string; title: string; description: string }) {
+function SectionHeading({ id, title, description }: { id: string; title: string; description: string }) {
   return (
-    <div className="flex flex-col gap-[3px]">
-      <h3 id={id} className="text-[14px] font-bold whitespace-nowrap text-ink">
+    <div className="flex w-full shrink-0 flex-col gap-1 pb-3">
+      <h3 id={id} className="text-[14px] font-extrabold whitespace-nowrap text-ink">
         {title}
       </h3>
-      <p className="text-[11px] text-muted">{description}</p>
+      <p className="text-[11px] font-medium text-muted">{description}</p>
     </div>
   );
 }
@@ -113,7 +108,10 @@ type PaymentSettingsFormProps = {
   onToggleRequestMode: (mode: BillPaymentMethod) => void;
 };
 
-/** "Payment Settings Form": "Accepted Payment Methods" and "Customer Payment Preferences". */
+/**
+ * "Configuración · A" of the "Métodos y modalidades" tab: "Medios de cobro aceptados" and
+ * "Modalidades para solicitar la cuenta" in one card.
+ */
 export function PaymentSettingsForm({
   draft,
   lockedMethods,
@@ -124,70 +122,50 @@ export function PaymentSettingsForm({
   const methodsTitleId = useId();
   const modesTitleId = useId();
   return (
-    <div className="flex h-full min-w-0 flex-1 flex-col gap-3 overflow-y-auto">
-      <section
-        aria-labelledby={methodsTitleId}
-        className="flex w-full shrink-0 flex-col gap-2.5 rounded-card bg-surface p-3.5 outline-1 -outline-offset-[0.5px] outline-line"
-      >
-        <PanelHeading
+    <div className="flex h-full min-w-0 flex-1 flex-col overflow-y-auto rounded-card bg-surface px-6 py-[22px]">
+      <section aria-labelledby={methodsTitleId} className="flex w-full shrink-0 flex-col">
+        <SectionHeading
           id={methodsTitleId}
           title="Medios de cobro aceptados"
-          description="Seleccioná los medios que el personal puede registrar al cobrar una cuenta."
+          description="Medios que el personal puede registrar al cobrar una cuenta."
         />
-        <div className="grid w-full grid-cols-2 gap-2">
-          {PAYMENT_METHOD_OPTIONS.map((option) => (
-            <SettingToggle
-              key={option.id}
-              variant="method"
-              label={option.label}
-              description={option.description}
-              icon={METHOD_ICONS[option.id]}
-              checked={draft.methods[option.id]}
-              locked={lockedMethods.includes(option.id)}
-              onToggle={() => onToggleMethod(option.id)}
-            />
-          ))}
-        </div>
-        <p className="flex w-full items-center gap-[7px] rounded-nav bg-cream p-[9px]">
-          <Info size={13} aria-hidden="true" className="shrink-0 text-brand" />
-          <span className="text-[11px] font-semibold text-muted">{MINIMUM_METHOD_RULE}</span>
-        </p>
+        {PAYMENT_METHOD_OPTIONS.map((option) => (
+          <SettingRow
+            key={option.id}
+            size="method"
+            label={option.label}
+            description={option.description}
+            icon={METHOD_ICONS[option.id]}
+            checked={draft.methods[option.id]}
+            locked={lockedMethods.includes(option.id)}
+            onToggle={() => onToggleMethod(option.id)}
+          />
+        ))}
       </section>
 
-      <section
-        aria-labelledby={modesTitleId}
-        className="flex w-full shrink-0 flex-col gap-[9px] rounded-card bg-surface p-3.5 outline-1 -outline-offset-[0.5px] outline-line"
-      >
-        <PanelHeading
+      <section aria-labelledby={modesTitleId} className="mt-[22px] flex w-full shrink-0 flex-col">
+        <SectionHeading
           id={modesTitleId}
           title="Modalidades para solicitar la cuenta"
-          description="Estas opciones aparecerán en la pantalla del cliente. No se selecciona una modalidad predeterminada."
+          description="Opciones visibles en la experiencia del cliente."
         />
-        <div className="grid w-full grid-cols-3 gap-2">
-          {REQUEST_MODE_OPTIONS.map((option) => (
-            <SettingToggle
-              key={option.id}
-              variant="mode"
-              label={option.label}
-              description={option.description}
-              icon={REQUEST_MODE_ICONS[option.id]}
-              checked={draft.requestModes[option.id]}
-              onToggle={() => onToggleRequestMode(option.id)}
-            />
-          ))}
-        </div>
+        {REQUEST_MODE_OPTIONS.map((option) => (
+          <SettingRow
+            key={option.id}
+            size="mode"
+            label={option.label}
+            description={option.description}
+            icon={REQUEST_MODE_ICONS[option.id]}
+            checked={draft.requestModes[option.id]}
+            onToggle={() => onToggleRequestMode(option.id)}
+          />
+        ))}
         {transferModeBlocked && (
-          <p role="alert" className="flex w-full items-center gap-[7px] rounded-nav bg-danger-bg p-[9px] text-danger">
+          <p role="alert" className="mt-3 flex w-full items-center gap-[7px] rounded-nav bg-danger-bg p-[9px] text-danger">
             <CircleAlert size={13} aria-hidden="true" className="shrink-0" />
             <span className="text-[11px] font-bold">{TRANSFER_MODE_RULE}</span>
           </p>
         )}
-        <p className="flex w-full items-center gap-[7px] rounded-nav bg-brand-wash p-[9px] text-brand">
-          <Split size={13} aria-hidden="true" className="shrink-0" />
-          <span className="text-[11px] font-bold">
-            La modalidad elegida por el cliente no confirma ni determina el medio de pago real.
-          </span>
-        </p>
       </section>
     </div>
   );

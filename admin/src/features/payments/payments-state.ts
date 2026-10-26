@@ -10,7 +10,7 @@ import {
   REQUEST_MODE_OPTIONS,
   applySettings,
   canDisableMethod,
-  formatChangesTitle,
+  formatSavedAgo,
   formatVersionMeta,
   getSettingsChanges,
   getSettingsIssues,
@@ -22,8 +22,8 @@ import {
   type SettingsIssue,
 } from "./payment-settings";
 
-/** "Payment Settings Navigation" tabs with content; "Seguridad" has no design yet. */
-export type SettingsTab = "methods" | "modes" | "bank";
+/** Tabs with content: "Métodos y modalidades" and "Datos bancarios"; "Seguridad" has no design yet. */
+export type SettingsTab = "methods" | "bank";
 
 export type PaymentsState = {
   /** Last confirmed configuration (in memory only). */
@@ -35,6 +35,8 @@ export type PaymentsState = {
   confirmOpen: boolean;
   /** A save was attempted with errors: every bank error is shown, not only edited fields. */
   showErrors: boolean;
+  /** Screen clock ("HH:MM") the saved status is measured against; a confirmed save moves it. */
+  now: string;
 };
 
 export type PaymentsAction =
@@ -66,6 +68,7 @@ export function createPaymentsState(
     tab: "methods",
     confirmOpen: false,
     showErrors: false,
+    now: saved.updatedAt,
     ...overrides,
   };
 }
@@ -109,7 +112,14 @@ export function paymentsReducer(state: PaymentsState, action: PaymentsAction): P
       return { ...state, confirmOpen: false };
     case "confirm-save": {
       const saved = applySettings(state.saved, state.draft, action.now);
-      return { ...state, saved, draft: copySettings(saved.settings), confirmOpen: false, showErrors: false };
+      return {
+        ...state,
+        saved,
+        draft: copySettings(saved.settings),
+        confirmOpen: false,
+        showErrors: false,
+        now: action.now,
+      };
     }
   }
 }
@@ -118,13 +128,13 @@ export type PaymentsView = {
   changes: SettingsChange[];
   dirty: boolean;
   issues: SettingsIssue[];
-  /** Save bar title: "Configuración sin cambios" or "N cambios sin guardar". */
-  title: string;
-  /** Save bar meta: "Versión 18 · actualizada hoy 09:42". */
+  /** Header status pill: "Guardado hace 4 min". */
+  savedAgo: string;
+  /** Version detail of that pill: "Versión 18 · actualizada hoy 14:38". */
   meta: string;
   /** Enabled methods that cannot be turned off (the last one left). */
   lockedMethods: AcceptedPaymentMethod[];
-  /** Request modes the customer would see on the 08 screen. */
+  /** Request modes the customer would see on the 08 screen ("Previsualización en tiempo real"). */
   previewModes: RequestModeOption[];
   /** Bank errors to show: edited fields only, or all of them after a save attempt. */
   bankErrors: BankAccountErrors;
@@ -147,7 +157,7 @@ export function getPaymentsView(state: PaymentsState): PaymentsView {
     changes,
     dirty: changes.length > 0,
     issues: getSettingsIssues(draft),
-    title: formatChangesTitle(changes.length),
+    savedAgo: formatSavedAgo(saved.updatedAt, state.now),
     meta: formatVersionMeta(saved),
     lockedMethods: PAYMENT_METHOD_OPTIONS.map((option) => option.id).filter(
       (method) => !canDisableMethod(draft.methods, method),

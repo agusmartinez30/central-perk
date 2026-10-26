@@ -1,7 +1,7 @@
 "use client";
 
-import { useReducer } from "react";
-import { PAYMENT_SETTINGS } from "@/mocks/payments";
+import { useEffect, useReducer, useRef } from "react";
+import { PAYMENT_SETTINGS, PAYMENT_SETTINGS_VIEWED_AT } from "@/mocks/payments";
 import { useScreenState } from "@/shared/lib/use-screen-state";
 import { BankAccountForm } from "./BankAccountForm";
 import { createPaymentsState, getPaymentsView, paymentsReducer, type PaymentsState } from "./payments-state";
@@ -22,7 +22,7 @@ export const PAYMENTS_FORCED_STATES = ["bank", "bank-errors", "confirm"] as cons
 type ForcedState = (typeof PAYMENTS_FORCED_STATES)[number];
 
 function initPaymentsState(forcedState: ForcedState | null): PaymentsState {
-  const state = createPaymentsState(PAYMENT_SETTINGS);
+  const state = createPaymentsState(PAYMENT_SETTINGS, { now: PAYMENT_SETTINGS_VIEWED_AT });
   const { bankAccount } = state.draft;
   switch (forcedState) {
     case "bank":
@@ -57,22 +57,32 @@ function formatClock(date: Date): string {
 }
 
 /**
- * 06 · Configuración de pagos. Container: owns the saved settings, the draft, the active tab and
- * the save confirmation (pure `paymentsReducer`), fed by `PAYMENT_SETTINGS`. Saving only applies
- * the draft in memory after "Confirmar y guardar"; nothing persists beyond the session.
+ * 06 · Configuración de pagos, under Configuración (`/settings/payments`). Container: owns the saved
+ * settings, the draft, the active tab and the save confirmation (pure `paymentsReducer`), fed by
+ * `PAYMENT_SETTINGS` and viewed at the service-day clock. Saving only applies the draft in memory
+ * after "Confirmar y guardar"; nothing persists beyond the session.
  */
 export function PaymentSettingsScreen() {
   const forcedState = useScreenState(PAYMENTS_FORCED_STATES);
   const [state, dispatch] = useReducer(paymentsReducer, forcedState, initPaymentsState);
   const view = getPaymentsView(state);
   const transferModeBlocked = view.issues.some((issue) => issue.id === "transfer-mode-requirements");
+  const blockedIssue = state.showErrors && view.issues.length > 0 ? view.issues[0].message : undefined;
+
+  // A confirmed save removes the save bar (and the dialog's opener): move focus to the saved status.
+  const statusRef = useRef<HTMLParagraphElement>(null);
+  const savedVersion = state.saved.version;
+  const initialVersion = useRef(savedVersion);
+  useEffect(() => {
+    if (savedVersion !== initialVersion.current) statusRef.current?.focus();
+  }, [savedVersion]);
 
   return (
     // The workspace fills the viewport under the 72px top bar, as in the 1440×900 export.
-    <div className="flex h-[calc(100dvh-72px)] min-h-[700px] flex-col gap-3 px-7 pt-[18px] pb-4">
-      <PaymentSettingsHeader />
-      <div className="flex min-h-0 w-full flex-1 items-start gap-3">
-        <PaymentSettingsNavigation tab={state.tab} onTabChange={(tab) => dispatch({ type: "select-tab", tab })} />
+    <div className="flex h-[calc(100dvh-72px)] min-h-[640px] flex-col px-8 pt-5 pb-5">
+      <PaymentSettingsHeader tab={state.tab} savedAgo={view.savedAgo} meta={view.meta} statusRef={statusRef} />
+      <PaymentSettingsNavigation tab={state.tab} onTabChange={(tab) => dispatch({ type: "select-tab", tab })} />
+      <div className="mt-5 flex min-h-0 w-full flex-1 items-start gap-5">
         {state.tab === "bank" ? (
           <BankAccountForm
             account={state.draft.bankAccount}
@@ -89,16 +99,15 @@ export function PaymentSettingsScreen() {
             onToggleRequestMode={(mode) => dispatch({ type: "toggle-request-mode", mode })}
           />
         )}
-        <SettingsPreviewColumn modes={view.previewModes} />
+        <SettingsPreviewColumn tab={state.tab} modes={view.previewModes} account={state.draft.bankAccount} />
       </div>
-      <PaymentSettingsSaveBar
-        title={state.showErrors && view.issues.length > 0 ? view.issues[0].message : view.title}
-        meta={view.meta}
-        dirty={view.dirty}
-        invalid={state.showErrors && view.issues.length > 0}
-        onDiscard={() => dispatch({ type: "discard" })}
-        onSave={() => dispatch({ type: "request-save" })}
-      />
+      {view.dirty && (
+        <PaymentSettingsSaveBar
+          issue={blockedIssue}
+          onDiscard={() => dispatch({ type: "discard" })}
+          onSave={() => dispatch({ type: "request-save" })}
+        />
+      )}
       {state.confirmOpen && (
         <SaveConfirmationDialog
           onCancel={() => dispatch({ type: "cancel-save" })}

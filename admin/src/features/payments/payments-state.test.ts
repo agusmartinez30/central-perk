@@ -1,20 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { PAYMENT_SETTINGS } from "@/mocks/payments";
+import { PAYMENT_SETTINGS, PAYMENT_SETTINGS_VIEWED_AT } from "@/mocks/payments";
 import { createPaymentsState, getPaymentsView, paymentsReducer } from "./payments-state";
 
-const initial = createPaymentsState(PAYMENT_SETTINGS);
+const initial = createPaymentsState(PAYMENT_SETTINGS, { now: PAYMENT_SETTINGS_VIEWED_AT });
 
 describe("createPaymentsState", () => {
-  it("starts on 'Medios de cobro' with a clean copy of the saved settings", () => {
+  it("starts on 'Métodos y modalidades' with a clean copy of the saved settings", () => {
     expect(initial.tab).toBe("methods");
     expect(initial.draft).toEqual(PAYMENT_SETTINGS.settings);
     expect(initial.draft).not.toBe(PAYMENT_SETTINGS.settings);
     expect(getPaymentsView(initial)).toMatchObject({
       changes: [],
       dirty: false,
-      title: "Configuración sin cambios",
-      meta: "Versión 18 · actualizada hoy 09:42",
+      savedAgo: "Guardado hace 4 min",
+      meta: "Versión 18 · actualizada hoy 14:38",
     });
+  });
+
+  it("reads the clock at the last save when none is given", () => {
+    expect(getPaymentsView(createPaymentsState(PAYMENT_SETTINGS)).savedAgo).toBe("Guardado recién");
   });
 });
 
@@ -33,7 +37,8 @@ describe("paymentsReducer", () => {
     expect(toggled.draft.methods.other).toBe(true);
     expect(toggled.draft.requestModes.register).toBe(false);
     expect(toggled.saved).toBe(PAYMENT_SETTINGS);
-    expect(getPaymentsView(toggled)).toMatchObject({ dirty: true, title: "2 cambios sin guardar" });
+    expect(getPaymentsView(toggled)).toMatchObject({ dirty: true });
+    expect(getPaymentsView(toggled).changes).toHaveLength(2);
   });
 
   it("is clean again after toggling a method back", () => {
@@ -124,7 +129,7 @@ describe("saving", () => {
     expect(saved.saved.settings.methods.other).toBe(true);
     expect(getPaymentsView(saved)).toMatchObject({
       dirty: false,
-      title: "Configuración sin cambios",
+      savedAgo: "Guardado recién",
       meta: "Versión 19 · actualizada hoy 10:15",
     });
     expect(PAYMENT_SETTINGS.settings.methods.other).toBe(false);

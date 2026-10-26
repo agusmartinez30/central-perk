@@ -6,6 +6,7 @@ import type {
   SavedPaymentSettings,
 } from "@/mocks/types";
 import { PAYMENT_METHODS, REQUEST_MODES } from "@/mocks/service-day/catalog";
+import { minutesBetween } from "@/mocks/service-day/time";
 
 /** 06 name of a request mode, from the service-day catalogue. */
 const requestModeLabel = (id: BillPaymentMethod) => REQUEST_MODES.find((mode) => mode.id === id)?.label ?? id;
@@ -14,10 +15,10 @@ export type PaymentMethodOption = { id: AcceptedPaymentMethod; label: string; de
 
 /** "Medios de cobro aceptados", in the order of the 06 export. */
 const METHOD_DESCRIPTIONS: Record<AcceptedPaymentMethod, string> = {
-  cash: "Cobros en efectivo registrados por el personal.",
-  card: "Pagos con terminal física o dispositivo externo.",
-  transfer: "Transferencias bancarias verificadas manualmente.",
-  other: "Otros medios registrados con una descripción.",
+  cash: "Cobros registrados por el personal.",
+  card: "Terminal física o dispositivo externo.",
+  transfer: "Requiere verificación manual de acreditación.",
+  other: "Medio adicional con descripción.",
 };
 
 /** Names come from the service-day catalogue, which 05 uses for "Medio real" too. */
@@ -30,9 +31,10 @@ export const PAYMENT_METHOD_OPTIONS: readonly PaymentMethodOption[] = PAYMENT_ME
 export type RequestModeOption = {
   id: BillPaymentMethod;
   label: string;
-  /** Admin-facing description ("Preference Description"). */
+  /** Admin-facing description. */
   description: string;
-  /** Customer-facing description of the live 08 preview. */
+  /** Customer-facing name and description of the live 08 preview ("Opción refinada · …"). */
+  customerLabel: string;
   customerDescription: string;
 };
 
@@ -42,19 +44,22 @@ export const REQUEST_MODE_OPTIONS: readonly RequestModeOption[] = [
     id: "table",
     label: requestModeLabel("table"),
     description: "El personal se acerca a cobrar.",
-    customerDescription: "Nos acercamos a cobrarte.",
+    customerLabel: "En mi mesa",
+    customerDescription: "Nos acercamos a cobrarte",
   },
   {
     id: "register",
     label: requestModeLabel("register"),
     description: "El cliente se acerca al mostrador.",
-    customerDescription: "Pagá en el mostrador.",
+    customerLabel: requestModeLabel("register"),
+    customerDescription: "Pagá en el mostrador",
   },
   {
     id: "transfer",
     label: requestModeLabel("transfer"),
-    description: "El personal indica cómo realizar el pago.",
-    customerDescription: "Te indicamos cómo realizarla.",
+    description: "El personal comparte las instrucciones.",
+    customerLabel: requestModeLabel("transfer"),
+    customerDescription: "Te indicamos cómo realizarla",
   },
 ];
 
@@ -120,11 +125,11 @@ export function validateBankAccount(account: BankAccount): BankAccountErrors {
 export type SettingsIssueId = "no-method" | "transfer-mode-requirements" | "invalid-bank-account";
 export type SettingsIssue = { id: SettingsIssueId; message: string };
 
-/** Rule shown under the methods ("Method Minimum Rule"). */
+/** Message of a blocked save that would leave no method enabled (not in the updated exports). */
 export const MINIMUM_METHOD_RULE = "Debe permanecer habilitado al menos un medio de cobro.";
-/** Rule shown under the bank form ("Bank Transfer Dependency"). */
+/** Rule shown under the bank form ("Dependencia de transferencia"). */
 export const TRANSFER_MODE_RULE =
-  "La modalidad “Por transferencia” requiere el medio Transferencia activo y datos bancarios válidos.";
+  "La modalidad “Por transferencia” requiere Transferencia activa y datos bancarios válidos.";
 
 /** Rules that block saving `draft`; an empty list means it can be saved. */
 export function getSettingsIssues(draft: PaymentSettings): SettingsIssue[] {
@@ -210,13 +215,19 @@ export function applySettings(
   };
 }
 
-/** "Configuración sin cambios" (export) or "N cambios sin guardar" (not in the exports). */
-export function formatChangesTitle(count: number): string {
-  if (count === 0) return "Configuración sin cambios";
-  return count === 1 ? "1 cambio sin guardar" : `${count} cambios sin guardar`;
-}
-
-/** "Versión 18 · actualizada hoy 09:42". */
+/** "Versión 18 · actualizada hoy 14:38", the version detail of the saved status. */
 export function formatVersionMeta(saved: Pick<SavedPaymentSettings, "version" | "updatedAt">): string {
   return `Versión ${saved.version} · actualizada hoy ${saved.updatedAt}`;
+}
+
+/**
+ * "Guardado hace 4 min" ("Estado guardado", shown uppercase) for a save at `updatedAt` seen at
+ * `now`, both "HH:MM" of the same day. "Guardado recién" and "Guardado hoy 09:42" (an hour or
+ * more) are not in the exports.
+ */
+export function formatSavedAgo(updatedAt: string, now: string): string {
+  const minutes = minutesBetween(updatedAt, now);
+  if (minutes < 1) return "Guardado recién";
+  if (minutes < 60) return `Guardado hace ${minutes} min`;
+  return `Guardado hoy ${updatedAt}`;
 }

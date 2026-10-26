@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { PAYMENT_SETTINGS } from "@/mocks/payments";
+import { PAYMENT_SETTINGS, PAYMENT_SETTINGS_VIEWED_AT } from "@/mocks/payments";
+import { SERVICE_DAY } from "@/mocks/service-day";
 import type { PaymentSettings } from "@/mocks/types";
 import {
   BANK_FIELDS,
@@ -7,7 +8,8 @@ import {
   REQUEST_MODE_OPTIONS,
   applySettings,
   canDisableMethod,
-  formatChangesTitle,
+  TRANSFER_MODE_RULE,
+  formatSavedAgo,
   formatVersionMeta,
   getSettingsChanges,
   getSettingsIssues,
@@ -30,7 +32,12 @@ describe("PAYMENT_SETTINGS mock", () => {
   it("matches the 06 export: every method but 'Otro' and every request mode enabled, version 18", () => {
     expect(settings.methods).toEqual({ cash: true, card: true, transfer: true, other: false });
     expect(settings.requestModes).toEqual({ table: true, register: true, transfer: true });
-    expect(saved).toMatchObject({ version: 18, updatedAt: "09:42" });
+    expect(saved).toMatchObject({ version: 18, updatedAt: "14:38" });
+  });
+
+  it("is viewed on the service-day clock, four minutes after the last save (\"Guardado hace 4 min\")", () => {
+    expect(PAYMENT_SETTINGS_VIEWED_AT).toBe(SERVICE_DAY.now);
+    expect(formatSavedAgo(saved.updatedAt, PAYMENT_SETTINGS_VIEWED_AT)).toBe("Guardado hace 4 min");
   });
 
   it("uses obviously fictional bank data that passes the validators", () => {
@@ -146,7 +153,7 @@ describe("getSettingsIssues", () => {
     expect(getSettingsIssues(draft)).toEqual([
       {
         id: "transfer-mode-requirements",
-        message: "La modalidad “Por transferencia” requiere el medio Transferencia activo y datos bancarios válidos.",
+        message: "La modalidad “Por transferencia” requiere Transferencia activa y datos bancarios válidos.",
       },
     ]);
     expect(getSettingsIssues(withDraft((d) => {
@@ -225,11 +232,49 @@ describe("applySettings", () => {
   });
 });
 
-describe("save bar copy", () => {
-  it("summarizes pending changes and the saved version", () => {
-    expect(formatChangesTitle(0)).toBe("Configuración sin cambios");
-    expect(formatChangesTitle(1)).toBe("1 cambio sin guardar");
-    expect(formatChangesTitle(3)).toBe("3 cambios sin guardar");
-    expect(formatVersionMeta(saved)).toBe("Versión 18 · actualizada hoy 09:42");
+describe("saved status copy", () => {
+  it("describes the saved version", () => {
+    expect(formatVersionMeta(saved)).toBe("Versión 18 · actualizada hoy 14:38");
+  });
+
+  it("counts whole minutes since the last save, within the hour", () => {
+    expect(formatSavedAgo("14:38", "14:42")).toBe("Guardado hace 4 min");
+    expect(formatSavedAgo("13:43", "14:42")).toBe("Guardado hace 59 min");
+  });
+
+  it("says 'recién' for a save in the current minute (or a clock behind it)", () => {
+    expect(formatSavedAgo("14:42", "14:42")).toBe("Guardado recién");
+    expect(formatSavedAgo("14:45", "14:42")).toBe("Guardado recién");
+  });
+
+  it("falls back to the time of day after an hour", () => {
+    expect(formatSavedAgo("09:42", "14:42")).toBe("Guardado hoy 09:42");
+  });
+});
+
+describe("06 copy", () => {
+  it("names the request modes as the customer sees them", () => {
+    expect(REQUEST_MODE_OPTIONS.map((option) => [option.customerLabel, option.customerDescription])).toEqual([
+      ["En mi mesa", "Nos acercamos a cobrarte"],
+      ["En caja", "Pagá en el mostrador"],
+      ["Por transferencia", "Te indicamos cómo realizarla"],
+    ]);
+  });
+
+  it("describes methods and modes as the updated export does", () => {
+    expect(PAYMENT_METHOD_OPTIONS.map((option) => option.description)).toEqual([
+      "Cobros registrados por el personal.",
+      "Terminal física o dispositivo externo.",
+      "Requiere verificación manual de acreditación.",
+      "Medio adicional con descripción.",
+    ]);
+    expect(REQUEST_MODE_OPTIONS.map((option) => option.description)).toEqual([
+      "El personal se acerca a cobrar.",
+      "El cliente se acerca al mostrador.",
+      "El personal comparte las instrucciones.",
+    ]);
+    expect(TRANSFER_MODE_RULE).toBe(
+      "La modalidad “Por transferencia” requiere Transferencia activa y datos bancarios válidos.",
+    );
   });
 });

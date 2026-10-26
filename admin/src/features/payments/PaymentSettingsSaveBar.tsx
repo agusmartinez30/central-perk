@@ -1,47 +1,42 @@
 import clsx from "clsx";
-import { Save } from "lucide-react";
+
+/** "Texto pendiente" of the 06 save bar. */
+export const UNSAVED_CHANGES_TITLE = "Tenés cambios sin guardar";
 
 type PaymentSettingsSaveBarProps = {
-  /** "Configuración sin cambios" or "N cambios sin guardar". */
-  title: string;
-  /** "Versión 18 · actualizada hoy 09:42". */
-  meta: string;
-  dirty: boolean;
-  /** A save was blocked: `title` is the first broken rule, in the danger tone. */
-  invalid?: boolean;
+  /** First broken rule after a blocked save, shown in the danger tone instead of the title. */
+  issue?: string;
   onDiscard: () => void;
   onSave: () => void;
 };
 
 /**
- * "Payment Settings Save Bar". "Guardar cambios" keeps the export's look but is disabled while
- * there is nothing to save; "Descartar cambios" (not in the exports) appears with pending changes.
+ * "Barra de guardado": shown only while there are unsaved changes, with "Descartar" and
+ * "Guardar cambios" (which opens the confirmation, or reveals the broken rules).
  */
-export function PaymentSettingsSaveBar({ title, meta, dirty, invalid, onDiscard, onSave }: PaymentSettingsSaveBarProps) {
+export function PaymentSettingsSaveBar({ issue, onDiscard, onSave }: PaymentSettingsSaveBarProps) {
   return (
-    <div className="flex h-16 w-full shrink-0 items-center justify-between rounded-card bg-surface px-3.5 outline-1 -outline-offset-[0.5px] outline-line">
-      <div className="flex flex-col gap-0.5" role="status">
-        <p className={clsx("text-[12px] font-bold whitespace-nowrap", invalid ? "text-danger" : "text-ink")}>{title}</p>
-        <p className="text-[11px] whitespace-nowrap text-muted">{meta}</p>
-      </div>
+    <div className="mt-3.5 flex h-[54px] w-full shrink-0 items-center justify-between rounded-[10px] bg-surface px-3.5 shadow-[0px_-2px_10px_#1010100d] outline-1 -outline-offset-[0.5px] outline-line">
+      <p role="status" className="flex items-center gap-2">
+        <span aria-hidden="true" className={clsx("size-2 shrink-0 rounded-full", issue ? "bg-danger" : "bg-warning")} />
+        <span className={clsx("text-[12px] font-bold whitespace-nowrap", issue ? "text-danger" : "text-ink")}>
+          {issue ?? UNSAVED_CHANGES_TITLE}
+        </span>
+      </p>
       <div className="flex items-center gap-2">
-        {dirty && (
-          <button
-            type="button"
-            onClick={onDiscard}
-            className="flex h-10 items-center rounded-[9px] px-3.5 text-[12px] font-bold text-ink outline-1 -outline-offset-[0.5px] outline-line hover:bg-cream"
-          >
-            Descartar cambios
-          </button>
-        )}
         <button
           type="button"
-          disabled={!dirty}
-          onClick={onSave}
-          className="flex h-10 items-center gap-[7px] rounded-[9px] bg-brand px-3.5 text-white enabled:hover:bg-brand/92 disabled:cursor-not-allowed"
+          onClick={onDiscard}
+          className="flex h-[38px] items-center rounded-[7px] bg-surface px-3.5 text-[12px] font-bold text-muted outline-1 -outline-offset-[0.5px] outline-line hover:bg-cream hover:text-ink"
         >
-          <span className="text-[12px] font-bold whitespace-nowrap">Guardar cambios</span>
-          <Save size={14} aria-hidden="true" className="shrink-0" />
+          Descartar
+        </button>
+        <button
+          type="button"
+          onClick={onSave}
+          className="flex h-[38px] items-center rounded-[7px] bg-brand px-4 text-[12px] font-extrabold whitespace-nowrap text-white hover:bg-brand/92"
+        >
+          Guardar cambios
         </button>
       </div>
     </div>
