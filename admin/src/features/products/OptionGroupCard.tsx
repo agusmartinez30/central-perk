@@ -2,11 +2,11 @@
 
 import { Check, Ellipsis, Pencil, Plus, Trash2 } from "lucide-react";
 import type { EditorAction } from "./product-editor-state";
-import { formatOptionDelta, parsePriceInput, type OptionDraft, type OptionGroupId } from "./product-form";
+import { formatOptionDelta, parsePriceInput, type OptionDraft } from "./product-form";
 
 type OptionGroupCardProps = {
-  group: OptionGroupId;
-  /** "Tamaño" or "Extras". */
+  groupId: string;
+  /** "Tamaño", "Extras", … */
   title: string;
   /** "Selección única · Obligatorio". */
   meta: string;
@@ -23,8 +23,8 @@ const ICON_BUTTON = "flex size-6 shrink-0 items-center justify-center rounded-ch
  * "Variant Group · Tamaño" / "Extras Group": option rows with their price adjustment, the pencil
  * to edit a row in place, the trash to remove it and "Agregar opción".
  */
-export function OptionGroupCard({ group, title, meta, options, editingOptionId, errors, onAction }: OptionGroupCardProps) {
-  const titleId = `option-group-${group}`;
+export function OptionGroupCard({ groupId, title, meta, options, editingOptionId, errors, onAction }: OptionGroupCardProps) {
+  const titleId = `option-group-${groupId}`;
   return (
     <section
       aria-labelledby={titleId}
@@ -58,7 +58,7 @@ export function OptionGroupCard({ group, title, meta, options, editingOptionId, 
                     value={option.name}
                     placeholder="Nombre"
                     onChange={(event) =>
-                      onAction({ type: "update-option", group, id: option.id, changes: { name: event.target.value } })
+                      onAction({ type: "update-option", groupId, id: option.id, changes: { name: event.target.value } })
                     }
                     onKeyDown={(event) => {
                       if (event.key === "Enter") onAction({ type: "finish-option-edit" });
@@ -73,7 +73,7 @@ export function OptionGroupCard({ group, title, meta, options, editingOptionId, 
                     aria-invalid={Boolean(error)}
                     value={option.priceDelta}
                     onChange={(event) =>
-                      onAction({ type: "update-option", group, id: option.id, changes: { priceDelta: event.target.value } })
+                      onAction({ type: "update-option", groupId, id: option.id, changes: { priceDelta: event.target.value } })
                     }
                     onKeyDown={(event) => {
                       if (event.key === "Enter") onAction({ type: "finish-option-edit" });
@@ -119,7 +119,7 @@ export function OptionGroupCard({ group, title, meta, options, editingOptionId, 
                 <button
                   type="button"
                   aria-label={`Quitar ${label}`}
-                  onClick={() => onAction({ type: "remove-option", group, id: option.id })}
+                  onClick={() => onAction({ type: "remove-option", groupId, id: option.id })}
                   className={`${ICON_BUTTON} text-danger`}
                 >
                   <Trash2 size={13} aria-hidden="true" />
@@ -132,7 +132,7 @@ export function OptionGroupCard({ group, title, meta, options, editingOptionId, 
       </ul>
       <button
         type="button"
-        onClick={() => onAction({ type: "add-option", group })}
+        onClick={() => onAction({ type: "add-option", groupId })}
         className="flex h-[34px] w-fit shrink-0 items-center justify-center gap-1.5 rounded-nav bg-brand-wash px-3 text-brand hover:bg-brand-wash/70"
       >
         <Plus size={13} aria-hidden="true" />

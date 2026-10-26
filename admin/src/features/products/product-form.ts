@@ -1,10 +1,28 @@
-import type { ConsumptionMomentId, Product, ProductCategoryId, ProductOption } from "@/mocks/service-day";
+import type {
+  ConsumptionMomentId,
+  OptionSelection,
+  Product,
+  ProductCategoryId,
+  ProductOption,
+  ProductOptionGroup,
+} from "@/mocks/service-day";
 import { formatPrice } from "@/shared/lib/format-price";
 import { CONSUMPTION_MOMENTS } from "@/mocks/service-day";
 import { getCategoryLabel, normalizeText } from "./product-catalog";
 
 /** An option row while it is edited: the adjustment stays the typed text. */
 export type OptionDraft = { id: string; name: string; priceDelta: string };
+
+/** A "Personalizaciones" group while it is edited. */
+export type OptionGroupDraft = {
+  id: string;
+  title: string;
+  selection: OptionSelection;
+  required: boolean;
+  max?: number;
+  defaultOptionId?: string;
+  options: OptionDraft[];
+};
 
 /** Fields of the 07B editor, as typed. */
 export type ProductDraft = {
@@ -17,18 +35,11 @@ export type ProductDraft = {
   image?: string;
   available: boolean;
   allowCustomerNotes: boolean;
-  sizes: OptionDraft[];
-  defaultSizeId?: string;
-  extras: OptionDraft[];
+  optionGroups: OptionGroupDraft[];
 };
-
-export type OptionGroupId = "sizes" | "extras";
 
 /** "Guardar borrador" or "Publicar producto". */
 export type SaveMode = "draft" | "publish";
-
-/** "Selección múltiple · Opcional · Máx. 3". */
-export const EXTRAS_MAX_SELECTION = 3;
 
 export const NAME_MAX_LENGTH = 60;
 export const DESCRIPTION_MAX_LENGTH = 140;
@@ -49,8 +60,52 @@ export function formatOptionDelta(amount: number): string {
   return `+${formatPrice(amount)}`;
 }
 
+/** 07B/07C option price: a free option is "Incluido" in a required group and "Sin cargo" otherwise. */
+export function getOptionPriceLabel(priceDelta: number, required: boolean): string {
+  if (priceDelta === 0) return required ? "Incluido" : "Sin cargo";
+  return formatOptionDelta(priceDelta);
+}
+
+function plural(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+/** 07C "2 grupos · 6 opciones". */
+export function getOptionGroupsSummary(groups: readonly { options: readonly unknown[] }[]): string {
+  if (groups.length === 0) return "Sin personalizaciones";
+  const options = groups.reduce((total, group) => total + group.options.length, 0);
+  return `${plural(groups.length, "grupo", "grupos")} · ${plural(options, "opción", "opciones")}`;
+}
+
+type GroupSettings = Pick<OptionGroupDraft, "selection" | "required" | "max"> & { options: readonly unknown[] };
+
+/** 07B group header: "Selección única · Obligatorio", "Selección múltiple · Máximo 2". */
+export function getOptionGroupMeta(group: GroupSettings): string {
+  const selection = group.selection === "single" ? "Selección única" : "Selección múltiple";
+  if (group.options.length === 0) return `${selection} · Sin opciones`;
+  if (group.required) return `${selection} · Obligatorio`;
+  return `${selection} · ${group.selection === "multiple" && group.max ? `Máximo ${group.max}` : "Opcional"}`;
+}
+
+/** Customer-side hint: "Obligatorio · Elegí 1", "Opcional · Hasta 2". */
+function getCustomerGroupMeta(group: GroupSettings): string {
+  const requirement = group.required ? "Obligatorio" : "Opcional";
+  if (group.selection === "single") return `${requirement} · Elegí 1`;
+  return group.max ? `${requirement} · Hasta ${group.max}` : requirement;
+}
+
+/** The option preselected for customers: only required single groups have one (the chosen, else the first). */
+function resolveDefaultOption(group: OptionGroupDraft): string | undefined {
+  if (group.selection !== "single" || !group.required || group.options.length === 0) return undefined;
+  return group.options.some((option) => option.id === group.defaultOptionId) ? group.defaultOptionId : group.options[0].id;
+}
+
 function toOptionDraft(option: ProductOption): OptionDraft {
   return { id: option.id, name: option.name, priceDelta: String(option.priceDelta) };
+}
+
+function toOptionGroupDraft(group: ProductOptionGroup): OptionGroupDraft {
+  return { ...group, options: group.options.map(toOptionDraft) };
 }
 
 export function toProductDraft(product: Product): ProductDraft {
@@ -63,9 +118,7 @@ export function toProductDraft(product: Product): ProductDraft {
     image: product.image,
     available: product.available,
     allowCustomerNotes: product.allowCustomerNotes,
-    sizes: product.sizes.map(toOptionDraft),
-    defaultSizeId: product.defaultSizeId,
-    extras: product.extras.map(toOptionDraft),
+    optionGroups: product.optionGroups.map(toOptionGroupDraft),
   };
 }
 
@@ -80,9 +133,7 @@ export function createEmptyDraft(): ProductDraft {
     image: undefined,
     available: true,
     allowCustomerNotes: true,
-    sizes: [],
-    defaultSizeId: undefined,
-    extras: [],
+    optionGroups: [],
   };
 }
 
@@ -90,15 +141,24 @@ function toOption(option: OptionDraft): ProductOption {
   return { id: option.id, name: option.name.trim(), priceDelta: parsePriceInput(option.priceDelta) ?? 0 };
 }
 
-/** The size preselected for customers: the chosen one, else the first size, else none. */
-function resolveDefaultSize(draft: ProductDraft): string | undefined {
-  if (draft.sizes.length === 0) return undefined;
-  return draft.sizes.some((size) => size.id === draft.defaultSizeId) ? draft.defaultSizeId : draft.sizes[0].id;
+/** The saved group: the default only for required single groups, the limit only for multiple ones. */
+function toOptionGroup(group: OptionGroupDraft): ProductOptionGroup {
+  const saved: ProductOptionGroup = {
+    id: group.id,
+    title: group.title.trim(),
+    selection: group.selection,
+    required: group.required,
+    options: group.options.map(toOption),
+  };
+  if (group.selection === "multiple" && group.max !== undefined) saved.max = group.max;
+  const defaultOptionId = resolveDefaultOption(group);
+  if (defaultOptionId) saved.defaultOptionId = defaultOptionId;
+  return saved;
 }
 
 /**
- * The product saved from a valid draft. `base` gives the id and the archived flag; the save mode
- * sets the publication. The plural name only survives while the name is unchanged.
+ * The product saved from a valid draft. `base` gives the id, SKU, rank and the archived flag; the
+ * save mode sets the publication. The plural name only survives while the name is unchanged.
  */
 export function applyProductDraft(draft: ProductDraft, base: Product, mode: SaveMode): Product {
   const name = draft.name.trim();
@@ -114,16 +174,19 @@ export function applyProductDraft(draft: ProductDraft, base: Product, mode: Save
     publication: mode === "publish" ? "published" : "draft",
     available: draft.available,
     allowCustomerNotes: draft.allowCustomerNotes,
-    sizes: draft.sizes.map(toOption),
-    defaultSizeId: resolveDefaultSize(draft),
-    extras: draft.extras.map(toOption),
+    optionGroups: draft.optionGroups.map(toOptionGroup),
   };
 }
 
 export type ProductField = "name" | "description" | "price" | "categoryId" | "image";
 
-/** Field messages plus option messages by option id. Empty when the draft can be saved. */
-export type ProductFormErrors = Partial<Record<ProductField, string>> & { options?: Record<string, string> };
+/** Messages of one group: its title, its limit and its options by option id. */
+export type OptionGroupErrors = { title?: string; max?: string; options?: Record<string, string> };
+
+/** Field messages plus group messages by group id. Empty when the draft can be saved. */
+export type ProductFormErrors = Partial<Record<ProductField, string>> & {
+  optionGroups?: Record<string, OptionGroupErrors>;
+};
 
 export type ValidationContext = {
   mode: SaveMode;
@@ -131,7 +194,8 @@ export type ValidationContext = {
   otherNames: readonly string[];
 };
 
-function validateOptions(options: readonly OptionDraft[], errors: Record<string, string>): void {
+function validateOptions(options: readonly OptionDraft[]): Record<string, string> {
+  const errors: Record<string, string> = {};
   const seen = new Set<string>();
   for (const option of options) {
     const name = normalizeText(option.name);
@@ -140,11 +204,31 @@ function validateOptions(options: readonly OptionDraft[], errors: Record<string,
     else if (parsePriceInput(option.priceDelta) === null) errors[option.id] = "Ingresá un ajuste válido.";
     seen.add(name);
   }
+  return errors;
+}
+
+function validateOptionGroups(groups: readonly OptionGroupDraft[]): Record<string, OptionGroupErrors> {
+  const errors: Record<string, OptionGroupErrors> = {};
+  const seen = new Set<string>();
+  for (const group of groups) {
+    const groupErrors: OptionGroupErrors = {};
+    const title = normalizeText(group.title);
+    if (!title) groupErrors.title = "Ingresá el nombre del grupo.";
+    else if (seen.has(title)) groupErrors.title = "El grupo ya existe.";
+    seen.add(title);
+    if (group.selection === "multiple" && group.max !== undefined && !(Number.isInteger(group.max) && group.max >= 1)) {
+      groupErrors.max = "Ingresá un máximo válido.";
+    }
+    const options = validateOptions(group.options);
+    if (Object.keys(options).length > 0) groupErrors.options = options;
+    if (Object.keys(groupErrors).length > 0) errors[group.id] = groupErrors;
+  }
+  return errors;
 }
 
 /**
  * Checks the draft before saving. A draft only needs a name, a price, a category and valid
- * options; publishing also asks for a description and an image.
+ * groups; publishing also asks for a description and an image.
  */
 export function validateProductDraft(draft: ProductDraft, context: ValidationContext): ProductFormErrors {
   const errors: ProductFormErrors = {};
@@ -169,16 +253,19 @@ export function validateProductDraft(draft: ProductDraft, context: ValidationCon
   if (!draft.categoryId) errors.categoryId = "Elegí una categoría.";
   if (!draft.image && context.mode === "publish") errors.image = "Agregá una imagen para publicar.";
 
-  const options: Record<string, string> = {};
-  validateOptions(draft.sizes, options);
-  validateOptions(draft.extras, options);
-  if (Object.keys(options).length > 0) errors.options = options;
+  const optionGroups = validateOptionGroups(draft.optionGroups);
+  if (Object.keys(optionGroups).length > 0) errors.optionGroups = optionGroups;
   return errors;
 }
 
 export function hasFormErrors(errors: ProductFormErrors): boolean {
-  const { options, ...fields } = errors;
-  return Object.keys(fields).length > 0 || Object.keys(options ?? {}).length > 0;
+  const { optionGroups, ...fields } = errors;
+  return (
+    Object.keys(fields).length > 0 ||
+    Object.values(optionGroups ?? {}).some(
+      (group) => Boolean(group.title || group.max) || Object.keys(group.options ?? {}).length > 0,
+    )
+  );
 }
 
 function sameOptions(a: readonly OptionDraft[], b: readonly OptionDraft[]): boolean {
@@ -190,6 +277,30 @@ function sameOptions(a: readonly OptionDraft[], b: readonly OptionDraft[]): bool
         parsePriceInput(option.priceDelta) === parsePriceInput(b[index].priceDelta),
     )
   );
+}
+
+function sameGroup(a: OptionGroupDraft, b: OptionGroupDraft): boolean {
+  return (
+    a.title.trim() === b.title.trim() &&
+    a.selection === b.selection &&
+    a.required === b.required &&
+    (a.selection === "multiple" ? a.max : undefined) === (b.selection === "multiple" ? b.max : undefined) &&
+    resolveDefaultOption(a) === resolveDefaultOption(b) &&
+    sameOptions(a.options, b.options)
+  );
+}
+
+/**
+ * Change labels of the groups: the saved title of each edited group, or "Personalizaciones" when
+ * groups were added, removed or reordered.
+ */
+function getOptionGroupChanges(saved: readonly OptionGroupDraft[], draft: readonly OptionGroupDraft[]): string[] {
+  const sameStructure = saved.length === draft.length && saved.every((group, index) => group.id === draft[index].id);
+  if (!sameStructure) return ["Personalizaciones"];
+  const labels = saved.flatMap((group, index) =>
+    sameGroup(group, draft[index]) ? [] : [group.title.trim() || draft[index].title.trim() || "Personalizaciones"],
+  );
+  return [...new Set(labels)];
 }
 
 /** Same amount, or the same text when neither is a valid amount. */
@@ -212,12 +323,13 @@ export function getProductChanges(saved: ProductDraft, draft: ProductDraft): str
     ["Categoría", saved.categoryId !== draft.categoryId],
     ["Momentos de consumo", !sameMoments(saved.moments, draft.moments)],
     ["Imagen principal", saved.image !== draft.image],
-    ["Tamaño", !sameOptions(saved.sizes, draft.sizes) || resolveDefaultSize(saved) !== resolveDefaultSize(draft)],
-    ["Extras", !sameOptions(saved.extras, draft.extras)],
+  ];
+  const tail: [string, boolean][] = [
     ["Observaciones del cliente", saved.allowCustomerNotes !== draft.allowCustomerNotes],
     ["Disponibilidad", saved.available !== draft.available],
   ];
-  return checks.filter(([, changed]) => changed).map(([label]) => label);
+  const changed = (list: [string, boolean][]) => list.filter(([, isChanged]) => isChanged).map(([label]) => label);
+  return [...changed(checks), ...getOptionGroupChanges(saved.optionGroups, draft.optionGroups), ...changed(tail)];
 }
 
 /** "Desayunar · Merendar · Tomar", in the 07B chip order. */
@@ -226,40 +338,71 @@ export function getMomentsLabel(moments: readonly ConsumptionMomentId[]): string
   return labels.length > 0 ? labels.join(" · ") : "Sin momentos";
 }
 
+/** One option as the customer sees it. */
+export type PreviewOption = { id: string; name: string; priceLabel: string; selected: boolean };
+
+/** One customization group as the customer sees it. */
+export type PreviewGroup = {
+  id: string;
+  title: string;
+  selection: OptionSelection;
+  required: boolean;
+  /** "Obligatorio · Elegí 1" / "Opcional · Hasta 2". */
+  meta: string;
+  options: PreviewOption[];
+};
+
 export type PreviewModel = {
   name: string;
   description: string;
   image?: string;
   price: string;
-  sizes: { id: string; name: string; selected: boolean }[];
-  extras: { id: string; label: string }[];
-  /** "Agregar · $5.400": base price plus the preselected size. */
+  /** Groups with at least one named option, in display order. */
+  groups: PreviewGroup[];
+  /** 07C "2 grupos · 6 opciones" of the shown groups. */
+  optionsSummary: string;
+  /** "Agregar · $5.400": base price plus the preselected options. */
   addLabel: string;
   categoryLabel: string;
   momentsLabel: string;
   availabilityLabel: string;
 };
 
+function toPreviewGroup(group: OptionGroupDraft): PreviewGroup {
+  const defaultOptionId = resolveDefaultOption(group);
+  return {
+    id: group.id,
+    title: group.title.trim(),
+    selection: group.selection,
+    required: group.required,
+    meta: getCustomerGroupMeta(group),
+    options: group.options.map((option) => ({
+      id: option.id,
+      name: option.name.trim(),
+      priceLabel: getOptionPriceLabel(parsePriceInput(option.priceDelta) ?? 0, group.required),
+      selected: option.id === defaultOptionId,
+    })),
+  };
+}
+
 /** What the customer would see for this draft (07B "Live Product Preview", 07C). */
 export function getPreviewModel(draft: ProductDraft): PreviewModel {
   const price = parsePriceInput(draft.price) ?? 0;
-  const sizes = draft.sizes.filter((size) => size.name.trim());
-  const defaultSizeId = resolveDefaultSize({ ...draft, sizes });
-  const selectedSize = sizes.find((size) => size.id === defaultSizeId);
-  const total = price + (selectedSize ? (parsePriceInput(selectedSize.priceDelta) ?? 0) : 0);
+  const groups = draft.optionGroups
+    .map((group) => ({ ...group, options: group.options.filter((option) => option.name.trim()) }))
+    .filter((group) => group.options.length > 0);
+  const preselected = groups.reduce((total, group) => {
+    const option = group.options.find((candidate) => candidate.id === resolveDefaultOption(group));
+    return total + (option ? (parsePriceInput(option.priceDelta) ?? 0) : 0);
+  }, 0);
   return {
     name: draft.name.trim() || "Nuevo producto",
     description: draft.description.trim(),
     image: draft.image,
     price: formatPrice(price),
-    sizes: sizes.map((size) => ({ id: size.id, name: size.name.trim(), selected: size.id === defaultSizeId })),
-    extras: draft.extras
-      .filter((extra) => extra.name.trim())
-      .map((extra) => ({
-        id: extra.id,
-        label: `${extra.name.trim()} · ${formatOptionDelta(parsePriceInput(extra.priceDelta) ?? 0)}`,
-      })),
-    addLabel: `Agregar · ${formatPrice(total)}`,
+    groups: groups.map(toPreviewGroup),
+    optionsSummary: getOptionGroupsSummary(groups),
+    addLabel: `Agregar · ${formatPrice(price + preselected)}`,
     categoryLabel: getCategoryLabel(draft.categoryId) ?? "Sin categoría",
     momentsLabel: getMomentsLabel(draft.moments),
     availabilityLabel: draft.available ? "Disponible" : "No disponible",

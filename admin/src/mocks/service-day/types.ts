@@ -28,12 +28,33 @@ export type ConsumptionMomentId = "desayunar" | "merendar" | "cenar" | "tomar";
 /** Whether customers see the product: "Publicado" or "Borrador". */
 export type ProductPublication = "published" | "draft";
 
-/** One choice of a "Tamaño" or "Extras" group with its price adjustment in ARS (07B "+$800"). */
+/** One choice of a customization group with its price adjustment in ARS (07B "+$800"). */
 export type ProductOption = { id: string; name: string; priceDelta: number };
+
+/** "Selección única" or "Selección múltiple". */
+export type OptionSelection = "single" | "multiple";
+
+/** A 07B "Personalizaciones" group, e.g. "Tamaño" (single, required) or "Extras" (multiple, optional). */
+export type ProductOptionGroup = {
+  /** Unique inside the product, e.g. "tamano". */
+  id: string;
+  title: string;
+  selection: OptionSelection;
+  required: boolean;
+  /** Most options a customer can pick in a multiple group ("Máximo 2"); unset means no limit. */
+  max?: number;
+  /** Option preselected for the customer; set exactly when a required single group has options. */
+  defaultOptionId?: string;
+  options: ProductOption[];
+};
 
 /** One product of the menu with its current price in ARS. */
 export type Product = {
   id: string;
+  /** Stock code of 07A, "<category prefix>-<3 digits>", e.g. "CAF-014"; stable once assigned. */
+  sku: string;
+  /** 07A "Orden: relevancia comercial": lower ranks list first. */
+  commercialRank: number;
   /** Singular display name, e.g. "Medialuna". */
   name: string;
   /** Display name for quantities above one, when it differs, e.g. "Medialunas". */
@@ -53,12 +74,8 @@ export type Product = {
   archived: boolean;
   /** "Permitir observaciones del cliente". */
   allowCustomerNotes: boolean;
-  /** "Tamaño": single choice, required when there are sizes. */
-  sizes: ProductOption[];
-  /** Size preselected for the customer; set exactly when there are sizes. */
-  defaultSizeId?: string;
-  /** "Extras": multiple choice, optional. */
-  extras: ProductOption[];
+  /** "Personalizaciones", in display order. */
+  optionGroups: ProductOptionGroup[];
 };
 
 /**

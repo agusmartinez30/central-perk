@@ -60,17 +60,61 @@ describe("product catalogue", () => {
     }
   });
 
-  it("keeps size defaults inside the sizes and non-negative option prices", () => {
+  it("keeps defaults inside required single groups and non-negative option prices", () => {
     for (const product of PRODUCTS) {
-      if (product.sizes.length > 0) {
-        expect(product.sizes.some((size) => size.id === product.defaultSizeId), product.id).toBe(true);
-      } else {
-        expect(product.defaultSizeId, product.id).toBeUndefined();
-      }
-      for (const option of [...product.sizes, ...product.extras]) {
-        expect(Number.isInteger(option.priceDelta) && option.priceDelta >= 0, option.id).toBe(true);
+      expect(new Set(product.optionGroups.map((group) => group.id)).size, product.id).toBe(product.optionGroups.length);
+      for (const group of product.optionGroups) {
+        if (group.selection === "single" && group.required && group.options.length > 0) {
+          expect(group.options.some((option) => option.id === group.defaultOptionId), group.id).toBe(true);
+        } else {
+          expect(group.defaultOptionId, group.id).toBeUndefined();
+        }
+        if (group.selection === "single") expect(group.max, group.id).toBeUndefined();
+        for (const option of group.options) {
+          expect(Number.isInteger(option.priceDelta) && option.priceDelta >= 0, option.id).toBe(true);
+        }
       }
     }
+  });
+
+  it("gives every product a unique SKU with its category prefix, as 07A shows", () => {
+    const prefixes: Record<string, string> = {
+      cafes: "CAF",
+      bebidas: "BEB",
+      panaderia: "PAN",
+      tostadas: "TOS",
+      tostados: "TOS",
+      sandwiches: "SAN",
+      hamburguesas: "HAM",
+      postres: "POS",
+      licuados: "LIC",
+    };
+    for (const product of PRODUCTS) {
+      expect(product.sku, product.id).toMatch(/^[A-Z]{3}-\d{3}$/);
+      expect(product.sku.slice(0, 3), product.id).toBe(prefixes[product.categoryId]);
+    }
+    expect(new Set(PRODUCTS.map((product) => product.sku)).size).toBe(PRODUCTS.length);
+    expect(
+      ["cappuccino", "toston-palta", "medialuna", "tostado-clasico", "limonada", "hamburguesa-clasica", "cheesecake"].map(
+        (id) => productOf(id)?.sku,
+      ),
+    ).toEqual(["CAF-014", "TOS-006", "PAN-002", "TOS-011", "BEB-018", "HAM-003", "POS-009"]);
+  });
+
+  it("ranks products by commercial relevance, keeping the 07A row order", () => {
+    const ranks = PRODUCTS.map((product) => product.commercialRank);
+    expect(ranks.every((rank) => Number.isInteger(rank) && rank > 0)).toBe(true);
+    expect(new Set(ranks).size).toBe(PRODUCTS.length);
+    const exportOrder = [
+      "cappuccino",
+      "toston-palta",
+      "medialuna",
+      "tostado-clasico",
+      "limonada",
+      "hamburguesa-clasica",
+      "cheesecake",
+    ].map((id) => productOf(id)!.commercialRank);
+    expect(exportOrder).toEqual([...exportOrder].sort((a, b) => a - b));
   });
 
   it("describes the Cappuccino as 07B does, on the canonical price", () => {
@@ -83,15 +127,31 @@ describe("product catalogue", () => {
       archived: false,
       allowCustomerNotes: true,
       image: "/images/products/cappuccino.webp",
-      defaultSizeId: "mediano",
-      sizes: [
-        { id: "chico", name: "Chico", priceDelta: 0 },
-        { id: "mediano", name: "Mediano", priceDelta: 800 },
-        { id: "grande", name: "Grande", priceDelta: 1500 },
-      ],
-      extras: [
-        { id: "shot-extra", name: "Shot extra", priceDelta: 900 },
-        { id: "leche-vegetal", name: "Leche vegetal", priceDelta: 700 },
+      optionGroups: [
+        {
+          id: "tamano",
+          title: "Tamaño",
+          selection: "single",
+          required: true,
+          defaultOptionId: "mediano",
+          options: [
+            { id: "chico", name: "Chico", priceDelta: 0 },
+            { id: "mediano", name: "Mediano", priceDelta: 800 },
+            { id: "grande", name: "Grande", priceDelta: 1500 },
+          ],
+        },
+        {
+          id: "extras",
+          title: "Extras",
+          selection: "multiple",
+          required: false,
+          max: 2,
+          options: [
+            { id: "shot-extra", name: "Shot extra", priceDelta: 900 },
+            { id: "leche-vegetal", name: "Leche vegetal", priceDelta: 700 },
+            { id: "canela", name: "Canela", priceDelta: 0 },
+          ],
+        },
       ],
     });
   });

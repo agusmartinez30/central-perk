@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PRODUCTS } from "@/mocks/service-day";
+import { BLOCKED_SAVE_MESSAGE } from "./product-editor-state";
 import {
   createProductsState,
   getEditorView,
@@ -31,10 +32,13 @@ describe("product editor", () => {
       saveMeta: "Versión 42 · Publicado",
       canSaveDraft: false,
       canPublish: false,
-      sizesMeta: "Selección única · Obligatorio",
-      extrasMeta: "Selección múltiple · Opcional · Máx. 3",
+      optionGroups: [
+        { id: "tamano", title: "Tamaño", meta: "Selección única · Obligatorio" },
+        { id: "extras", title: "Extras", meta: "Selección múltiple · Máximo 2" },
+      ],
       errors: {},
     });
+    expect(editor(state).optionGroups[0].options.map((option) => option.id)).toEqual(["chico", "mediano", "grande"]);
     expect(editor(state).preview.addLabel).toBe("Agregar · $5.400");
   });
 
@@ -89,38 +93,99 @@ describe("product editor", () => {
   });
 
   it("adds, edits and removes options, keeping a size preselected", () => {
-    let state = openCappuccino({ type: "add-option", group: "extras" });
-    expect(state.editor?.draft.extras[2]).toEqual({ id: "opcion-1", name: "", priceDelta: "0" });
+    let state = openCappuccino({ type: "add-option", groupId: "extras" });
+    expect(state.editor?.draft.optionGroups[1].options[3]).toEqual({ id: "opcion-1", name: "", priceDelta: "0" });
     expect(state.editor?.editingOptionId).toBe("opcion-1");
     state = productsReducer(state, {
       type: "update-option",
-      group: "extras",
+      groupId: "extras",
       id: "opcion-1",
-      changes: { name: "Canela", priceDelta: "300" },
+      changes: { name: "Miel", priceDelta: "300" },
     });
     state = productsReducer(state, { type: "finish-option-edit" });
     expect(state.editor?.editingOptionId).toBeNull();
-    expect(editor(state).preview.extras.at(-1)).toEqual({ id: "opcion-1", label: "Canela · +$300" });
-    state = productsReducer(state, { type: "remove-option", group: "sizes", id: "mediano" });
-    expect(editor(state).preview.sizes).toEqual([
-      { id: "chico", name: "Chico", selected: true },
-      { id: "grande", name: "Grande", selected: false },
+    expect(editor(state).preview.groups[1].options.at(-1)).toEqual({
+      id: "opcion-1",
+      name: "Miel",
+      priceLabel: "+$300",
+      selected: false,
+    });
+    state = productsReducer(state, { type: "remove-option", groupId: "tamano", id: "mediano" });
+    expect(editor(state).preview.groups[0].options.map(({ id, selected }) => ({ id, selected }))).toEqual([
+      { id: "chico", selected: true },
+      { id: "grande", selected: false },
     ]);
     expect(editor(state).changes).toEqual(["Tamaño", "Extras"]);
     state = productsReducer(state, { type: "edit-option", id: "grande" });
     expect(state.editor?.editingOptionId).toBe("grande");
-    state = productsReducer(state, { type: "add-option", group: "sizes" });
-    expect(state.editor?.draft.sizes.at(-1)?.id).toBe("opcion-2");
+    state = productsReducer(state, { type: "add-option", groupId: "tamano" });
+    expect(state.editor?.draft.optionGroups[0].options.at(-1)?.id).toBe("opcion-2");
   });
 
   it("removes every size and says the group has no options", () => {
     const state = openCappuccino(
-      { type: "remove-option", group: "sizes", id: "chico" },
-      { type: "remove-option", group: "sizes", id: "mediano" },
-      { type: "remove-option", group: "sizes", id: "grande" },
+      { type: "remove-option", groupId: "tamano", id: "chico" },
+      { type: "remove-option", groupId: "tamano", id: "mediano" },
+      { type: "remove-option", groupId: "tamano", id: "grande" },
     );
-    expect(editor(state).sizesMeta).toBe("Selección única · Sin opciones");
+    expect(editor(state).optionGroups[0].meta).toBe("Selección única · Sin opciones");
     expect(editor(state).preview.addLabel).toBe("Agregar · $4.600");
+  });
+
+  it("picks the preselected option of a required single group", () => {
+    const state = openCappuccino({ type: "set-default-option", groupId: "tamano", optionId: "grande" });
+    expect(editor(state).preview.addLabel).toBe("Agregar · $6.100");
+    expect(editor(state).changes).toEqual(["Tamaño"]);
+  });
+
+  it("adds a group, renames it, configures it and fills it with options", () => {
+    let state = openCappuccino({ type: "add-group" });
+    expect(state.editor?.draft.optionGroups[2]).toEqual({
+      id: "grupo-1",
+      title: "",
+      selection: "multiple",
+      required: false,
+      options: [],
+    });
+    expect(state.editor?.editingGroupId).toBe("grupo-1");
+    const actions: ProductsAction[] = [
+      { type: "rename-group", groupId: "grupo-1", title: "Leche" },
+      { type: "finish-group-edit" },
+      { type: "set-group-selection", groupId: "grupo-1", selection: "single" },
+      { type: "set-group-required", groupId: "grupo-1", required: true },
+      { type: "add-option", groupId: "grupo-1" },
+      { type: "update-option", groupId: "grupo-1", id: "opcion-1", changes: { name: "Entera" } },
+    ];
+    state = actions.reduce(productsReducer, state);
+    expect(state.editor?.editingGroupId).toBeNull();
+    expect(editor(state).optionGroups[2]).toMatchObject({ title: "Leche", meta: "Selección única · Obligatorio" });
+    expect(editor(state).preview.groups[2]).toMatchObject({
+      title: "Leche",
+      meta: "Obligatorio · Elegí 1",
+      options: [{ id: "opcion-1", name: "Entera", priceLabel: "Incluido", selected: true }],
+    });
+    expect(editor(state).changes).toEqual(["Personalizaciones"]);
+    state = productsReducer(state, { type: "add-group" });
+    expect(state.editor?.draft.optionGroups.at(-1)?.id).toBe("grupo-2");
+    state = productsReducer(state, { type: "save", mode: "publish" });
+    expect(state.notice).toBe(BLOCKED_SAVE_MESSAGE);
+    expect(editor(state).errors.optionGroups).toEqual({ "grupo-2": { title: "Ingresá el nombre del grupo." } });
+  });
+
+  it("switches selection and limits of a group, dropping what no longer applies", () => {
+    let state = openCappuccino({ type: "set-group-max", groupId: "extras", max: 3 });
+    expect(editor(state).optionGroups[1].meta).toBe("Selección múltiple · Máximo 3");
+    state = productsReducer(state, { type: "set-group-selection", groupId: "extras", selection: "single" });
+    expect(state.editor?.draft.optionGroups[1].max).toBeUndefined();
+    state = productsReducer(state, { type: "set-group-selection", groupId: "tamano", selection: "multiple" });
+    expect(state.editor?.draft.optionGroups[0].defaultOptionId).toBeUndefined();
+    expect(editor(state).preview.addLabel).toBe("Agregar · $4.600");
+  });
+
+  it("removes a group and saves the product without it", () => {
+    const state = openCappuccino({ type: "remove-group", groupId: "extras" }, { type: "save", mode: "publish" });
+    expect(productOf(state, "cappuccino")?.optionGroups.map((group) => group.id)).toEqual(["tamano"]);
+    expect(editor(state).dirty).toBe(false);
   });
 
   it("publishes the draft into the in-memory list and bumps the catalogue version", () => {
@@ -191,7 +256,7 @@ describe("product editor", () => {
       status: "draft",
       canSaveDraft: true,
       canPublish: true,
-      sizesMeta: "Selección única · Sin opciones",
+      optionGroups: [],
     });
     const actions: ProductsAction[] = [
       { type: "set-field", field: "name", value: "Té verde" },
@@ -202,10 +267,13 @@ describe("product editor", () => {
     state = actions.reduce(productsReducer, state);
     expect(productOf(state, "te-verde")).toMatchObject({
       name: "Té verde",
+      sku: "BEB-020",
+      commercialRank: 14,
       price: 3500,
       publication: "draft",
       archived: false,
       moments: [],
+      optionGroups: [],
     });
     expect(state.products.at(-1)?.id).toBe("te-verde");
     expect(state.editor?.productId).toBe("te-verde");

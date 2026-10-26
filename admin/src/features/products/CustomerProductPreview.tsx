@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { Fragment } from "react";
 import type { PreviewModel } from "./product-form";
 import { ProductImage } from "./ProductTags";
 
@@ -34,39 +35,39 @@ export function CustomerProductPreview({ preview, available, className }: Custom
       <p className="truncate text-[22px] font-bold text-ink">{preview.name}</p>
       {preview.description && <p className="line-clamp-2 w-full text-[12px] text-muted">{preview.description}</p>}
       <p className="text-[16px] font-bold text-brand">{preview.price}</p>
-      {preview.sizes.length > 0 && (
-        <>
-          <p className="text-[12px] font-bold text-ink">Elegí el tamaño</p>
-          <div className="flex w-full gap-1.5">
-            {preview.sizes.map((size) => (
-              <span
-                key={size.id}
-                className={clsx(
-                  "flex h-[34px] min-w-0 flex-1 items-center justify-center rounded-nav px-1 outline-1 -outline-offset-[0.5px]",
-                  size.selected ? "bg-brand text-white outline-brand" : "bg-surface text-ink outline-line",
-                )}
-              >
-                <span className="truncate text-[11px] font-bold">{size.name}</span>
-              </span>
-            ))}
-          </div>
-        </>
-      )}
-      {preview.extras.length > 0 && (
-        <>
-          <p className="text-[12px] font-bold text-ink">Extras</p>
-          <ul className="flex w-full flex-col gap-[5px]">
-            {preview.extras.map((extra) => (
-              <li
-                key={extra.id}
-                className="flex h-[30px] items-center rounded-[7px] bg-surface px-2 outline-1 -outline-offset-[0.5px] outline-line"
-              >
-                <span className="truncate text-[11px] font-semibold text-ink">{extra.label}</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+      {preview.groups.map((group) => (
+        <Fragment key={group.id}>
+          <p className="text-[12px] font-bold text-ink">{group.title}</p>
+          {group.selection === "single" ? (
+            <div className="flex w-full gap-1.5">
+              {group.options.map((option) => (
+                <span
+                  key={option.id}
+                  className={clsx(
+                    "flex h-[34px] min-w-0 flex-1 items-center justify-center rounded-nav px-1 outline-1 -outline-offset-[0.5px]",
+                    option.selected ? "bg-brand text-white outline-brand" : "bg-surface text-ink outline-line",
+                  )}
+                >
+                  <span className="truncate text-[11px] font-bold">{option.name}</span>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <ul className="flex w-full flex-col gap-[5px]">
+              {group.options.map((option) => (
+                <li
+                  key={option.id}
+                  className="flex h-[30px] items-center rounded-[7px] bg-surface px-2 outline-1 -outline-offset-[0.5px] outline-line"
+                >
+                  <span className="truncate text-[11px] font-semibold text-ink">
+                    {option.name} · {option.priceLabel}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Fragment>
+      ))}
       <span aria-hidden="true" className="min-h-0 flex-1" />
       <p
         className={clsx(

@@ -3,6 +3,7 @@ import { PRODUCTS, type Product } from "@/mocks/service-day";
 import {
   DEFAULT_PRODUCT_FILTERS,
   archiveProduct,
+  createProductSku,
   duplicateProduct,
   filterProducts,
   formatProductCount,
@@ -12,7 +13,7 @@ import {
   getVisibleProducts,
   restoreProduct,
   setProductAvailability,
-  sortProductsByName,
+  sortProductsByRelevance,
   type ProductFilters,
 } from "./product-catalog";
 
@@ -52,6 +53,11 @@ describe("filterProducts", () => {
     expect(filterProducts(PRODUCTS, filters({ availability: "available" }))).toHaveLength(PRODUCTS.length - 1);
   });
 
+  it("searches by SKU too", () => {
+    expect(ids(filterProducts(PRODUCTS, filters({ query: "caf-014" })))).toEqual(["cappuccino"]);
+    expect(ids(filterProducts(PRODUCTS, filters({ query: " POS-009 " })))).toEqual(["cheesecake"]);
+  });
+
   it("searches names and categories ignoring case and accents", () => {
     expect(ids(filterProducts(PRODUCTS, filters({ query: "  TOSTON " })))).toEqual(["toston-palta"]);
     expect(ids(filterProducts(PRODUCTS, filters({ query: "sandwich" })))).toEqual(["sandwich-pollo"]);
@@ -66,21 +72,36 @@ describe("filterProducts", () => {
   });
 });
 
-describe("sortProductsByName", () => {
-  it("orders by name as Spanish speakers read it, without mutating the input", () => {
-    const input = [byId(PRODUCTS, "toston-palta"), byId(PRODUCTS, "cappuccino"), byId(PRODUCTS, "cafe-latte")];
-    expect(ids(sortProductsByName(input))).toEqual(["cafe-latte", "cappuccino", "toston-palta"]);
-    expect(ids(input)).toEqual(["toston-palta", "cappuccino", "cafe-latte"]);
+describe("sortProductsByRelevance", () => {
+  it("orders by commercial rank, without mutating the input", () => {
+    const input = [byId(PRODUCTS, "cheesecake"), byId(PRODUCTS, "toston-palta"), byId(PRODUCTS, "cappuccino")];
+    expect(ids(sortProductsByRelevance(input))).toEqual(["cappuccino", "toston-palta", "cheesecake"]);
+    expect(ids(input)).toEqual(["cheesecake", "toston-palta", "cappuccino"]);
+  });
+
+  it("breaks rank ties by name as Spanish speakers read it", () => {
+    const rank = (product: Product): Product => ({ ...product, commercialRank: 1 });
+    const input = [byId(PRODUCTS, "toston-palta"), byId(PRODUCTS, "cappuccino"), byId(PRODUCTS, "cafe-latte")].map(rank);
+    expect(ids(sortProductsByRelevance(input))).toEqual(["cafe-latte", "cappuccino", "toston-palta"]);
   });
 
   it("is what getVisibleProducts returns after filtering", () => {
     expect(ids(getVisibleProducts(PRODUCTS, filters({ category: "bebidas" })))).toEqual(["jugo-naranja", "limonada"]);
     expect(ids(getVisibleProducts(PRODUCTS, DEFAULT_PRODUCT_FILTERS)).slice(0, 4)).toEqual([
-      "cafe-con-leche",
-      "cafe-latte",
       "cappuccino",
       "cappuccino-grande",
+      "cafe-latte",
+      "cafe-con-leche",
     ]);
+  });
+});
+
+describe("createProductSku", () => {
+  it("numbers the next SKU of the category prefix", () => {
+    const skus = PRODUCTS.map((product) => product.sku);
+    expect(createProductSku("cafes", skus)).toBe("CAF-018");
+    expect(createProductSku("tostadas", skus)).toBe("TOS-013");
+    expect(createProductSku("licuados", skus)).toBe("LIC-001");
   });
 });
 
@@ -129,7 +150,9 @@ describe("duplicateProduct", () => {
       price: 4600,
       publication: "draft",
       archived: false,
-      sizes: byId(PRODUCTS, "cappuccino").sizes,
+      optionGroups: byId(PRODUCTS, "cappuccino").optionGroups,
+      commercialRank: byId(PRODUCTS, "cappuccino").commercialRank,
+      sku: "CAF-018",
     });
     expect(product?.plural).toBeUndefined();
     expect(PRODUCTS).toHaveLength(13);
@@ -138,7 +161,7 @@ describe("duplicateProduct", () => {
   it("keeps ids and names unique across copies", () => {
     const first = duplicateProduct(PRODUCTS, "cappuccino");
     const second = duplicateProduct(first.products, "cappuccino");
-    expect(second.product).toMatchObject({ id: "cappuccino-copia-2", name: "Cappuccino (copia 2)" });
+    expect(second.product).toMatchObject({ id: "cappuccino-copia-2", name: "Cappuccino (copia 2)", sku: "CAF-019" });
   });
 
   it("returns the list untouched for an unknown product", () => {
@@ -175,8 +198,8 @@ describe("archive, restore and availability", () => {
 
 describe("formatProductCount", () => {
   it("writes the 07A footer", () => {
-    expect(formatProductCount(7)).toBe("7 productos · Ordenados por nombre");
-    expect(formatProductCount(1)).toBe("1 producto · Ordenado por nombre");
+    expect(formatProductCount(7)).toBe("7 productos · Orden: relevancia comercial");
+    expect(formatProductCount(1)).toBe("1 producto · Orden: relevancia comercial");
     expect(formatProductCount(0)).toBe("Sin productos para estos filtros");
   });
 });

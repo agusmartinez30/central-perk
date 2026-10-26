@@ -89,6 +89,35 @@ export function createProductId(name: string, existingIds: readonly string[]): s
   return candidate;
 }
 
+/** 07A SKU prefix of each category; Tostadas and Tostados share "TOS", as the export does. */
+export const SKU_PREFIXES: Record<ProductCategoryId, string> = {
+  cafes: "CAF",
+  bebidas: "BEB",
+  panaderia: "PAN",
+  tostadas: "TOS",
+  tostados: "TOS",
+  sandwiches: "SAN",
+  hamburguesas: "HAM",
+  postres: "POS",
+  licuados: "LIC",
+};
+
+/** Next SKU of the category prefix: one above the highest taken number ("CAF-018"). */
+export function createProductSku(categoryId: ProductCategoryId, existingSkus: readonly string[]): string {
+  const prefix = SKU_PREFIXES[categoryId];
+  const taken = existingSkus
+    .filter((sku) => sku.startsWith(`${prefix}-`))
+    .map((sku) => Number(sku.slice(prefix.length + 1)))
+    .filter(Number.isInteger);
+  const next = Math.max(0, ...taken) + 1;
+  return `${prefix}-${String(next).padStart(3, "0")}`;
+}
+
+/** Rank for a product added at the end of the relevance order. */
+export function getNextCommercialRank(products: readonly Product[]): number {
+  return Math.max(0, ...products.map((product) => product.commercialRank)) + 1;
+}
+
 export function getProductStatus(product: Product): ProductStatus {
   return product.archived ? "archived" : product.publication;
 }
@@ -102,7 +131,7 @@ function matchesPublication(product: Product, filter: PublicationFilter): boolea
 function matchesQuery(product: Product, query: string): boolean {
   const needle = normalizeText(query);
   if (!needle) return true;
-  const haystack = `${product.name} ${getCategoryLabel(product.categoryId) ?? ""}`;
+  const haystack = `${product.name} ${getCategoryLabel(product.categoryId) ?? ""} ${product.sku}`;
   return normalizeText(haystack).includes(needle);
 }
 
@@ -120,14 +149,14 @@ export function filterProducts(products: readonly Product[], filters: ProductFil
 
 const collator = new Intl.Collator("es", { sensitivity: "base" });
 
-/** A sorted copy, "Ordenados por nombre". */
-export function sortProductsByName(products: readonly Product[]): Product[] {
-  return [...products].sort((a, b) => collator.compare(a.name, b.name));
+/** A sorted copy, "Orden: relevancia comercial"; equal ranks follow the name. */
+export function sortProductsByRelevance(products: readonly Product[]): Product[] {
+  return [...products].sort((a, b) => a.commercialRank - b.commercialRank || collator.compare(a.name, b.name));
 }
 
 /** Rows of the 07A table. */
 export function getVisibleProducts(products: readonly Product[], filters: ProductFilters): Product[] {
-  return sortProductsByName(filterProducts(products, filters));
+  return sortProductsByRelevance(filterProducts(products, filters));
 }
 
 export type ProductMetrics = { published: number; available: number; unavailable: number };
@@ -152,7 +181,10 @@ export function getDuplicateName(name: string, existingNames: readonly string[])
   return candidate;
 }
 
-/** Inserts an unpublished copy right after the original ("Duplicar"). */
+/**
+ * Inserts an unpublished copy right after the original ("Duplicar"). The copy gets its own SKU
+ * and shares the original rank, so it lists right after it.
+ */
 export function duplicateProduct(
   products: Product[],
   id: string,
@@ -169,6 +201,10 @@ export function duplicateProduct(
     id: createProductId(
       name,
       products.map((product) => product.id),
+    ),
+    sku: createProductSku(
+      source.categoryId,
+      products.map((product) => product.sku),
     ),
     name,
     plural: undefined,
@@ -210,5 +246,5 @@ export function setProductAvailability(products: Product[], id: string, availabl
 /** "Catalog Product Count" footer of 07A. */
 export function formatProductCount(count: number): string {
   if (count === 0) return "Sin productos para estos filtros";
-  return count === 1 ? "1 producto · Ordenado por nombre" : `${count} productos · Ordenados por nombre`;
+  return `${count} ${count === 1 ? "producto" : "productos"} · Orden: relevancia comercial`;
 }

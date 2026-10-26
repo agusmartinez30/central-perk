@@ -1,21 +1,23 @@
-import type { ConsumptionMomentId, Product, ProductCategoryId } from "@/mocks/service-day";
+import type { ConsumptionMomentId, OptionSelection, Product, ProductCategoryId } from "@/mocks/service-day";
 import {
   PRODUCT_STATUS_LABELS,
   createProductId,
+  createProductSku,
+  getNextCommercialRank,
   getProductStatus,
   type ProductStatus,
 } from "./product-catalog";
 import {
-  EXTRAS_MAX_SELECTION,
   applyProductDraft,
   createEmptyDraft,
+  getOptionGroupMeta,
   getPreviewModel,
   getProductChanges,
   hasFormErrors,
   toProductDraft,
   validateProductDraft,
   type OptionDraft,
-  type OptionGroupId,
+  type OptionGroupDraft,
   type PreviewModel,
   type ProductDraft,
   type ProductFormErrors,
@@ -34,8 +36,12 @@ export type EditorState = {
   attemptedMode: SaveMode | null;
   /** Option row in edit mode (pencil), if any. */
   editingOptionId: string | null;
+  /** Group whose title is being edited, if any (a new group opens in edit mode). */
+  editingGroupId: string | null;
   /** Next "opcion-N" id for added options. */
   nextOptionNumber: number;
+  /** Next "grupo-N" id for added groups. */
+  nextGroupNumber: number;
 };
 
 export type EditorAction =
@@ -50,11 +56,20 @@ export type EditorAction =
   | { type: "set-draft-availability"; available: boolean }
   | { type: "set-customer-notes"; allow: boolean }
   | { type: "set-image"; image: string | undefined }
-  | { type: "add-option"; group: OptionGroupId }
+  | { type: "add-group" }
+  | { type: "edit-group"; groupId: string }
+  | { type: "finish-group-edit" }
+  | { type: "rename-group"; groupId: string; title: string }
+  | { type: "remove-group"; groupId: string }
+  | { type: "set-group-selection"; groupId: string; selection: OptionSelection }
+  | { type: "set-group-required"; groupId: string; required: boolean }
+  | { type: "set-group-max"; groupId: string; max: number | undefined }
+  | { type: "set-default-option"; groupId: string; optionId: string }
+  | { type: "add-option"; groupId: string }
   | { type: "edit-option"; id: string }
   | { type: "finish-option-edit" }
-  | { type: "update-option"; group: OptionGroupId; id: string; changes: Partial<Omit<OptionDraft, "id">> }
-  | { type: "remove-option"; group: OptionGroupId; id: string }
+  | { type: "update-option"; groupId: string; id: string; changes: Partial<Omit<OptionDraft, "id">> }
+  | { type: "remove-option"; groupId: string; id: string }
   | { type: "save"; mode: SaveMode }
   | { type: "discard" };
 
@@ -67,7 +82,9 @@ function openEditor(productId: string | null, draft: ProductDraft): EditorState 
     draft,
     attemptedMode: null,
     editingOptionId: null,
+    editingGroupId: null,
     nextOptionNumber: 1,
+    nextGroupNumber: 1,
   };
 }
 
@@ -75,24 +92,41 @@ function withDraft(state: ProductsState, editor: EditorState, changes: Partial<P
   return { ...state, editor: { ...editor, draft: { ...editor.draft, ...changes } } };
 }
 
-/** A product that was never saved; the draft is applied over it. */
+/** The draft with one group changed by `update`. */
+function withGroup(
+  state: ProductsState,
+  editor: EditorState,
+  groupId: string,
+  update: (group: OptionGroupDraft) => OptionGroupDraft,
+): ProductsState {
+  return withDraft(state, editor, {
+    optionGroups: editor.draft.optionGroups.map((group) => (group.id === groupId ? update(group) : group)),
+  });
+}
+
+/** A product that was never saved; the draft is applied over it. It lists last by relevance. */
 function newProductBase(draft: ProductDraft, products: readonly Product[]): Product {
+  const categoryId = draft.categoryId || "cafes";
   return {
     id: createProductId(
       draft.name,
       products.map((product) => product.id),
     ),
+    sku: createProductSku(
+      categoryId,
+      products.map((product) => product.sku),
+    ),
+    commercialRank: getNextCommercialRank(products),
     name: "",
     price: 0,
-    categoryId: draft.categoryId || "cafes",
+    categoryId,
     description: "",
     moments: [],
     publication: "draft",
     available: true,
     archived: false,
     allowCustomerNotes: true,
-    sizes: [],
-    extras: [],
+    optionGroups: [],
   };
 }
 
@@ -113,7 +147,11 @@ function saveEditor(state: ProductsState, editor: EditorState, mode: SaveMode): 
     ...state,
     products,
     version: state.version + 1,
-    editor: { ...openEditor(product.id, saved), nextOptionNumber: editor.nextOptionNumber },
+    editor: {
+      ...openEditor(product.id, saved),
+      nextOptionNumber: editor.nextOptionNumber,
+      nextGroupNumber: editor.nextGroupNumber,
+    },
     notice:
       mode === "publish"
         ? `${product.name} se publicó en la carta.`
@@ -139,7 +177,7 @@ export function editorReducer(state: ProductsState, action: EditorAction): Produ
     case "close-editor":
       return { ...state, screen: "list", editor: null };
     case "open-preview":
-      return { ...state, screen: "preview", editor: { ...editor, editingOptionId: null } };
+      return { ...state, screen: "preview", editor: { ...editor, editingOptionId: null, editingGroupId: null } };
     case "close-preview":
       return { ...state, screen: "editor" };
     case "set-field":
@@ -158,16 +196,63 @@ export function editorReducer(state: ProductsState, action: EditorAction): Produ
       return withDraft(state, editor, { allowCustomerNotes: action.allow });
     case "set-image":
       return withDraft(state, editor, { image: action.image });
-    case "add-option": {
-      const option: OptionDraft = { id: `opcion-${editor.nextOptionNumber}`, name: "", priceDelta: "0" };
+    case "add-group": {
+      const group: OptionGroupDraft = {
+        id: `grupo-${editor.nextGroupNumber}`,
+        title: "",
+        selection: "multiple",
+        required: false,
+        options: [],
+      };
       return {
         ...state,
         editor: {
           ...editor,
-          draft: { ...draft, [action.group]: [...draft[action.group], option] },
-          editingOptionId: option.id,
-          nextOptionNumber: editor.nextOptionNumber + 1,
+          draft: { ...draft, optionGroups: [...draft.optionGroups, group] },
+          editingGroupId: group.id,
+          nextGroupNumber: editor.nextGroupNumber + 1,
         },
+      };
+    }
+    case "edit-group":
+      return { ...state, editor: { ...editor, editingGroupId: action.groupId } };
+    case "finish-group-edit":
+      return { ...state, editor: { ...editor, editingGroupId: null } };
+    case "rename-group":
+      return withGroup(state, editor, action.groupId, (group) => ({ ...group, title: action.title }));
+    case "remove-group": {
+      const removed = draft.optionGroups.find((group) => group.id === action.groupId);
+      const editingRemovedOption = removed?.options.some((option) => option.id === editor.editingOptionId);
+      return {
+        ...state,
+        editor: {
+          ...editor,
+          draft: { ...draft, optionGroups: draft.optionGroups.filter((group) => group.id !== action.groupId) },
+          editingGroupId: editor.editingGroupId === action.groupId ? null : editor.editingGroupId,
+          editingOptionId: editingRemovedOption ? null : editor.editingOptionId,
+        },
+      };
+    }
+    case "set-group-selection":
+      // A single group has no limit and a multiple one no preselected option.
+      return withGroup(state, editor, action.groupId, (group) =>
+        action.selection === "single"
+          ? { ...group, selection: "single", max: undefined }
+          : { ...group, selection: "multiple", defaultOptionId: undefined },
+      );
+    case "set-group-required":
+      return withGroup(state, editor, action.groupId, (group) => ({ ...group, required: action.required }));
+    case "set-group-max":
+      return withGroup(state, editor, action.groupId, (group) => ({ ...group, max: action.max }));
+    case "set-default-option":
+      return withGroup(state, editor, action.groupId, (group) => ({ ...group, defaultOptionId: action.optionId }));
+    case "add-option": {
+      if (!draft.optionGroups.some((group) => group.id === action.groupId)) return state;
+      const option: OptionDraft = { id: `opcion-${editor.nextOptionNumber}`, name: "", priceDelta: "0" };
+      const next = withGroup(state, editor, action.groupId, (group) => ({ ...group, options: [...group.options, option] }));
+      return {
+        ...next,
+        editor: { ...next.editor!, editingOptionId: option.id, nextOptionNumber: editor.nextOptionNumber + 1 },
       };
     }
     case "edit-option":
@@ -175,20 +260,20 @@ export function editorReducer(state: ProductsState, action: EditorAction): Produ
     case "finish-option-edit":
       return { ...state, editor: { ...editor, editingOptionId: null } };
     case "update-option":
-      return withDraft(state, editor, {
-        [action.group]: draft[action.group].map((option) =>
-          option.id === action.id ? { ...option, ...action.changes } : option,
-        ),
-      });
-    case "remove-option":
+      return withGroup(state, editor, action.groupId, (group) => ({
+        ...group,
+        options: group.options.map((option) => (option.id === action.id ? { ...option, ...action.changes } : option)),
+      }));
+    case "remove-option": {
+      const next = withGroup(state, editor, action.groupId, (group) => ({
+        ...group,
+        options: group.options.filter((option) => option.id !== action.id),
+      }));
       return {
-        ...state,
-        editor: {
-          ...editor,
-          draft: { ...draft, [action.group]: draft[action.group].filter((option) => option.id !== action.id) },
-          editingOptionId: editor.editingOptionId === action.id ? null : editor.editingOptionId,
-        },
+        ...next,
+        editor: { ...next.editor!, editingOptionId: editor.editingOptionId === action.id ? null : editor.editingOptionId },
       };
+    }
     case "save":
       return saveEditor(state, editor, action.mode);
     case "discard":
@@ -197,6 +282,16 @@ export function editorReducer(state: ProductsState, action: EditorAction): Produ
 }
 
 export type SaveTone = "neutral" | "warning" | "danger";
+
+/** One "Personalizaciones" card of the editor. */
+export type OptionGroupView = {
+  id: string;
+  /** Title as typed, e.g. "Tamaño". */
+  title: string;
+  /** "Selección única · Obligatorio", "Selección múltiple · Máximo 2". */
+  meta: string;
+  options: OptionDraft[];
+};
 
 export type EditorView = {
   /** "Editar producto" or "Nuevo producto". */
@@ -215,10 +310,8 @@ export type EditorView = {
   saveMeta: string;
   canSaveDraft: boolean;
   canPublish: boolean;
-  /** "Selección única · Obligatorio". */
-  sizesMeta: string;
-  /** "Selección múltiple · Opcional · Máx. 3". */
-  extrasMeta: string;
+  /** Groups of the draft, in display order. */
+  optionGroups: OptionGroupView[];
   /** 07C "Cappuccino publicado". */
   previewTitle: string;
   preview: PreviewModel;
@@ -272,8 +365,12 @@ export function getEditorView(state: ProductsState): EditorView | null {
     saveMeta: `Versión ${state.version} · ${dirty || isNew ? "validación requerida" : PRODUCT_STATUS_LABELS[status]}`,
     canSaveDraft: dirty || isNew,
     canPublish: dirty || isNew || status !== "published",
-    sizesMeta: `Selección única · ${editor.draft.sizes.length > 0 ? "Obligatorio" : "Sin opciones"}`,
-    extrasMeta: `Selección múltiple · Opcional · Máx. ${EXTRAS_MAX_SELECTION}`,
+    optionGroups: editor.draft.optionGroups.map((group) => ({
+      id: group.id,
+      title: group.title,
+      meta: getOptionGroupMeta(group),
+      options: group.options,
+    })),
     previewTitle: product ? `${product.name} ${PREVIEW_STATUS[status]}` : "Nuevo producto sin guardar",
     preview: getPreviewModel(editor.draft),
   };

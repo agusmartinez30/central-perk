@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { PRODUCTS } from "@/mocks/service-day";
 import {
-  EXTRAS_MAX_SELECTION,
   applyProductDraft,
   createEmptyDraft,
   formatOptionDelta,
+  getOptionGroupMeta,
+  getOptionGroupsSummary,
+  getOptionPriceLabel,
   getPreviewModel,
   getProductChanges,
   hasFormErrors,
   parsePriceInput,
   toProductDraft,
   validateProductDraft,
+  type OptionGroupDraft,
   type ProductDraft,
 } from "./product-form";
 import { createProductId } from "./product-catalog";
@@ -20,6 +23,12 @@ const cappuccinoDraft = () => toProductDraft(cappuccino);
 const otherNames = PRODUCTS.filter((product) => product.id !== "cappuccino").map((product) => product.name);
 const validate = (draft: ProductDraft, mode: "draft" | "publish" = "publish") =>
   validateProductDraft(draft, { mode, otherNames });
+
+/** The draft with one group replaced by `changes`. */
+const withGroup = (draft: ProductDraft, id: string, changes: Partial<OptionGroupDraft>): ProductDraft => ({
+  ...draft,
+  optionGroups: draft.optionGroups.map((group) => (group.id === id ? { ...group, ...changes } : group)),
+});
 
 describe("parsePriceInput", () => {
   it("reads whole pesos with or without the symbol and thousands dots", () => {
@@ -44,26 +53,76 @@ describe("formatOptionDelta", () => {
   });
 });
 
+describe("getOptionPriceLabel", () => {
+  it("reads a free option as included in a required group and free of charge in an optional one", () => {
+    expect(getOptionPriceLabel(0, true)).toBe("Incluido");
+    expect(getOptionPriceLabel(0, false)).toBe("Sin cargo");
+  });
+
+  it("writes other adjustments with the currency format", () => {
+    expect(getOptionPriceLabel(800, true)).toBe("+$800");
+    expect(getOptionPriceLabel(1500, false)).toBe("+$1.500");
+  });
+});
+
+describe("getOptionGroupsSummary", () => {
+  it("counts groups and options, as 07C does", () => {
+    expect(getOptionGroupsSummary(cappuccino.optionGroups)).toBe("2 grupos · 6 opciones");
+    expect(getOptionGroupsSummary([{ options: [{}] }])).toBe("1 grupo · 1 opción");
+    expect(getOptionGroupsSummary([{ options: [] }])).toBe("1 grupo · 0 opciones");
+    expect(getOptionGroupsSummary([])).toBe("Sin personalizaciones");
+  });
+});
+
+describe("getOptionGroupMeta", () => {
+  it("describes selection, requirement and limit, as the 07B group headers", () => {
+    const [sizes, extras] = cappuccinoDraft().optionGroups;
+    expect(getOptionGroupMeta(sizes)).toBe("Selección única · Obligatorio");
+    expect(getOptionGroupMeta(extras)).toBe("Selección múltiple · Máximo 2");
+    expect(getOptionGroupMeta({ ...extras, max: undefined })).toBe("Selección múltiple · Opcional");
+    expect(getOptionGroupMeta({ ...sizes, options: [] })).toBe("Selección única · Sin opciones");
+  });
+});
+
 describe("toProductDraft / applyProductDraft", () => {
   it("round-trips a product through the form", () => {
     const draft = cappuccinoDraft();
     expect(draft.price).toBe("$4.600");
-    expect(draft.sizes[1]).toEqual({ id: "mediano", name: "Mediano", priceDelta: "800" });
+    expect(draft.optionGroups.map((group) => group.title)).toEqual(["Tamaño", "Extras"]);
+    expect(draft.optionGroups[0].options[1]).toEqual({ id: "mediano", name: "Mediano", priceDelta: "800" });
     expect(applyProductDraft(draft, cappuccino, "publish")).toEqual(cappuccino);
   });
 
   it("applies the edits, trims the copy and sets the publication of the save", () => {
     const draft = { ...cappuccinoDraft(), name: "  Cappuccino doble ", price: "5.400", moments: ["tomar" as const] };
     const saved = applyProductDraft(draft, cappuccino, "draft");
-    expect(saved).toMatchObject({ id: "cappuccino", name: "Cappuccino doble", price: 5400, moments: ["tomar"] });
+    expect(saved).toMatchObject({
+      id: "cappuccino",
+      sku: "CAF-014",
+      name: "Cappuccino doble",
+      price: 5400,
+      moments: ["tomar"],
+    });
     expect(saved.publication).toBe("draft");
   });
 
-  it("drops the size default when there are no sizes and repairs a missing one", () => {
-    const noSizes = applyProductDraft({ ...cappuccinoDraft(), sizes: [] }, cappuccino, "publish");
-    expect(noSizes.defaultSizeId).toBeUndefined();
-    const lostDefault = applyProductDraft({ ...cappuccinoDraft(), defaultSizeId: "gone" }, cappuccino, "publish");
-    expect(lostDefault.defaultSizeId).toBe("chico");
+  it("drops the default of an empty group and repairs a missing one", () => {
+    const noSizes = applyProductDraft(withGroup(cappuccinoDraft(), "tamano", { options: [] }), cappuccino, "publish");
+    expect(noSizes.optionGroups[0].defaultOptionId).toBeUndefined();
+    const lost = applyProductDraft(withGroup(cappuccinoDraft(), "tamano", { defaultOptionId: "gone" }), cappuccino, "publish");
+    expect(lost.optionGroups[0].defaultOptionId).toBe("chico");
+  });
+
+  it("keeps defaults only in required single groups and limits only in multiple ones", () => {
+    const optional = applyProductDraft(withGroup(cappuccinoDraft(), "tamano", { required: false }), cappuccino, "publish");
+    expect(optional.optionGroups[0].defaultOptionId).toBeUndefined();
+    const single = applyProductDraft(withGroup(cappuccinoDraft(), "extras", { selection: "single" }), cappuccino, "publish");
+    expect(single.optionGroups[1].max).toBeUndefined();
+  });
+
+  it("trims group titles", () => {
+    const saved = applyProductDraft(withGroup(cappuccinoDraft(), "extras", { title: "  Adicionales " }), cappuccino, "publish");
+    expect(saved.optionGroups[1].title).toBe("Adicionales");
   });
 
   it("starts new products empty, available and accepting customer notes", () => {
@@ -76,9 +135,7 @@ describe("toProductDraft / applyProductDraft", () => {
       image: undefined,
       available: true,
       allowCustomerNotes: true,
-      sizes: [],
-      defaultSizeId: undefined,
-      extras: [],
+      optionGroups: [],
     });
   });
 });
@@ -124,30 +181,39 @@ describe("validateProductDraft", () => {
   });
 
   it("checks every option: name, uniqueness inside its group and adjustment", () => {
-    const draft = cappuccinoDraft();
-    const errors = validate({
-      ...draft,
-      sizes: [
+    let draft = withGroup(cappuccinoDraft(), "tamano", {
+      options: [
         { id: "chico", name: " ", priceDelta: "0" },
         { id: "mediano", name: "Grande", priceDelta: "800" },
         { id: "grande", name: "grande", priceDelta: "1.500" },
       ],
-      extras: [
+    });
+    draft = withGroup(draft, "extras", {
+      options: [
         { id: "shot-extra", name: "Grande", priceDelta: "-1" },
         { id: "leche-vegetal", name: "Leche vegetal", priceDelta: "700" },
       ],
     });
-    expect(errors.options).toEqual({
-      chico: "Ingresá el nombre de la opción.",
-      grande: "La opción ya existe en el grupo.",
-      "shot-extra": "Ingresá un ajuste válido.",
+    expect(validate(draft).optionGroups).toEqual({
+      tamano: { options: { chico: "Ingresá el nombre de la opción.", grande: "La opción ya existe en el grupo." } },
+      extras: { options: { "shot-extra": "Ingresá un ajuste válido." } },
+    });
+  });
+
+  it("checks group titles, their uniqueness and the selection limit", () => {
+    let draft = withGroup(cappuccinoDraft(), "tamano", { title: " " });
+    draft = { ...draft, optionGroups: [...draft.optionGroups, { ...draft.optionGroups[1], id: "grupo-1", max: 0 }] };
+    expect(validate(draft).optionGroups).toEqual({
+      tamano: { title: "Ingresá el nombre del grupo." },
+      "grupo-1": { title: "El grupo ya existe.", max: "Ingresá un máximo válido." },
     });
   });
 
   it("is empty when nothing is wrong, so hasFormErrors is false", () => {
     expect(validate(cappuccinoDraft())).toEqual({});
-    expect(hasFormErrors({ options: {} })).toBe(false);
-    expect(hasFormErrors({ options: { chico: "x" } })).toBe(true);
+    expect(hasFormErrors({ optionGroups: {} })).toBe(false);
+    expect(hasFormErrors({ optionGroups: { tamano: { options: { chico: "x" } } } })).toBe(true);
+    expect(hasFormErrors({ optionGroups: { tamano: { title: "x" } } })).toBe(true);
   });
 });
 
@@ -155,12 +221,12 @@ describe("getProductChanges", () => {
   it("lists the edited fields in form order, ignoring surrounding spaces", () => {
     const saved = cappuccinoDraft();
     expect(getProductChanges(saved, { ...saved, name: " Cappuccino " })).toEqual([]);
+    const extras = saved.optionGroups[1];
     expect(
       getProductChanges(saved, {
-        ...saved,
+        ...withGroup(saved, "extras", { options: extras.options.slice(0, 1) }),
         price: "4.600",
         moments: ["desayunar", "merendar", "tomar"],
-        extras: saved.extras.slice(0, 1),
         available: false,
         description: "Otra",
       }),
@@ -170,10 +236,17 @@ describe("getProductChanges", () => {
   it("compares moments as a set and prices by value", () => {
     const saved = cappuccinoDraft();
     expect(getProductChanges(saved, { ...saved, moments: ["merendar", "desayunar"], price: "4600" })).toEqual([]);
-    expect(getProductChanges(saved, { ...saved, price: "4700", image: undefined, defaultSizeId: "grande" })).toEqual([
-      "Precio base",
-      "Imagen principal",
-      "Tamaño",
+    expect(
+      getProductChanges(saved, { ...withGroup(saved, "tamano", { defaultOptionId: "grande" }), price: "4700", image: undefined }),
+    ).toEqual(["Precio base", "Imagen principal", "Tamaño"]);
+  });
+
+  it("reports group settings and added or removed groups", () => {
+    const saved = cappuccinoDraft();
+    expect(getProductChanges(saved, withGroup(saved, "extras", { max: 3 }))).toEqual(["Extras"]);
+    expect(getProductChanges(saved, withGroup(saved, "tamano", { required: false }))).toEqual(["Tamaño"]);
+    expect(getProductChanges(saved, { ...saved, optionGroups: saved.optionGroups.slice(0, 1) })).toEqual([
+      "Personalizaciones",
     ]);
   });
 });
@@ -186,15 +259,33 @@ describe("getPreviewModel", () => {
       description: "Espresso intenso con leche vaporizada y espuma cremosa.",
       image: "/images/products/cappuccino.webp",
       price: "$4.600",
-      sizes: [
-        { id: "chico", name: "Chico", selected: false },
-        { id: "mediano", name: "Mediano", selected: true },
-        { id: "grande", name: "Grande", selected: false },
+      groups: [
+        {
+          id: "tamano",
+          title: "Tamaño",
+          selection: "single",
+          required: true,
+          meta: "Obligatorio · Elegí 1",
+          options: [
+            { id: "chico", name: "Chico", priceLabel: "Incluido", selected: false },
+            { id: "mediano", name: "Mediano", priceLabel: "+$800", selected: true },
+            { id: "grande", name: "Grande", priceLabel: "+$1.500", selected: false },
+          ],
+        },
+        {
+          id: "extras",
+          title: "Extras",
+          selection: "multiple",
+          required: false,
+          meta: "Opcional · Hasta 2",
+          options: [
+            { id: "shot-extra", name: "Shot extra", priceLabel: "+$900", selected: false },
+            { id: "leche-vegetal", name: "Leche vegetal", priceLabel: "+$700", selected: false },
+            { id: "canela", name: "Canela", priceLabel: "Sin cargo", selected: false },
+          ],
+        },
       ],
-      extras: [
-        { id: "shot-extra", label: "Shot extra · +$900" },
-        { id: "leche-vegetal", label: "Leche vegetal · +$700" },
-      ],
+      optionsSummary: "2 grupos · 6 opciones",
       addLabel: "Agregar · $5.400",
       categoryLabel: "Cafés",
       momentsLabel: "Desayunar · Merendar · Tomar",
@@ -208,8 +299,8 @@ describe("getPreviewModel", () => {
       name: "Nuevo producto",
       description: "",
       price: "$0",
-      sizes: [],
-      extras: [],
+      groups: [],
+      optionsSummary: "Sin personalizaciones",
       addLabel: "Agregar · $0",
       categoryLabel: "Sin categoría",
       momentsLabel: "Sin momentos",
@@ -217,18 +308,18 @@ describe("getPreviewModel", () => {
     });
   });
 
-  it("skips options without a name and ignores invalid adjustments in the total", () => {
-    const draft = cappuccinoDraft();
-    const preview = getPreviewModel({
-      ...draft,
-      sizes: [{ id: "mediano", name: "Mediano", priceDelta: "abc" }],
-      extras: [{ id: "x", name: " ", priceDelta: "100" }],
-    });
+  it("skips options without a name, empty groups and invalid adjustments in the total", () => {
+    let draft = withGroup(cappuccinoDraft(), "tamano", { options: [{ id: "mediano", name: "Mediano", priceDelta: "abc" }] });
+    draft = withGroup(draft, "extras", { options: [{ id: "x", name: " ", priceDelta: "100" }] });
+    const preview = getPreviewModel(draft);
     expect(preview.addLabel).toBe("Agregar · $4.600");
-    expect(preview.extras).toEqual([]);
+    expect(preview.groups.map((group) => group.id)).toEqual(["tamano"]);
   });
 
-  it("limits extras to three choices, as 07B says", () => {
-    expect(EXTRAS_MAX_SELECTION).toBe(3);
+  it("says how many options an optional group allows, or none when unlimited", () => {
+    const draft = withGroup(cappuccinoDraft(), "extras", { max: undefined });
+    expect(getPreviewModel(draft).groups[1].meta).toBe("Opcional");
+    const required = withGroup(cappuccinoDraft(), "extras", { required: true });
+    expect(getPreviewModel(required).groups[1].meta).toBe("Obligatorio · Hasta 2");
   });
 });

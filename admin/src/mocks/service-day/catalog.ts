@@ -6,6 +6,7 @@ import type {
   Product,
   ProductCategoryInfo,
   ProductOption,
+  ProductOptionGroup,
   RequestModeInfo,
 } from "./types";
 
@@ -92,11 +93,24 @@ const COFFEE_SIZES: ProductOption[] = [
   { id: "grande", name: "Grande", priceDelta: 1500 },
 ];
 
-/** 07B/07C "Extras" of the Cappuccino. */
+/** 07B/07C "Extras" of the coffees. */
 const COFFEE_EXTRAS: ProductOption[] = [
   { id: "shot-extra", name: "Shot extra", priceDelta: 900 },
   { id: "leche-vegetal", name: "Leche vegetal", priceDelta: 700 },
 ];
+
+/** 07B/07C free "Canela" extra ("Sin cargo") of the Cappuccino. */
+const CINNAMON: ProductOption = { id: "canela", name: "Canela", priceDelta: 0 };
+
+/** "Tamaño": single choice, required, with a preselected size. */
+function sizeGroup(options: ProductOption[], defaultOptionId: string): ProductOptionGroup {
+  return { id: "tamano", title: "Tamaño", selection: "single", required: true, defaultOptionId, options };
+}
+
+/** "Extras": multiple choice, optional, "Máximo 2" as 07B. */
+function extrasGroup(options: ProductOption[]): ProductOptionGroup {
+  return { id: "extras", title: "Extras", selection: "multiple", required: false, max: 2, options };
+}
 
 /** Defaults of a product without options, published and available. */
 const base = {
@@ -104,8 +118,7 @@ const base = {
   available: true,
   archived: false,
   allowCustomerNotes: true,
-  sizes: [],
-  extras: [],
+  optionGroups: [],
 } as const satisfies Partial<Product>;
 
 /**
@@ -114,48 +127,56 @@ const base = {
  * Tostado de jamón y queso $6.900, Sándwich de pollo $8.900); Cappuccino, Café con leche and
  * Jugo de naranja are priced so the accounts of 02/04/05 add up. The 07A prices of the products
  * the live screens sell lose against them; Hamburguesa clásica and Cheesecake, never sold today,
- * keep their 07A prices. Photos are the customer app's; the 07A ones are leftovers that do not
+ * keep their 07A prices. SKUs follow 07A where it shows them (Cappuccino CAF-014, …) and number the
+ * other products after them; `commercialRank` keeps the 07A row order ("Orden: relevancia
+ * comercial") with the coffees first and the other products between its rows. Photos are the customer app's; the 07A ones are leftovers that do not
  * match their rows, so products without a matching photo have none.
  */
 export const PRODUCTS: Product[] = [
   {
     ...base,
     id: "cappuccino",
+    sku: "CAF-014",
+    commercialRank: 1,
     name: "Cappuccino",
     price: 4600,
     categoryId: "cafes",
     description: "Espresso intenso con leche vaporizada y espuma cremosa.",
     image: photo("cappuccino"),
     moments: ["desayunar", "merendar"],
-    sizes: COFFEE_SIZES,
-    defaultSizeId: "mediano",
-    extras: COFFEE_EXTRAS,
+    optionGroups: [sizeGroup(COFFEE_SIZES, "mediano"), extrasGroup([...COFFEE_EXTRAS, CINNAMON])],
   },
   {
     ...base,
     id: "cappuccino-grande",
+    sku: "CAF-015",
+    commercialRank: 2,
     name: "Cappuccino grande",
     price: 5200,
     categoryId: "cafes",
     description: "Doble espresso con leche vaporizada y espuma, en taza grande.",
     image: photo("cappuccino"),
     moments: ["desayunar", "merendar"],
-    extras: COFFEE_EXTRAS,
+    optionGroups: [extrasGroup(COFFEE_EXTRAS)],
   },
   {
     ...base,
     id: "cafe-latte",
+    sku: "CAF-016",
+    commercialRank: 3,
     name: "Café latte",
     price: 4200,
     categoryId: "cafes",
     description: "Espresso suave con mucha leche y una capa fina de espuma.",
     image: photo("cappuccino"),
     moments: ["desayunar", "merendar", "tomar"],
-    extras: [{ id: "leche-vegetal", name: "Leche vegetal", priceDelta: 700 }],
+    optionGroups: [extrasGroup([{ id: "leche-vegetal", name: "Leche vegetal", priceDelta: 700 }])],
   },
   {
     ...base,
     id: "cafe-con-leche",
+    sku: "CAF-017",
+    commercialRank: 4,
     name: "Café con leche",
     price: 3800,
     categoryId: "cafes",
@@ -166,6 +187,8 @@ export const PRODUCTS: Product[] = [
   {
     ...base,
     id: "jugo-naranja",
+    sku: "BEB-019",
+    commercialRank: 10,
     name: "Jugo de naranja",
     price: 5100,
     categoryId: "bebidas",
@@ -176,6 +199,8 @@ export const PRODUCTS: Product[] = [
   {
     ...base,
     id: "medialuna",
+    sku: "PAN-002",
+    commercialRank: 6,
     name: "Medialuna",
     plural: "Medialunas",
     price: 3900,
@@ -187,6 +212,8 @@ export const PRODUCTS: Product[] = [
   {
     ...base,
     id: "tostado-clasico",
+    sku: "TOS-011",
+    commercialRank: 7,
     name: "Tostado clásico",
     plural: "Tostados clásicos",
     price: 7200,
@@ -198,6 +225,8 @@ export const PRODUCTS: Product[] = [
   {
     ...base,
     id: "tostado-jamon-queso",
+    sku: "TOS-012",
+    commercialRank: 8,
     name: "Tostado de jamón y queso",
     price: 6900,
     categoryId: "tostados",
@@ -208,6 +237,8 @@ export const PRODUCTS: Product[] = [
   {
     ...base,
     id: "toston-palta",
+    sku: "TOS-006",
+    commercialRank: 5,
     name: "Tostón de palta",
     price: 7500,
     categoryId: "tostadas",
@@ -218,6 +249,8 @@ export const PRODUCTS: Product[] = [
   {
     ...base,
     id: "sandwich-pollo",
+    sku: "SAN-004",
+    commercialRank: 9,
     name: "Sándwich de pollo",
     price: 8900,
     categoryId: "sandwiches",
@@ -228,6 +261,8 @@ export const PRODUCTS: Product[] = [
   {
     ...base,
     id: "limonada",
+    sku: "BEB-018",
+    commercialRank: 11,
     name: "Limonada",
     price: 3600,
     categoryId: "bebidas",
@@ -237,6 +272,8 @@ export const PRODUCTS: Product[] = [
   {
     ...base,
     id: "hamburguesa-clasica",
+    sku: "HAM-003",
+    commercialRank: 12,
     name: "Hamburguesa clásica",
     price: 12500,
     categoryId: "hamburguesas",
@@ -247,6 +284,8 @@ export const PRODUCTS: Product[] = [
   {
     ...base,
     id: "cheesecake",
+    sku: "POS-009",
+    commercialRank: 13,
     name: "Cheesecake",
     price: 6800,
     categoryId: "postres",

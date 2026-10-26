@@ -8,12 +8,12 @@ const names = (state: ProductsState) => getProductsListView(state).rows.map((row
 const rowOf = (state: ProductsState, id: string) => getProductsListView(state).rows.find((row) => row.id === id);
 
 describe("products list view", () => {
-  it("lists every product by name with the 07A metrics and footer", () => {
+  it("lists every product by commercial relevance with the 07A metrics and footer", () => {
     const view = getProductsListView(createProductsState(PRODUCTS));
     expect(view.rows).toHaveLength(13);
-    expect(view.rows.slice(0, 3).map((row) => row.name)).toEqual(["Café con leche", "Café latte", "Cappuccino"]);
+    expect(view.rows.slice(0, 3).map((row) => row.name)).toEqual(["Cappuccino", "Cappuccino grande", "Café latte"]);
     expect(view.metrics).toEqual({ published: 12, available: 11, unavailable: 1 });
-    expect(view.countLabel).toBe("13 productos · Ordenados por nombre");
+    expect(view.countLabel).toBe("13 productos · Orden: relevancia comercial");
   });
 
   it("describes each row as 07A shows it", () => {
@@ -35,15 +35,15 @@ describe("products list view", () => {
 
   it("filters with the search box and the selects", () => {
     expect(names(run({ type: "set-query", query: "tost" }))).toEqual([
+      "Tostón de palta",
       "Tostado clásico",
       "Tostado de jamón y queso",
-      "Tostón de palta",
     ]);
     expect(names(run({ type: "set-filter", filter: "availability", value: "unavailable" }))).toEqual([
       "Hamburguesa clásica",
     ]);
     const filtered = run({ type: "set-filter", filter: "category", value: "bebidas" });
-    expect(getProductsListView(filtered).countLabel).toBe("2 productos · Ordenados por nombre");
+    expect(getProductsListView(filtered).countLabel).toBe("2 productos · Orden: relevancia comercial");
     expect(getProductsListView(filtered).metrics).toEqual({ published: 12, available: 11, unavailable: 1 });
     expect(names(run({ type: "set-query", query: "pizza" }))).toEqual([]);
     expect(getProductsListView(run({ type: "set-query", query: "pizza" })).countLabel).toBe(
@@ -71,7 +71,7 @@ describe("productsReducer list actions", () => {
 
   it("duplicates a product as a draft next to the original", () => {
     const state = run({ type: "duplicate", id: "cappuccino" });
-    expect(names(state).slice(2, 5)).toEqual(["Cappuccino", "Cappuccino (copia)", "Cappuccino grande"]);
+    expect(names(state).slice(0, 3)).toEqual(["Cappuccino", "Cappuccino (copia)", "Cappuccino grande"]);
     expect(rowOf(state, "cappuccino-copia")).toMatchObject({ status: "draft", price: "$4.600" });
     expect(getProductsListView(state).metrics.published).toBe(12);
     expect(state.notice).toBe("Se creó Cappuccino (copia) como borrador.");

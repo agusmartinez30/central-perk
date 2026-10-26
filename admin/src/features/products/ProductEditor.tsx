@@ -131,24 +131,18 @@ export function ProductEditor({ editor, view, onAction }: ProductEditorProps) {
           </div>
           <ProductTaxonomy draft={draft} onAction={onAction} />
           <div className="flex min-h-0 w-full flex-1 gap-[9px]">
-            <OptionGroupCard
-              group="sizes"
-              title="Tamaño"
-              meta={view.sizesMeta}
-              options={draft.sizes}
-              editingOptionId={editor.editingOptionId}
-              errors={view.errors.options}
-              onAction={onAction}
-            />
-            <OptionGroupCard
-              group="extras"
-              title="Extras"
-              meta={view.extrasMeta}
-              options={draft.extras}
-              editingOptionId={editor.editingOptionId}
-              errors={view.errors.options}
-              onAction={onAction}
-            />
+            {view.optionGroups.map((group) => (
+              <OptionGroupCard
+                key={group.id}
+                groupId={group.id}
+                title={group.title}
+                meta={group.meta}
+                options={group.options}
+                editingOptionId={editor.editingOptionId}
+                errors={view.errors.optionGroups?.[group.id]?.options}
+                onAction={onAction}
+              />
+            ))}
           </div>
           <CustomerNotesSetting allow={draft.allowCustomerNotes} onAction={onAction} />
           <EditorSaveProductBar view={view} onAction={onAction} />
