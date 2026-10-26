@@ -103,6 +103,14 @@ describe("service day data", () => {
       expect(ordersOf(request.sessionId).map((order) => order.customer), request.id).toContain(request.customer);
       expect(day.billRequests.filter((item) => item.sessionId === request.sessionId)).toHaveLength(1);
       if (request.status !== "pending") expect(day.staff.map((member) => member.name)).toContain(request.assignee);
+      expect(request.history[0]).toEqual({ kind: "requested", at: request.requestedAt });
+      expect(request.history.map((event) => event.at)).toEqual(
+        [...request.history].map((event) => event.at).sort((a, b) => a.localeCompare(b)),
+      );
+      for (const event of request.history) {
+        expect(event.at >= request.requestedAt && event.at <= day.now, `${request.id}:${event.kind}`).toBe(true);
+        if (event.by) expect(day.staff.map((member) => member.name)).toContain(event.by);
+      }
     }
   });
 });
@@ -156,6 +164,17 @@ describe("tables (02) agree with orders (03) and bill requests (04)", () => {
   it("measures 04 waits from the request time to now", () => {
     for (const request of BILL_REQUESTS_BOARD.requests.filter((item) => item.status !== "finalized")) {
       expect(request.waitMinutes, request.id).toBe(minutesBetween(request.requestedAt, day.now));
+    }
+  });
+
+  it("derives every consumption and payment verification fact without changing shared totals", () => {
+    for (const request of BILL_REQUESTS_BOARD.requests) {
+      expect(request.consumptions.reduce((sum, item) => sum + item.total, 0), request.id).toBe(request.total);
+      expect(request.consumptions.every((item) => item.quantity > 0 && item.unitPrice > 0), request.id).toBe(true);
+      if (request.paymentVerification.status === "pending") {
+        expect(request.paymentPreference, request.id).toBe("transfer");
+        expect(request.history.some((event) => event.kind === "receipt-reported"), request.id).toBe(true);
+      }
     }
   });
 });

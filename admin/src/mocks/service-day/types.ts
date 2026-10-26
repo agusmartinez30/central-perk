@@ -1,6 +1,7 @@
 import type {
   AcceptedPaymentMethod,
   BillPaymentMethod,
+  BillRequestHistoryEvent,
   BillRequestStatus,
   CollectionMethod,
   ManagedOrder,
@@ -195,6 +196,8 @@ export type ServiceBillRequest = {
   status: BillRequestStatus;
   /** Staff member attending the request; unset while pending. */
   assignee?: string;
+  /** Operational history retained as the canonical source for the 04 timeline. */
+  history: BillRequestHistoryEvent[];
 };
 
 /** The payment that closed a table session. Its amount is derived from the session's orders. */

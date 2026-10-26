@@ -1,5 +1,5 @@
 import { REQUEST_MODES, getRequestModeShortLabel } from "@/mocks/service-day/catalog";
-import type { BillPaymentMethod, BillRequestStatus, ManagedBillRequest } from "@/mocks/types";
+import type { BillPaymentMethod, BillRequestStatus, ManagedBillRequest, PaymentVerification } from "@/mocks/types";
 import { formatPrice } from "@/shared/lib/format-price";
 
 export type RequestTone = "brand" | "warning" | "success" | "danger";
@@ -15,7 +15,7 @@ export type RequestMetric = {
   tone: RequestTone;
 };
 
-/** "Request Metrics": pending, in attention, active transfers and finalized today. */
+/** "Request Metrics": pending, in attention, manual payment reviews and finalized today. */
 export function getRequestMetrics(requests: readonly ManagedBillRequest[]): RequestMetric[] {
   const count = (predicate: (request: ManagedBillRequest) => boolean) => requests.filter(predicate).length;
   return [
@@ -23,15 +23,15 @@ export function getRequestMetrics(requests: readonly ManagedBillRequest[]): Requ
     { id: "attending", label: "En atención", value: count((r) => r.status === "attending"), tone: "brand" },
     {
       id: "transfers",
-      label: "Transferencias activas",
-      value: count((r) => isActiveRequest(r) && r.paymentPreference === "transfer"),
-      tone: "brand",
+      label: "Por verificar",
+      value: count((r) => isActiveRequest(r) && r.paymentVerification.status === "pending"),
+      tone: "danger",
     },
     { id: "finalized", label: "Finalizadas hoy", value: count((r) => r.status === "finalized"), tone: "success" },
   ];
 }
 
-export type StatusFilter = "active" | BillRequestStatus | "all";
+export type StatusFilter = "active" | "payment-review" | BillRequestStatus | "all";
 export type PaymentFilter = "all" | BillPaymentMethod;
 export type RequestSort = "longest-wait" | "highest-total";
 
@@ -40,6 +40,7 @@ export const STATUS_FILTERS: readonly { id: StatusFilter; label: string }[] = [
   { id: "active", label: "Activas" },
   { id: "pending", label: "Pendientes" },
   { id: "attending", label: "En atención" },
+  { id: "payment-review", label: "Por verificar" },
   { id: "finalized", label: "Finalizadas" },
   { id: "all", label: "Todas" },
 ];
@@ -65,6 +66,7 @@ export type RequestQuery = {
 function matchesStatus(request: ManagedBillRequest, status: StatusFilter): boolean {
   if (status === "all") return true;
   if (status === "active") return isActiveRequest(request);
+  if (status === "payment-review") return request.paymentVerification.status === "pending";
   return request.status === status;
 }
 
@@ -102,7 +104,11 @@ export function filterRequests(
 export function sortRequests(requests: readonly ManagedBillRequest[], sort: RequestSort): ManagedBillRequest[] {
   const key = (request: ManagedBillRequest) => (sort === "longest-wait" ? request.waitMinutes : request.total);
   return [...requests].sort(
-    (a, b) => Number(isActiveRequest(b)) - Number(isActiveRequest(a)) || key(b) - key(a),
+    (a, b) =>
+      Number(isActiveRequest(b)) - Number(isActiveRequest(a)) ||
+      key(b) - key(a) ||
+      a.requestedAt.localeCompare(b.requestedAt) ||
+      a.id.localeCompare(b.id),
   );
 }
 
@@ -139,6 +145,19 @@ export function formatRequestTotal(request: Pick<ManagedBillRequest, "total">): 
 
 export function getPaymentLabel(method: BillPaymentMethod): string {
   return getRequestModeShortLabel(method);
+}
+
+export function getPaymentVerificationLabel(verification: PaymentVerification): string {
+  switch (verification.status) {
+    case "not-required":
+      return "No requiere verificación";
+    case "awaiting-receipt":
+      return "Esperando comprobante";
+    case "pending":
+      return "Pago por verificar";
+    case "verified":
+      return "Pago verificado";
+  }
 }
 
 const STATUS_BADGES: Record<BillRequestStatus, { label: string; tone: RequestTone }> = {
@@ -190,23 +209,58 @@ export function getAssigneeLabel(request: ManagedBillRequest): string {
   return request.assignee ?? "Sin asignar";
 }
 
-export type RowAction = "mark-attending" | "view-detail";
+export type RowAction = "mark-attending" | "verify-payment" | "finalize" | "view-detail";
 
 export function canMarkAttending(request: ManagedBillRequest): boolean {
   return request.status === "pending";
 }
 
-/** "Row Actions": pending rows add "Marcar en atención" before "Ver detalle". */
+/** Actions follow the next valid operational transition and always retain detail access. */
 export function getRowActions(request: ManagedBillRequest): RowAction[] {
-  return canMarkAttending(request) ? ["mark-attending", "view-detail"] : ["view-detail"];
+  if (canMarkAttending(request)) return ["mark-attending", "view-detail"];
+  if (request.status === "attending" && request.paymentVerification.status === "pending") {
+    return ["verify-payment", "view-detail"];
+  }
+  if (request.status === "attending" && request.paymentVerification.status !== "awaiting-receipt") {
+    return ["finalize", "view-detail"];
+  }
+  return ["view-detail"];
 }
 
 /**
- * "Marcar en atención": a pending request moves to attention, assigned to the staff member who
- * took it. Closing the table requires authorization ("El cierre de mesa requiere autorización"),
- * so there is no transition to finalized here. Other statuses are returned unchanged.
+ * "Marcar en atención": a pending request moves to attention and records the responsible staff
+ * member. Other statuses are returned unchanged.
  */
-export function markAttending(request: ManagedBillRequest, staffName: string): ManagedBillRequest {
+export function markAttending(request: ManagedBillRequest, staffName: string, at: string): ManagedBillRequest {
   if (!canMarkAttending(request)) return request;
-  return { ...request, status: "attending", assignee: staffName };
+  return {
+    ...request,
+    status: "attending",
+    assignee: staffName,
+    history: [...request.history, { kind: "attending", at, by: staffName }],
+  };
+}
+
+export function verifyPayment(request: ManagedBillRequest, staffName: string, at: string): ManagedBillRequest {
+  if (request.status !== "attending" || request.paymentVerification.status !== "pending") return request;
+  return {
+    ...request,
+    paymentVerification: {
+      status: "verified",
+      reportedAt: request.paymentVerification.reportedAt,
+      verifiedAt: at,
+      verifiedBy: staffName,
+    },
+    history: [...request.history, { kind: "payment-verified", at, by: staffName }],
+  };
+}
+
+export function finalizeRequest(request: ManagedBillRequest, staffName: string, at: string): ManagedBillRequest {
+  if (request.status !== "attending") return request;
+  if (request.paymentPreference === "transfer" && request.paymentVerification.status !== "verified") return request;
+  return {
+    ...request,
+    status: "finalized",
+    history: [...request.history, { kind: "finalized", at, by: staffName }],
+  };
 }

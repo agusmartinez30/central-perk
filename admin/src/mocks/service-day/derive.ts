@@ -145,19 +145,55 @@ export function getOrdersBoard(day: ServiceDay): OrdersBoard {
 function deriveBillRequest(day: ServiceDay, request: ServiceBillRequest): ManagedBillRequest {
   const session = getSession(day, request.sessionId);
   const orders = getSessionOrders(day, session.id);
+  const table = day.tables.find((candidate) => candidate.number === session.tableNumber);
+  const spaceName = day.spaces.find((space) => space.id === table?.spaceId)?.name ?? "Sin espacio";
+  const consumptionMap = orders
+    .flatMap((order) => order.items)
+    .reduce<Map<string, ManagedBillRequest["consumptions"][number]>>((items, item) => {
+      const current = items.get(item.productId);
+      const quantity = (current?.quantity ?? 0) + item.quantity;
+      items.set(item.productId, {
+        id: item.productId,
+        name: item.name,
+        quantity,
+        unitPrice: item.unitPrice,
+        total: quantity * item.unitPrice,
+      });
+      return items;
+    }, new Map());
+  const consumptions = Array.from(consumptionMap.values());
+  const receipt = request.history.find((event) => event.kind === "receipt-reported");
+  const verification = request.history.find((event) => event.kind === "payment-verified");
+  const paymentVerification: ManagedBillRequest["paymentVerification"] =
+    request.paymentPreference !== "transfer"
+      ? { status: "not-required" }
+      : verification
+        ? {
+            status: "verified",
+            ...(receipt && { reportedAt: receipt.at }),
+            verifiedAt: verification.at,
+            verifiedBy: verification.by ?? request.assignee ?? "Sin asignar",
+          }
+        : receipt
+          ? { status: "pending", reportedAt: receipt.at }
+          : { status: "awaiting-receipt" };
   const until = request.status === "finalized" ? (getCollection(day, session.id)?.time ?? day.now) : day.now;
   return {
     id: request.id,
     tableNumber: session.tableNumber,
+    spaceName,
     customer: request.customer,
     requestedAt: request.requestedAt,
     waitMinutes: minutesBetween(request.requestedAt, until),
     paymentPreference: request.paymentPreference,
-    total: orders.reduce((sum, order) => sum + getOrderTotal(order), 0),
+    total: consumptions.reduce((sum, item) => sum + item.total, 0),
+    consumptions,
     confirmedOrders: orders.length,
     ordersInPreparation: orders.filter(isUnfinished).length,
     status: request.status,
     ...(request.assignee && { assignee: request.assignee }),
+    paymentVerification,
+    history: request.history.map((event) => ({ ...event })),
   };
 }
 

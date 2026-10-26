@@ -1,7 +1,7 @@
 import type { ManagedBillRequest } from "@/mocks/types";
-import { markAttending } from "./bill-requests-view";
+import { finalizeRequest, isActiveRequest, markAttending, verifyPayment } from "./bill-requests-view";
 
-/** In-memory state of 04: the requests and the one open in the quick-detail drawer. */
+/** In-memory state of 04: the requests and the one shown in the persistent detail panel. */
 export type BillRequestsState = {
   requests: ManagedBillRequest[];
   selectedId: string | null;
@@ -10,12 +10,18 @@ export type BillRequestsState = {
 export type BillRequestsAction =
   | { type: "open-detail"; id: string }
   | { type: "close-detail" }
-  | { type: "mark-attending"; id: string; staffName: string };
+  | { type: "mark-attending"; id: string; staffName: string; at?: string }
+  | { type: "verify-payment"; id: string; staffName: string; at: string }
+  | { type: "finalize-request"; id: string; staffName: string; at: string };
 
 export function createBillRequestsState(
   requests: ManagedBillRequest[],
-  { selectedId = null }: Partial<Pick<BillRequestsState, "selectedId">> = {},
+  options: Partial<Pick<BillRequestsState, "selectedId">> = {},
 ): BillRequestsState {
+  const selectedId =
+    "selectedId" in options
+      ? (options.selectedId ?? null)
+      : (requests.find(isActiveRequest)?.id ?? requests[0]?.id ?? null);
   return { requests, selectedId };
 }
 
@@ -28,7 +34,7 @@ export function getSelectedRequest(state: BillRequestsState): ManagedBillRequest
 }
 
 /**
- * Pure transitions of the bill requests screen. "Marcar en atención" keeps the drawer open so
+ * Pure transitions of the bill requests screen. Contextual actions keep the detail panel open so
  * it reflects the new status and assignee.
  */
 export function billRequestsReducer(state: BillRequestsState, action: BillRequestsAction): BillRequestsState {
@@ -41,7 +47,23 @@ export function billRequestsReducer(state: BillRequestsState, action: BillReques
       return {
         ...state,
         requests: state.requests.map((request) =>
-          request.id === action.id ? markAttending(request, action.staffName) : request,
+          request.id === action.id
+            ? markAttending(request, action.staffName, action.at ?? request.history.at(-1)?.at ?? request.requestedAt)
+            : request,
+        ),
+      };
+    case "verify-payment":
+      return {
+        ...state,
+        requests: state.requests.map((request) =>
+          request.id === action.id ? verifyPayment(request, action.staffName, action.at) : request,
+        ),
+      };
+    case "finalize-request":
+      return {
+        ...state,
+        requests: state.requests.map((request) =>
+          request.id === action.id ? finalizeRequest(request, action.staffName, action.at) : request,
         ),
       };
   }

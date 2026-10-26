@@ -152,10 +152,42 @@ export type OrdersBoard = {
 /** Stage of a bill request in 04 · Solicitudes de cuenta; finalized requests are paid and closed. */
 export type BillRequestStatus = "pending" | "attending" | "finalized";
 
+export type BillRequestHistoryKind =
+  | "requested"
+  | "attending"
+  | "receipt-reported"
+  | "payment-verified"
+  | "finalized";
+
+export type BillRequestHistoryEvent = {
+  kind: BillRequestHistoryKind;
+  /** Local "HH:MM" time. */
+  at: string;
+  /** Staff member responsible for operational transitions. */
+  by?: string;
+};
+
+export type PaymentVerification =
+  | { status: "not-required" }
+  | { status: "awaiting-receipt" }
+  | { status: "pending"; reportedAt: string }
+  | { status: "verified"; reportedAt?: string; verifiedAt: string; verifiedBy: string };
+
+export type BillRequestConsumption = {
+  /** Stable catalogue product id. */
+  id: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+};
+
 export type ManagedBillRequest = {
   /** Request code shown as "#SC-010". */
   id: string;
   tableNumber: number;
+  /** 09A space containing the table. */
+  spaceName: string;
   /** Customer who asked for the bill. */
   customer: string;
   /** Local "HH:MM" time the bill was requested. */
@@ -165,6 +197,8 @@ export type ManagedBillRequest = {
   paymentPreference: BillPaymentMethod;
   /** Shared account total in ARS. */
   total: number;
+  /** Account lines aggregated by catalogue product. */
+  consumptions: BillRequestConsumption[];
   /** Orders confirmed for the table's shared account. */
   confirmedOrders: number;
   /** Confirmed orders the kitchen has not finished yet. */
@@ -172,6 +206,8 @@ export type ManagedBillRequest = {
   status: BillRequestStatus;
   /** Staff member attending the request ("Responsable"); unset while pending. */
   assignee?: string;
+  paymentVerification: PaymentVerification;
+  history: BillRequestHistoryEvent[];
 };
 
 export type BillRequestsBoard = {

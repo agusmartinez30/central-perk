@@ -210,9 +210,9 @@ const TODAY_ORDERS: ServiceOrder[] = [
 
 /** 04: Mesa 10, 05 and 07 wait (10A), Mesa 12 and 04 are in attention, Mesa 09 was closed at 12:24. */
 const BILL_REQUESTS: ServiceBillRequest[] = [
-  { id: "SC-010", sessionId: MESA_10.id, customer: "Lucía", requestedAt: "14:24", paymentPreference: "transfer", status: "pending" },
-  { id: "SC-005", sessionId: MESA_05.id, customer: "Joaquín", requestedAt: "14:30", paymentPreference: "table", status: "pending" },
-  { id: "SC-007", sessionId: MESA_07.id, customer: "Julieta", requestedAt: "14:35", paymentPreference: "register", status: "pending" },
+  { id: "SC-010", sessionId: MESA_10.id, customer: "Lucía", requestedAt: "14:24", paymentPreference: "transfer", status: "pending", history: [{ kind: "requested", at: "14:24" }] },
+  { id: "SC-005", sessionId: MESA_05.id, customer: "Joaquín", requestedAt: "14:30", paymentPreference: "table", status: "pending", history: [{ kind: "requested", at: "14:30" }] },
+  { id: "SC-007", sessionId: MESA_07.id, customer: "Julieta", requestedAt: "14:35", paymentPreference: "register", status: "pending", history: [{ kind: "requested", at: "14:35" }] },
   {
     id: "SC-012",
     sessionId: MESA_12.id,
@@ -221,6 +221,11 @@ const BILL_REQUESTS: ServiceBillRequest[] = [
     paymentPreference: "transfer",
     status: "attending",
     assignee: "María G.",
+    history: [
+      { kind: "requested", at: "14:37" },
+      { kind: "attending", at: "14:38", by: "María G." },
+      { kind: "receipt-reported", at: "14:41" },
+    ],
   },
   {
     id: "SC-004",
@@ -230,6 +235,10 @@ const BILL_REQUESTS: ServiceBillRequest[] = [
     paymentPreference: "table",
     status: "attending",
     assignee: "Martín A.",
+    history: [
+      { kind: "requested", at: "14:39" },
+      { kind: "attending", at: "14:40", by: "Martín A." },
+    ],
   },
   {
     id: "SC-009",
@@ -239,6 +248,11 @@ const BILL_REQUESTS: ServiceBillRequest[] = [
     paymentPreference: "register",
     status: "finalized",
     assignee: "María G.",
+    history: [
+      { kind: "requested", at: "12:15" },
+      { kind: "attending", at: "12:17", by: "María G." },
+      { kind: "finalized", at: "12:24", by: "María G." },
+    ],
   },
 ];
 

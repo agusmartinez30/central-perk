@@ -8,10 +8,12 @@ const valueOf = (state: typeof initial, id: string) =>
   getRequestMetrics(state.requests).find((metric) => metric.id === id)?.value;
 
 describe("billRequestsReducer", () => {
-  it("starts with no selection unless one is given", () => {
-    expect(getSelectedRequest(initial)).toBeNull();
+  it("selects the first active request by default and respects an explicit selection", () => {
+    expect(getSelectedRequest(initial)?.id).toBe("SC-010");
     const selected = createBillRequestsState(BILL_REQUESTS_BOARD.requests, { selectedId: "SC-010" });
     expect(getSelectedRequest(selected)?.tableNumber).toBe(10);
+    expect(createBillRequestsState(BILL_REQUESTS_BOARD.requests, { selectedId: null }).selectedId).toBeNull();
+    expect(createBillRequestsState([]).selectedId).toBeNull();
   });
 
   it("opens and closes the quick detail", () => {
@@ -26,11 +28,17 @@ describe("billRequestsReducer", () => {
 
   it("marks a pending request as attending, updating the metrics and the open detail", () => {
     const opened = billRequestsReducer(initial, { type: "open-detail", id: "SC-010" });
-    const next = billRequestsReducer(opened, { type: "mark-attending", id: "SC-010", staffName: "Sofía M." });
+    const next = billRequestsReducer(opened, {
+      type: "mark-attending",
+      id: "SC-010",
+      staffName: "Sofía M.",
+      at: "14:42",
+    });
     expect(getSelectedRequest(next)).toMatchObject({ status: "attending", assignee: "Sofía M." });
+    expect(getSelectedRequest(next)?.history.at(-1)).toEqual({ kind: "attending", at: "14:42", by: "Sofía M." });
     expect(valueOf(next, "pending")).toBe(2);
     expect(valueOf(next, "attending")).toBe(3);
-    expect(valueOf(next, "transfers")).toBe(2);
+    expect(valueOf(next, "transfers")).toBe(1);
     expect(initial.requests[0].status).toBe("pending");
   });
 
@@ -38,5 +46,30 @@ describe("billRequestsReducer", () => {
     const next = billRequestsReducer(initial, { type: "mark-attending", id: "SC-012", staffName: "Sofía M." });
     expect(next.requests.find((request) => request.id === "SC-012")?.assignee).toBe("María G.");
     expect(valueOf(next, "attending")).toBe(2);
+  });
+
+  it("verifies payment and finalizes through guarded contextual transitions", () => {
+    const verified = billRequestsReducer(initial, {
+      type: "verify-payment",
+      id: "SC-012",
+      staffName: "Sofía M.",
+      at: "14:42",
+    });
+    expect(verified.requests.find((request) => request.id === "SC-012")?.paymentVerification).toMatchObject({
+      status: "verified",
+      verifiedAt: "14:42",
+      verifiedBy: "Sofía M.",
+    });
+    expect(valueOf(verified, "transfers")).toBe(0);
+
+    const finalized = billRequestsReducer(verified, {
+      type: "finalize-request",
+      id: "SC-012",
+      staffName: "Sofía M.",
+      at: "14:43",
+    });
+    expect(finalized.requests.find((request) => request.id === "SC-012")?.status).toBe("finalized");
+    expect(valueOf(finalized, "attending")).toBe(1);
+    expect(valueOf(finalized, "finalized")).toBe(2);
   });
 });
