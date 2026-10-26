@@ -52,7 +52,7 @@ Staff need to prioritize bill requests, identify payment verification work, insp
   - Trigger evidence: the visual update spans multiple non-trivial screen, header, toolbar, table, tag, and state files.
   - Acceptance: at 1440×900 the screen has the compact header/metrics/toolbar, dense contextual table, persistent 362px panel, selected-row styling, and coherent empty/no-result states.
   - Checks: focused tests, lint, TypeScript, build, and runtime visual inspection.
-  - Evidence: compact 50px header, four 68px operational metrics, 46px toolbar, contextual table rows/actions, and the persistent non-modal 362px detail panel are wired to the BR-1 projection and reducer. The 72 focused tests, lint, TypeScript, and production build pass; component styling uses the documented structural verification exception because this repository has no jsdom/Testing Library boundary.
+  - Evidence: work-unit commit `3f6323e`; compact 50px header, four 68px operational metrics, 46px toolbar, contextual table rows/actions, and the persistent non-modal 362px detail panel are wired to the BR-1 projection and reducer. The 72 focused tests, lint, TypeScript, and production build pass; component styling uses the documented structural verification exception because this repository has no jsdom/Testing Library boundary.
 - [ ] **BR-3 — Verify the integrated workflow and accessibility**
   - Route: delegated direct verification.
   - Trigger evidence: full checks and browser-level behavior should not inflate the orchestrator context.
@@ -66,7 +66,7 @@ Staff need to prioritize bill requests, identify payment verification work, insp
 - Forecast: approximately 925–1,190 authored changed lines across three coherent work units, excluding generated files.
 - Chain strategy: keep every work-unit commit on `feat/bill-requests-optimized` and integrate the branch only after the feature is complete.
 - Reviewed boundary: branch point `8eb6d3f`.
-- Running authored lines: 460 from BR-1 commit `b6fd3f6`.
+- Running authored lines: 1,221 across BR-1 commit `b6fd3f6` (460) and BR-2 commit `3f6323e` (761).
 - PR slices: pending.
 
 ## Progress
