@@ -46,13 +46,13 @@ Staff need to prioritize bill requests, identify payment verification work, insp
   - Trigger evidence: test-first domain work spans multiple non-trivial projection, helper, fixture, and test files.
   - Acceptance: metrics, status/payment filters, sorting, default selection, consumption detail, timeline, and contextual actions are deterministic and covered by focused tests.
   - Checks: focused bill-request view/state tests and service-day invariant tests.
-  - Evidence: work-unit commit `b6fd3f6`; RED observed 15 focused failures before implementation; GREEN/REFACTOR observed 72 focused tests passing. `npm run lint` and `npx tsc --noEmit` passed. Canonical service-day identities remain unchanged while request history now derives payment verification, consumption, and guarded workflow context.
-- [ ] **BR-2 — Implement the optimized operational board**
+  - Evidence: work-unit commit `b6fd3f6`; RED observed 15 focused failures before implementation; GREEN/REFACTOR observed 72 focused tests passing. `npm run lint` and `npx tsc --noEmit` passed. Canonical service-day identities remain unchanged while request history now derives payment verification, consumption, and guarded workflow context. RDD assessed `medium` with `slice_budget_reached`; native review remained unavailable at intended-untracked selection, so writer verification plus the parent reducer-test spot check is the verification of record and the reviewed boundary remains `8eb6d3f`.
+- [x] **BR-2 — Implement the optimized operational board**
   - Route: delegated direct.
   - Trigger evidence: the visual update spans multiple non-trivial screen, header, toolbar, table, tag, and state files.
   - Acceptance: at 1440×900 the screen has the compact header/metrics/toolbar, dense contextual table, persistent 362px panel, selected-row styling, and coherent empty/no-result states.
   - Checks: focused tests, lint, TypeScript, build, and runtime visual inspection.
-  - Evidence: pending.
+  - Evidence: compact 50px header, four 68px operational metrics, 46px toolbar, contextual table rows/actions, and the persistent non-modal 362px detail panel are wired to the BR-1 projection and reducer. The 72 focused tests, lint, TypeScript, and production build pass; component styling uses the documented structural verification exception because this repository has no jsdom/Testing Library boundary.
 - [ ] **BR-3 — Verify the integrated workflow and accessibility**
   - Route: delegated direct verification.
   - Trigger evidence: full checks and browser-level behavior should not inflate the orchestrator context.
@@ -75,4 +75,4 @@ Staff need to prioritize bill requests, identify payment verification work, insp
 - Reference and current implementation mapped with path-level evidence.
 - User selected a single feature branch for all work-unit commits.
 - BR-1 implementation and verification completed with canonical service-day invariants preserved.
-- Next step: implement BR-2 against the extended projection and reducer API.
+- Next step: run BR-3 integrated workflow, accessibility, and runtime visual verification.

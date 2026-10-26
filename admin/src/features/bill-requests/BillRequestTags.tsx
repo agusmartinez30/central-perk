@@ -1,7 +1,14 @@
 import clsx from "clsx";
 import { Clock3, CreditCard, Landmark, Store, type LucideIcon } from "lucide-react";
-import type { BillPaymentMethod, ManagedBillRequest } from "@/mocks/types";
-import { formatWait, getPaymentLabel, getStatusBadge, getWaitTone, type RequestTone } from "./bill-requests-view";
+import type { BillPaymentMethod, ManagedBillRequest, PaymentVerification } from "@/mocks/types";
+import {
+  formatWait,
+  getPaymentLabel,
+  getPaymentVerificationLabel,
+  getStatusBadge,
+  getWaitTone,
+  type RequestTone,
+} from "./bill-requests-view";
 
 /** Wash, text and dot classes of each request tone. */
 export const REQUEST_TONE_CLASSES: Record<RequestTone, { wash: string; text: string; dot: string }> = {
@@ -19,6 +26,22 @@ export function StatusPill({ status }: { status: ManagedBillRequest["status"] })
     <span className={clsx("inline-flex h-[26px] w-fit shrink-0 items-center gap-1.5 rounded-[13px] px-2.5", classes.wash)}>
       <span aria-hidden="true" className={clsx("size-1.5 shrink-0 rounded-full", classes.dot)} />
       <span className={clsx("text-[11px] font-bold whitespace-nowrap", classes.text)}>{label}</span>
+    </span>
+  );
+}
+
+/** Payment verification keeps its own textual state instead of relying on color alone. */
+export function PaymentVerificationPill({ verification }: { verification: PaymentVerification }) {
+  const danger = verification.status === "pending";
+  const success = verification.status === "verified";
+  return (
+    <span
+      className={clsx(
+        "inline-flex h-[26px] w-fit shrink-0 items-center rounded-[13px] px-2.5 text-[9px] font-extrabold whitespace-nowrap uppercase",
+        danger ? "bg-danger-bg text-danger" : success ? "bg-success-bg text-success" : "bg-sand text-muted",
+      )}
+    >
+      {getPaymentVerificationLabel(verification)}
     </span>
   );
 }
