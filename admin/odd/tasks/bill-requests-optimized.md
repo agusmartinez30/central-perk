@@ -53,12 +53,12 @@ Staff need to prioritize bill requests, identify payment verification work, insp
   - Acceptance: at 1440×900 the screen has the compact header/metrics/toolbar, dense contextual table, persistent 362px panel, selected-row styling, and coherent empty/no-result states.
   - Checks: focused tests, lint, TypeScript, build, and runtime visual inspection.
   - Evidence: work-unit commit `3f6323e`; compact 50px header, four 68px operational metrics, 46px toolbar, contextual table rows/actions, and the persistent non-modal 362px detail panel are wired to the BR-1 projection and reducer. The 72 focused tests, lint, TypeScript, and production build pass; component styling uses the documented structural verification exception because this repository has no jsdom/Testing Library boundary. RDD assessed `medium` with `slice_budget_reached`; native review again remained unavailable at intended-untracked selection, so writer verification plus parent focused tests and TypeScript spot checks are the verification of record.
-- [ ] **BR-3 — Verify the integrated workflow and accessibility**
+- [x] **BR-3 — Verify the integrated workflow and accessibility**
   - Route: delegated direct verification.
   - Trigger evidence: full checks and browser-level behavior should not inflate the orchestrator context.
   - Acceptance: selection and contextual actions update rows, metrics, timeline, and panel coherently; keyboard controls retain visible focus and semantic labels.
   - Checks: full test suite, lint, typecheck, production build, and `/bill-requests?state=selected|empty|no-results` runtime checks.
-  - Evidence: pending.
+  - Evidence: full candidate and correction commit `95fff6c` validated with 586 tests, lint, TypeScript, production build, and `git diff --check` passing. Production runtime smoke loaded `/bill-requests` plus `selected`, `empty`, and `no-results` states. The validator found no remaining severity findings after the displayed-count and focus-visible correction. Browser screenshot/DOM capture was unavailable after timing out, so exact 1440×900 pixel proof is explicitly skipped; source dimensions and semantic structure were verified instead.
 
 ## Delivery
 
@@ -66,7 +66,7 @@ Staff need to prioritize bill requests, identify payment verification work, insp
 - Forecast: approximately 925–1,190 authored changed lines across three coherent work units, excluding generated files.
 - Chain strategy: keep every work-unit commit on `feat/bill-requests-optimized` and integrate the branch only after the feature is complete.
 - Reviewed boundary: branch point `8eb6d3f`.
-- Running authored lines: 1,221 across BR-1 commit `b6fd3f6` (460) and BR-2 commit `3f6323e` (761).
+- Running authored lines: 1,240 across BR-1 commit `b6fd3f6` (460), BR-2 commit `3f6323e` (761), and correction commit `95fff6c` (19).
 - PR slices: pending.
 
 ## Progress
@@ -75,4 +75,6 @@ Staff need to prioritize bill requests, identify payment verification work, insp
 - Reference and current implementation mapped with path-level evidence.
 - User selected a single feature branch for all work-unit commits.
 - BR-1 implementation and verification completed with canonical service-day invariants preserved.
-- Next step: run BR-3 integrated workflow, accessibility, and runtime visual verification.
+- BR-2 implementation and verification completed with the persistent operational board.
+- BR-3 verification and one bounded correction completed; exact 1440×900 screenshot proof remains unavailable.
+- Next step: user visual acceptance, then integrate the feature branch when requested.
