@@ -46,7 +46,7 @@ Staff need to prioritize bill requests, identify payment verification work, insp
   - Trigger evidence: test-first domain work spans multiple non-trivial projection, helper, fixture, and test files.
   - Acceptance: metrics, status/payment filters, sorting, default selection, consumption detail, timeline, and contextual actions are deterministic and covered by focused tests.
   - Checks: focused bill-request view/state tests and service-day invariant tests.
-  - Evidence: RED observed 15 focused failures before implementation; GREEN/REFACTOR observed 72 focused tests passing. `npm run lint` and `npx tsc --noEmit` passed. Canonical service-day identities remain unchanged while request history now derives payment verification, consumption, and guarded workflow context. Work-unit commit is pending the parent transaction controller.
+  - Evidence: work-unit commit `b6fd3f6`; RED observed 15 focused failures before implementation; GREEN/REFACTOR observed 72 focused tests passing. `npm run lint` and `npx tsc --noEmit` passed. Canonical service-day identities remain unchanged while request history now derives payment verification, consumption, and guarded workflow context.
 - [ ] **BR-2 — Implement the optimized operational board**
   - Route: delegated direct.
   - Trigger evidence: the visual update spans multiple non-trivial screen, header, toolbar, table, tag, and state files.
@@ -66,7 +66,7 @@ Staff need to prioritize bill requests, identify payment verification work, insp
 - Forecast: approximately 925–1,190 authored changed lines across three coherent work units, excluding generated files.
 - Chain strategy: keep every work-unit commit on `feat/bill-requests-optimized` and integrate the branch only after the feature is complete.
 - Reviewed boundary: branch point `8eb6d3f`.
-- Running authored lines: 460 projected for BR-1; parent-owned work-unit commit pending.
+- Running authored lines: 460 from BR-1 commit `b6fd3f6`.
 - PR slices: pending.
 
 ## Progress
@@ -75,4 +75,4 @@ Staff need to prioritize bill requests, identify payment verification work, insp
 - Reference and current implementation mapped with path-level evidence.
 - User selected a single feature branch for all work-unit commits.
 - BR-1 implementation and verification completed with canonical service-day invariants preserved.
-- Next step: create the parent-owned BR-1 work-unit commit, then implement BR-2 against the extended projection and reducer API.
+- Next step: implement BR-2 against the extended projection and reducer API.
