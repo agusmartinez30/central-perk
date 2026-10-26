@@ -53,7 +53,7 @@ lint, tsc, vitest, build.
 - P3 review: RDD assessed medium (`slice_budget_reached`, base 15b2221); user declined for this candidate. Next assess base: c1deb8a.
 - P4 done (route: delegated writer; 3 files +238/−61 plus new `product-preview.ts` + test): 07C header (breadcrumb, "Vista previa del producto", subtitle, "Volver a editar", "Versión publicada"/"Cambios pendientes" toggle via tested `getProductPreviewView`), admin summary (thumb, badge, SKU, facts grid, "Personalizaciones visibles" with summary pill and group blocks, info note), "Experiencia del cliente" mobile viewport (`CustomerProductPreview variant="viewport"`, shared with 07B). Test-first: RED new suite missing (6 tests), GREEN 6/6. Checks: vitest 645/645, lint OK, tsc OK, build OK. Browser: version toggle, Ampliar ↔ Volver a editar round trip keeps the draft. Screenshots (scratchpad): `prod-preview-pending`, `prod-preview-published`, `prod-preview-clean`, `prod-preview-07b`.
 - P4 deviations: "Cambios pendientes" disabled without changes ("Versión publicada" disabled for never-saved products); total follows `preview-order.ts` ($5.400 vs export's inconsistent $4.300), only required single groups preselect a default; canonical data; group titles as phone headings; lucide icons in the viewport top bar; real scroll instead of the fake indicator; 02/03 type scale; `EditorView.previewTitle` now unused by the UI (kept, covered by a test).
-- P4 review: pending (not yet assessed; base c1deb8a).
+- P4 review: RDD assessed medium (`slice_budget_reached`, base c1deb8a); user declined for this candidate.
 
 ## Next step
-Assess/review P4 candidate (base c1deb8a), then the user decides merge to `main`.
+User decides merge to `main` (push/PR/merge are user decisions).
