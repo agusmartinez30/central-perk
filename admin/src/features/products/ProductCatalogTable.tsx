@@ -1,12 +1,25 @@
+"use client";
+
 import clsx from "clsx";
-import { Archive, ArchiveRestore, Copy, Pencil, type LucideIcon } from "lucide-react";
+import { Archive, ArchiveRestore, Copy, Pencil, SearchX } from "lucide-react";
+import { useState } from "react";
+import { Pagination } from "@/shared/ui";
 import type { ProductRowView } from "./products-state";
-import { AvailabilitySwitch, ProductImage, PublicationStatus } from "./ProductTags";
+import { ProductRowMenu, type RowMenuItem } from "./ProductRowMenu";
+import { ProductImage } from "./ProductTags";
 
 type ProductCatalogTableProps = {
   rows: readonly ProductRowView[];
-  /** "7 productos · Ordenados por nombre". */
+  /** "13 productos". */
   countLabel: string;
+  /** "Mostrando todos · Orden: relevancia comercial". */
+  summaryLabel: string;
+  page: number;
+  pageCount: number;
+  /** No product matches the search and filters. */
+  empty: boolean;
+  onPageChange: (page: number) => void;
+  onClearFilters: () => void;
   onEdit: (id: string) => void;
   onDuplicate: (id: string) => void;
   onArchive: (id: string) => void;
@@ -14,135 +27,212 @@ type ProductCatalogTableProps = {
   onAvailabilityChange: (id: string, available: boolean) => void;
 };
 
-/** Column widths of "Catalog Table Header"; "Acciones" takes the rest of the 1164px row. */
+/** "Table Header" columns of the 1164px table, widths from the 07A export. */
 const COLUMNS = [
-  { label: "Imagen", width: "w-[72px]" },
-  { label: "Producto", width: "w-[190px]" },
-  { label: "Categoría", width: "w-[130px]" },
-  { label: "Precio base", width: "w-[110px]" },
-  { label: "Publicación", width: "w-[130px]" },
-  { label: "Disponibilidad", width: "w-[150px]" },
-  { label: "Acciones", width: "" },
-];
+  { label: "Producto", width: "w-[400px]", align: "text-left" },
+  { label: "Precio", width: "w-[110px]", align: "text-right" },
+  { label: "Momentos", width: "w-[150px]", align: "text-left" },
+  { label: "Publicación", width: "w-[140px]", align: "text-left" },
+  { label: "Disponibilidad", width: "w-[170px]", align: "text-left" },
+  { label: "Acciones", width: "", align: "text-right" },
+] as const;
 
-type RowActionProps = {
-  label: string;
-  /** Accessible name with the product, e.g. "Duplicar Cappuccino". */
-  ariaLabel: string;
-  icon: LucideIcon;
-  primary?: boolean;
-  onClick: () => void;
+const CELL = "px-3 align-middle";
+
+const PUBLICATION_TONES: Record<ProductRowView["status"], string> = {
+  published: "bg-success-bg text-success",
+  draft: "bg-sand text-muted",
+  archived: "bg-warning-bg text-warning",
 };
 
-/** "Product Action · …": 32px button, brand-filled for "Editar". */
-function RowAction({ label, ariaLabel, icon: Icon, primary = false, onClick }: RowActionProps) {
+/** "Availability": 30×18 switch with its state line and, after a failed save, the inline error. */
+function RowAvailability({ row, onChange }: { row: ProductRowView; onChange: (available: boolean) => void }) {
+  const pending = row.availabilityState === "pending";
+  const archived = row.status === "archived";
   return (
-    <button
-      type="button"
-      aria-label={ariaLabel}
-      onClick={onClick}
-      className={clsx(
-        "flex h-8 items-center gap-[5px] rounded-[7px] px-[9px] outline-1 -outline-offset-[0.5px]",
-        primary ? "bg-brand text-white outline-brand hover:bg-brand/92" : "bg-surface text-ink outline-line hover:bg-cream",
+    <div className="flex flex-col items-start gap-[3px]">
+      <span className="inline-flex items-center gap-[7px]">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={row.available}
+          aria-label={`Disponibilidad de ${row.name}`}
+          aria-busy={pending || undefined}
+          disabled={archived || pending}
+          onClick={() => onChange(!row.available)}
+          className={clsx(
+            "flex h-[18px] w-[30px] shrink-0 items-center rounded-[9px] p-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
+            row.available ? "justify-end bg-brand" : "justify-start bg-[#D3CFC6]",
+            archived && "cursor-not-allowed opacity-50",
+            pending && "cursor-progress",
+          )}
+        >
+          <span aria-hidden="true" className="size-3.5 rounded-full bg-surface" />
+        </button>
+        <span
+          aria-hidden="true"
+          className={clsx(
+            "text-[11px] font-semibold whitespace-nowrap",
+            pending ? "text-brand" : row.availabilityError ? "text-warning" : "text-ink",
+          )}
+        >
+          {row.availabilityLabel}
+        </span>
+      </span>
+      {row.availabilityError && (
+        <span className="text-[11px] font-bold whitespace-nowrap text-danger">{row.availabilityError}</span>
       )}
-    >
-      <Icon size={12} aria-hidden="true" className="shrink-0" />
-      <span className="text-[11px] font-bold whitespace-nowrap">{label}</span>
-    </button>
+    </div>
   );
 }
 
-const CELL = "px-2.5 align-middle";
+function EmptyRows({ onClearFilters }: { onClearFilters: () => void }) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
+      <SearchX size={28} aria-hidden="true" className="text-muted" />
+      <p className="text-[14px] font-bold text-ink">Sin productos para estos filtros</p>
+      <p className="max-w-[360px] text-[12px] text-muted">Probá con otra búsqueda o limpiá los filtros.</p>
+      <button
+        type="button"
+        onClick={onClearFilters}
+        className="mt-1 flex h-[34px] items-center rounded-nav px-3 text-[11px] font-bold text-ink outline-1 -outline-offset-[0.5px] outline-line hover:bg-cream focus-visible:outline-2 focus-visible:outline-brand"
+      >
+        Limpiar filtros
+      </button>
+    </div>
+  );
+}
 
 /**
- * "Product Catalog Table": sticky header, one 65.5px "Producto · …" row per product (the body
- * scrolls when they do not fit) and the "Catalog Table Footer".
+ * "Products Table · Commerce": sticky header, one 65.5px row per product of the current page,
+ * "Editar" plus a "More Actions" menu per row, and the "Commerce Footer" with the pagination.
  */
 export function ProductCatalogTable({
   rows,
   countLabel,
+  summaryLabel,
+  page,
+  pageCount,
+  empty,
+  onPageChange,
+  onClearFilters,
   onEdit,
   onDuplicate,
   onArchive,
   onRestore,
   onAvailabilityChange,
 }: ProductCatalogTableProps) {
+  const [menuRowId, setMenuRowId] = useState<string | null>(null);
+
+  const menuItems = (row: ProductRowView): RowMenuItem[] => [
+    { label: "Duplicar", icon: Copy, onSelect: () => onDuplicate(row.id) },
+    row.status === "archived"
+      ? { label: "Restaurar", icon: ArchiveRestore, onSelect: () => onRestore(row.id) }
+      : { label: "Archivar", icon: Archive, onSelect: () => onArchive(row.id) },
+  ];
+
   return (
     <section
       aria-label="Productos"
-      className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-card bg-surface outline-1 -outline-offset-[0.5px] outline-line"
+      className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[10px] bg-surface outline-1 -outline-offset-[0.5px] outline-line"
     >
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <table className="w-full table-fixed border-collapse text-left">
-          <thead className="sticky top-0 z-[1] bg-sand">
-            <tr className="h-10">
+      <div className="min-h-0 shrink overflow-y-auto">
+        <table className="w-full table-fixed border-collapse">
+          <thead className="sticky top-0 z-[1] bg-[#F6F4EF]">
+            <tr className="h-[38px]">
               {COLUMNS.map((column) => (
                 <th
                   key={column.label}
                   scope="col"
-                  className={clsx(CELL, column.width, "text-[11px] font-bold whitespace-nowrap text-muted")}
+                  className={clsx(
+                    CELL,
+                    column.width,
+                    column.align,
+                    "text-[11px] font-bold tracking-[0.7px] whitespace-nowrap text-muted uppercase",
+                  )}
                 >
                   {column.label}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
-            {rows.map((row) => {
-              const archived = row.status === "archived";
-              return (
-                <tr key={row.id} className="h-[65.5px] border-b border-line">
-                  <td className={CELL}>
-                    <ProductImage src={row.image} alt={row.name} sizes="44px" className="size-11 rounded-nav" />
-                  </td>
-                  <th scope="row" className={clsx(CELL, "truncate text-[13px] font-bold text-ink")}>
-                    {row.name}
-                  </th>
-                  <td className={clsx(CELL, "truncate text-[12px] font-semibold text-muted")}>{row.categoryLabel}</td>
-                  <td className={clsx(CELL, "text-[13px] font-bold whitespace-nowrap text-ink")}>{row.price}</td>
-                  <td className={CELL}>
-                    <PublicationStatus status={row.status} label={row.statusLabel} />
-                  </td>
-                  <td className={CELL}>
-                    <AvailabilitySwitch
-                      available={row.available}
-                      label={`Disponibilidad de ${row.name}`}
-                      disabled={archived}
-                      onChange={(available) => onAvailabilityChange(row.id, available)}
-                    />
-                  </td>
-                  <td className={CELL}>
-                    <div className="flex items-center gap-1.5">
-                      <RowAction label="Editar" ariaLabel={`Editar ${row.name}`} icon={Pencil} primary onClick={() => onEdit(row.id)} />
-                      <RowAction label="Duplicar" ariaLabel={`Duplicar ${row.name}`} icon={Copy} onClick={() => onDuplicate(row.id)} />
-                      {archived ? (
-                        <RowAction
-                          label="Restaurar"
-                          ariaLabel={`Restaurar ${row.name}`}
-                          icon={ArchiveRestore}
-                          onClick={() => onRestore(row.id)}
+          {!empty && (
+            <tbody>
+              {rows.map((row) => {
+                const menuOpen = menuRowId === row.id;
+                return (
+                  <tr
+                    key={row.id}
+                    className={clsx(
+                      "h-[65.5px] border-b border-[#E8E5DF]",
+                      menuOpen ? "bg-[#F1F4FF] shadow-[inset_3px_0_0_#2F45AD]" : "bg-surface",
+                      row.status === "archived" && "opacity-[0.92]",
+                    )}
+                  >
+                    <th scope="row" className={clsx(CELL, "text-left font-normal")}>
+                      <span className="flex items-center gap-3">
+                        <ProductImage src={row.image} alt={row.name} sizes="56px" className="size-14 rounded-[10px]" />
+                        <span className="flex min-w-0 flex-col gap-1">
+                          <span className="truncate text-[13px] font-bold text-ink">{row.name}</span>
+                          <span className="truncate text-[11px] text-muted">{row.metaLabel}</span>
+                        </span>
+                      </span>
+                    </th>
+                    <td className={clsx(CELL, "text-right text-[13px] font-bold whitespace-nowrap text-ink")}>{row.price}</td>
+                    <td title={row.momentsLabel} className={clsx(CELL, "truncate text-[12px] font-medium text-muted")}>
+                      {row.momentsLabel}
+                    </td>
+                    <td className={CELL}>
+                      <span
+                        className={clsx(
+                          "inline-flex h-[23px] items-center rounded-[12px] px-2 text-[11px] font-bold whitespace-nowrap",
+                          PUBLICATION_TONES[row.status],
+                        )}
+                      >
+                        {row.statusLabel}
+                      </span>
+                    </td>
+                    <td className={CELL}>
+                      <RowAvailability row={row} onChange={(available) => onAvailabilityChange(row.id, available)} />
+                    </td>
+                    <td className="px-2.5 align-middle">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          aria-label={`Editar ${row.name}`}
+                          onClick={() => onEdit(row.id)}
+                          className="flex h-[30px] items-center gap-[5px] rounded-nav bg-brand-wash px-2.5 text-brand hover:bg-brand/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                        >
+                          <Pencil size={12} aria-hidden="true" className="shrink-0" />
+                          <span className="text-[11px] font-bold whitespace-nowrap">Editar</span>
+                        </button>
+                        <ProductRowMenu
+                          label={`Más acciones para ${row.name}`}
+                          items={menuItems(row)}
+                          open={menuOpen}
+                          onOpenChange={(open) => setMenuRowId(open ? row.id : null)}
                         />
-                      ) : (
-                        <RowAction label="Archivar" ariaLabel={`Archivar ${row.name}`} icon={Archive} onClick={() => onArchive(row.id)} />
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          )}
         </table>
       </div>
-      <footer className="flex h-12 shrink-0 items-center justify-between border-t border-line px-3">
-        <p role="status" className="text-[11px] font-semibold whitespace-nowrap text-muted">
-          {countLabel}
+      {empty && <EmptyRows onClearFilters={onClearFilters} />}
+      <footer
+        className={clsx(
+          "flex min-h-12 w-full items-center justify-between border-t border-[#E8E5DF] px-3.5",
+          empty ? "shrink-0" : "flex-1",
+        )}
+      >
+        <p role="status" className="flex items-center gap-2 whitespace-nowrap">
+          <span className="text-[12px] font-bold text-ink">{countLabel}</span>
+          <span className="text-[11px] text-muted">{summaryLabel}</span>
         </p>
-        <p className="flex items-center gap-1.5 text-muted">
-          <Archive size={12} aria-hidden="true" className="shrink-0" />
-          <span className="text-[11px] font-semibold whitespace-nowrap">
-            Productos con pedidos confirmados se archivan, no se eliminan.
-          </span>
-        </p>
+        <Pagination page={page} pageCount={pageCount} onPageChange={onPageChange} />
       </footer>
     </section>
   );

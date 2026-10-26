@@ -6,11 +6,15 @@ import {
   createProductSku,
   duplicateProduct,
   filterProducts,
+  formatCatalogShare,
+  formatListSummary,
+  formatMomentsLabel,
   formatProductCount,
   getDuplicateName,
   getProductMetrics,
   getProductStatus,
   getVisibleProducts,
+  hasActiveFilters,
   restoreProduct,
   setProductAvailability,
   sortProductsByRelevance,
@@ -197,9 +201,46 @@ describe("archive, restore and availability", () => {
 });
 
 describe("formatProductCount", () => {
-  it("writes the 07A footer", () => {
-    expect(formatProductCount(7)).toBe("7 productos · Orden: relevancia comercial");
-    expect(formatProductCount(1)).toBe("1 producto · Orden: relevancia comercial");
-    expect(formatProductCount(0)).toBe("Sin productos para estos filtros");
+  it("writes the 07A footer count", () => {
+    expect(formatProductCount(7)).toBe("7 productos");
+    expect(formatProductCount(1)).toBe("1 producto");
+    expect(formatProductCount(0)).toBe("0 productos");
+  });
+});
+
+describe("formatListSummary", () => {
+  it("says whether the list is filtered, followed by the order", () => {
+    expect(formatListSummary(false)).toBe("Mostrando todos · Orden: relevancia comercial");
+    expect(formatListSummary(true)).toBe("Con filtros aplicados · Orden: relevancia comercial");
+  });
+});
+
+describe("formatMomentsLabel", () => {
+  it("joins the moment labels in the canonical order", () => {
+    expect(formatMomentsLabel(["merendar", "desayunar"])).toBe("Desayunar · Merendar");
+    expect(formatMomentsLabel(["tomar"])).toBe("Tomar");
+  });
+
+  it("names every moment and no moment", () => {
+    expect(formatMomentsLabel(["desayunar", "merendar", "cenar", "tomar"])).toBe("Todo el día");
+    expect(formatMomentsLabel([])).toBe("Sin momentos");
+  });
+});
+
+describe("formatCatalogShare", () => {
+  it("rounds the share of the catalogue", () => {
+    expect(formatCatalogShare(6, 7)).toBe("86% del catálogo");
+    expect(formatCatalogShare(12, 13)).toBe("92% del catálogo");
+    expect(formatCatalogShare(0, 0)).toBe("0% del catálogo");
+  });
+});
+
+describe("hasActiveFilters", () => {
+  it("is false only for the default filters", () => {
+    expect(hasActiveFilters(DEFAULT_PRODUCT_FILTERS)).toBe(false);
+    expect(hasActiveFilters(filters({ query: "  " }))).toBe(false);
+    expect(hasActiveFilters(filters({ query: "caf" }))).toBe(true);
+    expect(hasActiveFilters(filters({ availability: "available" }))).toBe(true);
+    expect(hasActiveFilters(filters({ publication: "archived" }))).toBe(true);
   });
 });

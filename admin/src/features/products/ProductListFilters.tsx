@@ -1,7 +1,6 @@
 import clsx from "clsx";
-import { ChevronDown, CircleCheck, Clock3, Eye, Search, Tags, type LucideIcon } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 import {
-  AVAILABILITY_FILTER_OPTIONS,
   CATEGORY_FILTER_OPTIONS,
   MOMENT_FILTER_OPTIONS,
   PUBLICATION_FILTER_OPTIONS,
@@ -12,31 +11,34 @@ import type { FilterKey } from "./products-state";
 
 type ProductListFiltersProps = {
   filters: ProductFilters;
+  /** Shows "Limpiar" when the search or a filter narrows the list. */
+  canClear: boolean;
   onQueryChange: (query: string) => void;
   onFilterChange: <K extends FilterKey>(filter: K, value: ProductFilters[K]) => void;
+  onClear: () => void;
 };
 
 const FIELD_CLASSES =
-  "h-10 rounded-field bg-surface outline-1 -outline-offset-[0.5px] outline-line focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-brand";
+  "h-10 rounded-nav bg-surface outline-1 -outline-offset-[0.5px] outline-line focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-brand";
 
 type SelectFilterProps<T extends string> = {
   label: string;
-  icon: LucideIcon;
+  /** Minimum width of the closed select, as in the export. */
+  width: string;
   value: T;
   options: readonly FilterOption<T>[];
   onChange: (value: T) => void;
 };
 
-/** "Product Filter · …": native select with the 07A leading icon and chevron. */
-function SelectFilter<T extends string>({ label, icon: Icon, value, options, onChange }: SelectFilterProps<T>) {
+/** "Filter · …": native select showing the filter name until an option is chosen. */
+function SelectFilter<T extends string>({ label, width, value, options, onChange }: SelectFilterProps<T>) {
   return (
-    <label className={clsx("relative flex items-center", FIELD_CLASSES)}>
+    <label className={clsx("relative flex shrink-0 items-center", width, FIELD_CLASSES)}>
       <span className="sr-only">{label}</span>
-      <Icon size={13} aria-hidden="true" className="pointer-events-none absolute left-2.5 text-muted" />
       <select
         value={value}
         onChange={(event) => onChange(event.target.value as T)}
-        className="h-full cursor-pointer appearance-none bg-transparent pr-7 pl-[29px] text-[11px] font-semibold text-ink outline-none"
+        className="h-full w-full cursor-pointer appearance-none bg-transparent pr-7 pl-[11px] text-[12px] font-semibold text-ink outline-none"
       >
         {options.map((option) => (
           <option key={option.id} value={option.id}>
@@ -44,56 +46,74 @@ function SelectFilter<T extends string>({ label, icon: Icon, value, options, onC
           </option>
         ))}
       </select>
-      <ChevronDown size={12} aria-hidden="true" className="pointer-events-none absolute right-2.5 text-muted" />
+      <ChevronDown size={13} aria-hidden="true" className="pointer-events-none absolute right-[11px] text-muted" />
     </label>
   );
 }
 
-/** "Product List Filters": "Product Search" and the four "Product Filter Selects". */
-export function ProductListFilters({ filters, onQueryChange, onFilterChange }: ProductListFiltersProps) {
+/**
+ * "Commerce Filters": search by name or SKU, the "Disponibles" chip (brand-filled while on),
+ * the three filter selects and "Limpiar".
+ */
+export function ProductListFilters({ filters, canClear, onQueryChange, onFilterChange, onClear }: ProductListFiltersProps) {
+  const onlyAvailable = filters.availability === "available";
   return (
-    <div className="flex h-11 w-full shrink-0 items-center justify-between">
-      <label className={clsx("flex w-[330px] items-center gap-2 px-[11px]", FIELD_CLASSES)}>
+    <div role="search" className="flex h-10 w-full shrink-0 items-center gap-2">
+      <label className={clsx("flex w-[300px] shrink-0 items-center gap-2 px-[11px]", FIELD_CLASSES)}>
         <Search size={14} aria-hidden="true" className="shrink-0 text-muted" />
-        <span className="sr-only">Buscar producto</span>
+        <span className="sr-only">Buscar producto por nombre o SKU</span>
         <input
           type="search"
           value={filters.query}
           onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="Buscar producto..."
+          placeholder="Buscar producto…"
           className="h-full min-w-0 flex-1 bg-transparent text-[12px] text-ink outline-none placeholder:text-muted"
         />
       </label>
-      <div className="flex items-center gap-[7px]">
-        <SelectFilter
-          label="Categoría"
-          icon={Tags}
-          value={filters.category}
-          options={CATEGORY_FILTER_OPTIONS}
-          onChange={(value) => onFilterChange("category", value)}
-        />
-        <SelectFilter
-          label="Momento"
-          icon={Clock3}
-          value={filters.moment}
-          options={MOMENT_FILTER_OPTIONS}
-          onChange={(value) => onFilterChange("moment", value)}
-        />
-        <SelectFilter
-          label="Publicación"
-          icon={Eye}
-          value={filters.publication}
-          options={PUBLICATION_FILTER_OPTIONS}
-          onChange={(value) => onFilterChange("publication", value)}
-        />
-        <SelectFilter
-          label="Disponibilidad"
-          icon={CircleCheck}
-          value={filters.availability}
-          options={AVAILABILITY_FILTER_OPTIONS}
-          onChange={(value) => onFilterChange("availability", value)}
-        />
-      </div>
+      <button
+        type="button"
+        aria-pressed={onlyAvailable}
+        onClick={() => onFilterChange("availability", onlyAvailable ? "all" : "available")}
+        className={clsx(
+          "flex h-10 shrink-0 items-center gap-[7px] rounded-nav px-[11px] text-[12px] font-bold whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
+          onlyAvailable
+            ? "bg-brand text-white hover:bg-brand/92"
+            : "bg-surface text-ink outline-1 -outline-offset-[0.5px] outline-line hover:bg-cream",
+        )}
+      >
+        Disponibles
+        {onlyAvailable && <X size={13} aria-hidden="true" className="shrink-0" />}
+      </button>
+      <SelectFilter
+        label="Categoría"
+        width="min-w-[118px]"
+        value={filters.category}
+        options={CATEGORY_FILTER_OPTIONS}
+        onChange={(value) => onFilterChange("category", value)}
+      />
+      <SelectFilter
+        label="Momento"
+        width="min-w-[110px]"
+        value={filters.moment}
+        options={MOMENT_FILTER_OPTIONS}
+        onChange={(value) => onFilterChange("moment", value)}
+      />
+      <SelectFilter
+        label="Publicación"
+        width="min-w-[126px]"
+        value={filters.publication}
+        options={PUBLICATION_FILTER_OPTIONS}
+        onChange={(value) => onFilterChange("publication", value)}
+      />
+      {canClear && (
+        <button
+          type="button"
+          onClick={onClear}
+          className="flex h-10 shrink-0 items-center rounded-nav px-2 text-[11px] font-bold whitespace-nowrap text-brand hover:underline focus-visible:outline-2 focus-visible:outline-brand"
+        >
+          Limpiar
+        </button>
+      )}
     </div>
   );
 }

@@ -11,7 +11,7 @@ export type PublicationFilter = "all" | "published" | "draft" | "archived";
 
 export type AvailabilityFilter = "all" | "available" | "unavailable";
 
-/** Search box and the four 07A "Product Filter Selects". */
+/** Search box, the "Disponibles" chip (`availability`) and the three 07A filter selects. */
 export type ProductFilters = {
   query: string;
   category: ProductCategoryId | "all";
@@ -37,6 +37,13 @@ export const PRODUCT_STATUS_LABELS: Record<ProductStatus, string> = {
   archived: "Archivado",
 };
 
+/** "Publicación" badge of the 07A rows: drafts read "No publicado". */
+export const PRODUCT_LIST_STATUS_LABELS: Record<ProductStatus, string> = {
+  published: "Publicado",
+  draft: "No publicado",
+  archived: "Archivado",
+};
+
 export type FilterOption<T extends string> = { id: T; label: string };
 
 /** Options of each select; the `all` option carries the filter name, as the closed 07A select. */
@@ -57,18 +64,31 @@ export const PUBLICATION_FILTER_OPTIONS: FilterOption<PublicationFilter>[] = [
   { id: "archived", label: "Archivados" },
 ];
 
-export const AVAILABILITY_FILTER_OPTIONS: FilterOption<AvailabilityFilter>[] = [
-  { id: "all", label: "Disponibilidad" },
-  { id: "available", label: "Disponibles" },
-  { id: "unavailable", label: "No disponibles" },
-];
-
 export function getCategoryLabel(id: ProductCategoryId | ""): string | null {
   return PRODUCT_CATEGORIES.find((category) => category.id === id)?.label ?? null;
 }
 
 export function getMomentLabel(id: ConsumptionMomentId): string {
   return CONSUMPTION_MOMENTS.find((moment) => moment.id === id)?.label ?? id;
+}
+
+/** "Momentos" column: labels in the canonical order, "Todo el día" when the product has every moment. */
+export function formatMomentsLabel(moments: readonly ConsumptionMomentId[]): string {
+  if (moments.length === 0) return "Sin momentos";
+  const selected = CONSUMPTION_MOMENTS.filter((moment) => moments.includes(moment.id));
+  if (selected.length === CONSUMPTION_MOMENTS.length) return "Todo el día";
+  return selected.map((moment) => moment.label).join(" · ");
+}
+
+/** True when the search or any filter narrows the list ("Limpiar" is offered). */
+export function hasActiveFilters(filters: ProductFilters): boolean {
+  return (
+    filters.query.trim() !== "" ||
+    filters.category !== DEFAULT_PRODUCT_FILTERS.category ||
+    filters.moment !== DEFAULT_PRODUCT_FILTERS.moment ||
+    filters.publication !== DEFAULT_PRODUCT_FILTERS.publication ||
+    filters.availability !== DEFAULT_PRODUCT_FILTERS.availability
+  );
 }
 
 /** Lower case without accents or surrounding spaces, for search and name comparisons. */
@@ -243,8 +263,18 @@ export function setProductAvailability(products: Product[], id: string, availabl
   return updateProduct(products, id, { available });
 }
 
-/** "Catalog Product Count" footer of 07A. */
+/** "Result Count" of the 07A footer. */
 export function formatProductCount(count: number): string {
-  if (count === 0) return "Sin productos para estos filtros";
-  return `${count} ${count === 1 ? "producto" : "productos"} · Orden: relevancia comercial`;
+  return `${count} ${count === 1 ? "producto" : "productos"}`;
+}
+
+/** "Filter Summary" of the 07A footer. */
+export function formatListSummary(filtered: boolean): string {
+  return `${filtered ? "Con filtros aplicados" : "Mostrando todos"} · Orden: relevancia comercial`;
+}
+
+/** "Publicados" metric support text, e.g. "86% del catálogo". */
+export function formatCatalogShare(count: number, total: number): string {
+  const share = total > 0 ? Math.round((count / total) * 100) : 0;
+  return `${share}% del catálogo`;
 }
