@@ -178,10 +178,10 @@ export function getKitchenNote(request: ManagedBillRequest): string | null {
   return `${count} ${count === 1 ? "pedido" : "pedidos"} en preparación`;
 }
 
-/** "Table Count": "5 solicitudes activas · Actualizado hace unos segundos". */
+/** "Table Count": the number of requests currently displayed by the table. */
 export function formatTableCount(requests: readonly ManagedBillRequest[]): string {
-  const count = requests.filter(isActiveRequest).length;
-  const noun = count === 1 ? "solicitud activa" : "solicitudes activas";
+  const count = requests.length;
+  const noun = count === 1 ? "solicitud mostrada" : "solicitudes mostradas";
   return `${count} ${noun} · Actualizado hace unos segundos`;
 }
 

@@ -128,7 +128,7 @@ function EmptyState({ icon: Icon, title, description, action }: TableEmptyState)
         <button
           type="button"
           onClick={action.onClick}
-          className="mt-1 flex h-[34px] items-center rounded-nav px-3 text-[11px] font-bold text-ink outline-1 -outline-offset-[0.5px] outline-line hover:bg-cream"
+          className="mt-1 flex h-[34px] items-center rounded-nav px-3 text-[11px] font-bold text-ink outline-1 -outline-offset-[0.5px] outline-line hover:bg-cream focus-visible:outline-2 focus-visible:outline-brand"
         >
           {action.label}
         </button>

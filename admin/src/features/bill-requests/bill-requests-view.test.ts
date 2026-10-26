@@ -242,9 +242,12 @@ describe("copy", () => {
     expect(getKitchenNote(request({ id: "a", ordersInPreparation: 2 }))).toBe("2 pedidos en preparación");
   });
 
-  it("counts the active requests in the table footer", () => {
-    expect(formatTableCount(requests)).toBe("5 solicitudes activas · Actualizado hace unos segundos");
-    expect(formatTableCount([request({ id: "a" })])).toBe("1 solicitud activa · Actualizado hace unos segundos");
+  it("counts every displayed request in the table footer", () => {
+    expect(formatTableCount(requests)).toBe("6 solicitudes mostradas · Actualizado hace unos segundos");
+    expect(formatTableCount([request({ id: "a", status: "finalized" })])).toBe(
+      "1 solicitud mostrada · Actualizado hace unos segundos",
+    );
+    expect(formatTableCount([])).toBe("0 solicitudes mostradas · Actualizado hace unos segundos");
   });
 
   it("sums the active totals", () => {
