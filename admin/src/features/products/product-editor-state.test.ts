@@ -29,9 +29,9 @@ describe("product editor", () => {
       changes: [],
       saveTitle: "Producto sin cambios",
       saveTone: "neutral",
-      saveMeta: "Versión 42 · Publicado",
-      canSaveDraft: false,
-      canPublish: false,
+      published: true,
+      publicationLabel: "Publicado",
+      primarySaveMode: "publish",
       optionGroups: [
         { id: "tamano", title: "Tamaño", meta: "Selección única · Obligatorio" },
         { id: "extras", title: "Extras", meta: "Selección múltiple · Máximo 2" },
@@ -57,11 +57,9 @@ describe("product editor", () => {
     expect(editor(state)).toMatchObject({
       dirty: true,
       changes: ["Precio base", "Momentos de consumo"],
-      saveTitle: "Cambios sin guardar",
+      saveTitle: "Tenés cambios sin guardar",
       saveTone: "warning",
-      saveMeta: "Versión 42 · validación requerida",
-      canSaveDraft: true,
-      canPublish: true,
+      saveHint: "La publicación actual no cambia hasta guardar.",
     });
     expect(editor(state).preview).toMatchObject({
       price: "$4.800",
@@ -107,7 +105,9 @@ describe("product editor", () => {
     expect(editor(state).preview.groups[1].options.at(-1)).toEqual({
       id: "opcion-1",
       name: "Miel",
+      priceDelta: 300,
       priceLabel: "+$300",
+      chipLabel: "Miel +$300",
       selected: false,
     });
     state = productsReducer(state, { type: "remove-option", groupId: "tamano", id: "mediano" });
@@ -193,7 +193,7 @@ describe("product editor", () => {
     expect(productOf(state, "cappuccino")?.moments).toEqual(["desayunar", "merendar", "tomar"]);
     expect(state.version).toBe(43);
     expect(state.screen).toBe("editor");
-    expect(editor(state)).toMatchObject({ dirty: false, saveMeta: "Versión 43 · Publicado", status: "published" });
+    expect(editor(state)).toMatchObject({ dirty: false, status: "published", published: true });
     expect(state.notice).toBe("Cappuccino se publicó en la carta.");
   });
 
@@ -203,14 +203,20 @@ describe("product editor", () => {
       { type: "save", mode: "draft" },
     );
     expect(productOf(state, "cappuccino")).toMatchObject({ publication: "draft", description: "Nueva descripción." });
-    expect(editor(state)).toMatchObject({ status: "draft", statusLabel: "Borrador", canPublish: true, canSaveDraft: false });
+    expect(editor(state)).toMatchObject({
+      status: "draft",
+      statusLabel: "Borrador",
+      published: false,
+      publicationLabel: "No publicado",
+      primarySaveMode: "draft",
+    });
     expect(getProductsListView(state).metrics.published).toBe(11);
     expect(state.notice).toBe("Cappuccino se guardó como borrador y no se muestra en la carta.");
   });
 
   it("lets a clean draft be published once it is complete", () => {
     const state = run({ type: "open-editor", id: "cheesecake" });
-    expect(editor(state)).toMatchObject({ canPublish: true, canSaveDraft: false });
+    expect(editor(state)).toMatchObject({ dirty: false, published: false });
     const blocked = productsReducer(state, { type: "save", mode: "publish" });
     expect(editor(blocked).errors).toEqual({ image: "Agregá una imagen para publicar." });
     const published = productsReducer(
@@ -219,6 +225,26 @@ describe("product editor", () => {
     );
     expect(productOf(published, "cheesecake")?.publication).toBe("published");
     expect(editor(published).errors).toEqual({});
+  });
+
+  it("toggles the draft publication and saves with it from the primary action", () => {
+    let state = openCappuccino({ type: "set-draft-publication", published: false });
+    expect(editor(state)).toMatchObject({
+      dirty: true,
+      changes: ["Publicación"],
+      published: false,
+      publicationLabel: "No publicado",
+      primarySaveMode: "draft",
+      status: "published",
+    });
+    expect(productOf(state, "cappuccino")?.publication).toBe("published");
+    state = productsReducer(state, { type: "save", mode: editor(state).primarySaveMode });
+    expect(productOf(state, "cappuccino")?.publication).toBe("draft");
+    state = productsReducer(state, { type: "set-draft-publication", published: true });
+    expect(editor(state).primarySaveMode).toBe("publish");
+    state = productsReducer(state, { type: "save", mode: editor(state).primarySaveMode });
+    expect(productOf(state, "cappuccino")?.publication).toBe("published");
+    expect(editor(state).dirty).toBe(false);
   });
 
   it("blocks an invalid save, shows every error and keeps the list", () => {
@@ -254,8 +280,8 @@ describe("product editor", () => {
       title: "Nuevo producto",
       breadcrumb: "Nuevo producto",
       status: "draft",
-      canSaveDraft: true,
-      canPublish: true,
+      publicationLabel: "No publicado",
+      dirty: false,
       optionGroups: [],
     });
     const actions: ProductsAction[] = [

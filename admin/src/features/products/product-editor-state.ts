@@ -54,6 +54,7 @@ export type EditorAction =
   | { type: "set-category"; categoryId: ProductCategoryId }
   | { type: "toggle-moment"; moment: ConsumptionMomentId }
   | { type: "set-draft-availability"; available: boolean }
+  | { type: "set-draft-publication"; published: boolean }
   | { type: "set-customer-notes"; allow: boolean }
   | { type: "set-image"; image: string | undefined }
   | { type: "add-group" }
@@ -192,6 +193,8 @@ export function editorReducer(state: ProductsState, action: EditorAction): Produ
     }
     case "set-draft-availability":
       return withDraft(state, editor, { available: action.available });
+    case "set-draft-publication":
+      return withDraft(state, editor, { published: action.published });
     case "set-customer-notes":
       return withDraft(state, editor, { allowCustomerNotes: action.allow });
     case "set-image":
@@ -306,10 +309,14 @@ export type EditorView = {
   errors: ProductFormErrors;
   saveTitle: string;
   saveTone: SaveTone;
-  /** "Versión 42 · validación requerida" or "Versión 42 · Publicado". */
-  saveMeta: string;
-  canSaveDraft: boolean;
-  canPublish: boolean;
+  /** Second line of the save bar. */
+  saveHint: string;
+  /** Publication of the draft, as the header "Publication Control" shows it. */
+  published: boolean;
+  /** "Publicado" / "No publicado". */
+  publicationLabel: string;
+  /** Mode of "Guardar cambios": the publication chosen in the header. */
+  primarySaveMode: SaveMode;
   /** Groups of the draft, in display order. */
   optionGroups: OptionGroupView[];
   /** 07C "Cappuccino publicado". */
@@ -345,7 +352,7 @@ export function getEditorView(state: ProductsState): EditorView | null {
     saveTitle = BLOCKED_SAVE_MESSAGE;
     saveTone = "danger";
   } else if (dirty) {
-    saveTitle = "Cambios sin guardar";
+    saveTitle = "Tenés cambios sin guardar";
     saveTone = "warning";
   } else if (isNew) {
     saveTitle = "Producto nuevo sin guardar";
@@ -362,9 +369,10 @@ export function getEditorView(state: ProductsState): EditorView | null {
     errors,
     saveTitle,
     saveTone,
-    saveMeta: `Versión ${state.version} · ${dirty || isNew ? "validación requerida" : PRODUCT_STATUS_LABELS[status]}`,
-    canSaveDraft: dirty || isNew,
-    canPublish: dirty || isNew || status !== "published",
+    saveHint: "La publicación actual no cambia hasta guardar.",
+    published: editor.draft.published,
+    publicationLabel: editor.draft.published ? "Publicado" : "No publicado",
+    primarySaveMode: editor.draft.published ? "publish" : "draft",
     optionGroups: editor.draft.optionGroups.map((group) => ({
       id: group.id,
       title: group.title,

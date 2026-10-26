@@ -6,6 +6,7 @@ import {
   formatOptionDelta,
   getOptionGroupMeta,
   getOptionGroupsSummary,
+  getImageFormatLabel,
   getOptionPriceLabel,
   getPreviewModel,
   getProductChanges,
@@ -134,9 +135,16 @@ describe("toProductDraft / applyProductDraft", () => {
       moments: [],
       image: undefined,
       available: true,
+      published: false,
       allowCustomerNotes: true,
       optionGroups: [],
     });
+  });
+
+  it("reads the publication of the saved product into the draft", () => {
+    expect(cappuccinoDraft().published).toBe(true);
+    const cheesecake = PRODUCTS.find((product) => product.id === "cheesecake")!;
+    expect(toProductDraft(cheesecake).published).toBe(false);
   });
 });
 
@@ -241,6 +249,14 @@ describe("getProductChanges", () => {
     ).toEqual(["Precio base", "Imagen principal", "Tamaño"]);
   });
 
+  it("reports a publication change before availability", () => {
+    const saved = cappuccinoDraft();
+    expect(getProductChanges(saved, { ...saved, published: false, available: false })).toEqual([
+      "Publicación",
+      "Disponibilidad",
+    ]);
+  });
+
   it("reports group settings and added or removed groups", () => {
     const saved = cappuccinoDraft();
     expect(getProductChanges(saved, withGroup(saved, "extras", { max: 3 }))).toEqual(["Extras"]);
@@ -259,6 +275,7 @@ describe("getPreviewModel", () => {
       description: "Espresso intenso con leche vaporizada y espuma cremosa.",
       image: "/images/products/cappuccino.webp",
       price: "$4.600",
+      basePrice: 4600,
       groups: [
         {
           id: "tamano",
@@ -267,9 +284,9 @@ describe("getPreviewModel", () => {
           required: true,
           meta: "Obligatorio · Elegí 1",
           options: [
-            { id: "chico", name: "Chico", priceLabel: "Incluido", selected: false },
-            { id: "mediano", name: "Mediano", priceLabel: "+$800", selected: true },
-            { id: "grande", name: "Grande", priceLabel: "+$1.500", selected: false },
+            { id: "chico", name: "Chico", priceDelta: 0, priceLabel: "Incluido", chipLabel: "Chico", selected: false },
+            { id: "mediano", name: "Mediano", priceDelta: 800, priceLabel: "+$800", chipLabel: "Mediano +$800", selected: true },
+            { id: "grande", name: "Grande", priceDelta: 1500, priceLabel: "+$1.500", chipLabel: "Grande +$1.500", selected: false },
           ],
         },
         {
@@ -277,11 +294,12 @@ describe("getPreviewModel", () => {
           title: "Extras",
           selection: "multiple",
           required: false,
+          max: 2,
           meta: "Opcional · Hasta 2",
           options: [
-            { id: "shot-extra", name: "Shot extra", priceLabel: "+$900", selected: false },
-            { id: "leche-vegetal", name: "Leche vegetal", priceLabel: "+$700", selected: false },
-            { id: "canela", name: "Canela", priceLabel: "Sin cargo", selected: false },
+            { id: "shot-extra", name: "Shot extra", priceDelta: 900, priceLabel: "+$900", chipLabel: "Shot extra +$900", selected: false },
+            { id: "leche-vegetal", name: "Leche vegetal", priceDelta: 700, priceLabel: "+$700", chipLabel: "Leche vegetal +$700", selected: false },
+            { id: "canela", name: "Canela", priceDelta: 0, priceLabel: "Sin cargo", chipLabel: "Canela", selected: false },
           ],
         },
       ],
@@ -321,5 +339,14 @@ describe("getPreviewModel", () => {
     expect(getPreviewModel(draft).groups[1].meta).toBe("Opcional");
     const required = withGroup(cappuccinoDraft(), "extras", { required: true });
     expect(getPreviewModel(required).groups[1].meta).toBe("Obligatorio · Hasta 2");
+  });
+});
+
+describe("getImageFormatLabel", () => {
+  it("names the image format, or the accepted ones without an image", () => {
+    expect(getImageFormatLabel("/images/products/cappuccino.webp")).toBe("WEBP");
+    expect(getImageFormatLabel("/images/x.jpeg?v=2")).toBe("JPG");
+    expect(getImageFormatLabel("blob:http://localhost/abc")).toBe("Imagen local");
+    expect(getImageFormatLabel(undefined)).toBe("JPG, PNG o WEBP");
   });
 });

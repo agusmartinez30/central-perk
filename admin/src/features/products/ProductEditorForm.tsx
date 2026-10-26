@@ -1,16 +1,17 @@
 "use client";
 
 import clsx from "clsx";
+import { Check, Trash2 } from "lucide-react";
 import { useId, useRef, type ReactNode } from "react";
-import { CONSUMPTION_MOMENTS, PRODUCT_CATEGORIES, type ProductCategoryId } from "@/mocks/service-day";
+import { CONSUMPTION_MOMENTS, PRODUCT_CATEGORIES, type ConsumptionMomentId, type ProductCategoryId } from "@/mocks/service-day";
 import type { EditorAction } from "./product-editor-state";
-import type { ProductDraft, ProductFormErrors } from "./product-form";
-import { ProductImage } from "./ProductTags";
+import { getImageFormatLabel, type ProductDraft, type ProductFormErrors } from "./product-form";
+import { AvailabilitySwitch, ProductImage } from "./ProductTags";
 
 type OnAction = (action: EditorAction) => void;
 
 const INPUT_CLASSES =
-  "h-9 w-full rounded-nav bg-surface px-[9px] text-[12px] font-semibold text-ink outline-1 -outline-offset-[0.5px] focus:outline-2 focus:-outline-offset-1 focus:outline-brand";
+  "h-9 w-full rounded-nav bg-surface px-2.5 text-[12px] text-ink outline-1 -outline-offset-[0.5px] focus:outline-2 focus:-outline-offset-1 focus:outline-brand";
 
 type FieldProps = {
   label: string;
@@ -19,13 +20,13 @@ type FieldProps = {
   children: (props: { id: string; "aria-invalid": boolean; "aria-describedby"?: string; className: string }) => ReactNode;
 };
 
-/** "Product Field · …": 11px label over a 36px input, with the error below when there is one. */
+/** "Product Name Field", "Price Field", …: 11px label over a 36px input, with the error below. */
 function Field({ label, error, className, children }: FieldProps) {
   const id = useId();
   const errorId = `${id}-error`;
   return (
-    <div className={clsx("flex flex-col gap-1", className)}>
-      <label htmlFor={id} className="text-[11px] font-bold whitespace-nowrap text-muted">
+    <div className={clsx("flex flex-col gap-[5px]", className)}>
+      <label htmlFor={id} className="text-[11px] font-bold whitespace-nowrap text-ink">
         {label}
       </label>
       {children({
@@ -43,100 +44,23 @@ function Field({ label, error, className, children }: FieldProps) {
   );
 }
 
-type SectionProps = { draft: ProductDraft; errors: ProductFormErrors; onAction: OnAction };
-
-/** "General Information": name, description, base price and category. */
-export function GeneralInformation({ draft, errors, onAction }: SectionProps) {
-  return (
-    <section
-      aria-labelledby="general-information-title"
-      className="flex min-w-0 flex-1 flex-col gap-2.5 rounded-card bg-surface p-3.5 outline-1 -outline-offset-[0.5px] outline-line"
-    >
-      <h3 id="general-information-title" className="text-[14px] font-bold text-ink">
-        Información general
-      </h3>
-      <Field label="Nombre del producto" error={errors.name}>
-        {(props) => (
-          <input
-            {...props}
-            type="text"
-            value={draft.name}
-            onChange={(event) => onAction({ type: "set-field", field: "name", value: event.target.value })}
-          />
-        )}
-      </Field>
-      <Field label="Descripción" error={errors.description}>
-        {(props) => (
-          <input
-            {...props}
-            type="text"
-            value={draft.description}
-            onChange={(event) => onAction({ type: "set-field", field: "description", value: event.target.value })}
-          />
-        )}
-      </Field>
-      <div className="flex gap-2">
-        <Field label="Precio base (ARS)" error={errors.price} className="min-w-0 flex-1">
-          {(props) => (
-            <input
-              {...props}
-              type="text"
-              inputMode="numeric"
-              value={draft.price}
-              placeholder="$0"
-              onChange={(event) => onAction({ type: "set-field", field: "price", value: event.target.value })}
-            />
-          )}
-        </Field>
-        <Field label="Categoría" error={errors.categoryId} className="min-w-0 flex-1">
-          {(props) => (
-            <select
-              {...props}
-              value={draft.categoryId}
-              onChange={(event) =>
-                onAction({ type: "set-category", categoryId: event.target.value as ProductCategoryId })
-              }
-              className={clsx(props.className, "cursor-pointer")}
-            >
-              <option value="" disabled>
-                Elegí una categoría
-              </option>
-              {PRODUCT_CATEGORIES.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.label}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-      </div>
-    </section>
-  );
-}
-
-type ImageUploadProps = { image?: string; name: string; error?: string; onAction: OnAction };
+type ImageEditorProps = { image?: string; name: string; error?: string; onAction: OnAction };
 
 /**
- * "Editor Image Upload". "Reemplazar" picks a local file and shows it for this session only (no
- * upload); "Quitar" leaves the product without a photo.
+ * "Main Image Editor". "Reemplazar" picks a local file and shows it for this session only (no
+ * upload); the trash leaves the product without a photo.
  */
-export function EditorImageUpload({ image, name, error, onAction }: ImageUploadProps) {
+function MainImageEditor({ image, name, error, onAction }: ImageEditorProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const errorId = useId();
   return (
-    <section
-      aria-labelledby="editor-image-title"
-      className="flex w-[250px] shrink-0 flex-col gap-[7px] rounded-tile bg-surface p-[11px] outline-1 -outline-offset-[0.5px] outline-line"
-    >
-      <h3 id="editor-image-title" className="text-[12px] font-bold text-ink">
-        Imagen principal
-      </h3>
+    <div className="flex w-[218px] shrink-0 flex-col gap-2">
       <ProductImage
         src={image}
         alt={name || "Producto nuevo"}
-        sizes="228px"
+        sizes="218px"
         iconSize={24}
-        className={clsx("h-32 w-full rounded-field", error && "outline-1 -outline-offset-1 outline-danger")}
+        className={clsx("h-[148px] w-full rounded-[10px]", error && "outline-1 -outline-offset-1 outline-danger")}
       />
       <input
         ref={inputRef}
@@ -151,111 +75,170 @@ export function EditorImageUpload({ image, name, error, onAction }: ImageUploadP
           event.target.value = "";
         }}
       />
-      <div className="flex gap-1.5">
-        <button
-          type="button"
-          aria-describedby={error ? errorId : undefined}
-          onClick={() => inputRef.current?.click()}
-          className="flex h-[30px] flex-1 items-center justify-center rounded-[7px] bg-brand text-[11px] font-bold text-white outline-1 -outline-offset-[0.5px] outline-brand hover:bg-brand/92"
-        >
-          Reemplazar
-        </button>
-        <button
-          type="button"
-          disabled={!image}
-          onClick={() => onAction({ type: "set-image", image: undefined })}
-          className="flex h-[30px] flex-1 items-center justify-center rounded-[7px] bg-surface text-[11px] font-bold text-ink outline-1 -outline-offset-[0.5px] outline-line enabled:hover:bg-cream disabled:cursor-not-allowed disabled:text-muted"
-        >
-          Quitar
-        </button>
+      <div className="flex w-full items-center justify-between gap-1.5">
+        <p className="truncate text-[11px] text-muted">{getImageFormatLabel(image)}</p>
+        <div className="flex shrink-0 items-center gap-1">
+          {image && (
+            <button
+              type="button"
+              aria-label="Quitar imagen"
+              onClick={() => onAction({ type: "set-image", image: undefined })}
+              className="flex size-7 items-center justify-center rounded-[7px] text-muted hover:bg-cream hover:text-danger"
+            >
+              <Trash2 size={12} aria-hidden="true" />
+            </button>
+          )}
+          <button
+            type="button"
+            aria-describedby={error ? errorId : undefined}
+            onClick={() => inputRef.current?.click()}
+            className="flex h-7 items-center rounded-[7px] px-[9px] text-[11px] font-bold text-brand outline-1 -outline-offset-[0.5px] outline-line hover:bg-brand-wash"
+          >
+            {image ? "Reemplazar" : "Agregar imagen"}
+          </button>
+        </div>
       </div>
       {error && (
         <p id={errorId} className="text-[11px] font-semibold text-danger">
           {error}
         </p>
       )}
-    </section>
-  );
-}
-
-/** "Product Taxonomy": "Editor Category Selector" and "Editor Moment Selector" chips. */
-export function ProductTaxonomy({ draft, onAction }: Omit<SectionProps, "errors">) {
-  return (
-    <div className="flex w-full shrink-0 gap-[9px]">
-      <fieldset className="flex min-w-0 flex-1 flex-col gap-2 rounded-[10px] bg-surface p-3 outline-1 -outline-offset-[0.5px] outline-line">
-        <legend className="float-left text-[12px] font-bold text-ink">Categorías</legend>
-        <div className="flex flex-wrap gap-[5px]">
-          {PRODUCT_CATEGORIES.map((category) => {
-            const selected = draft.categoryId === category.id;
-            return (
-              <button
-                key={category.id}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => onAction({ type: "set-category", categoryId: category.id })}
-                className={clsx(
-                  "flex h-6 items-center rounded-[7px] px-[7px] text-[11px] font-bold whitespace-nowrap",
-                  selected ? "bg-brand text-white" : "bg-cream text-muted hover:bg-sand",
-                )}
-              >
-                {category.label}
-              </button>
-            );
-          })}
-        </div>
-      </fieldset>
-      <fieldset className="flex min-w-0 flex-1 flex-col gap-2 rounded-[10px] bg-surface p-3 outline-1 -outline-offset-[0.5px] outline-line">
-        <legend className="float-left text-[12px] font-bold text-ink">Momentos de consumo</legend>
-        <div className="flex flex-wrap gap-[5px]">
-          {CONSUMPTION_MOMENTS.map((moment) => {
-            const selected = draft.moments.includes(moment.id);
-            return (
-              <button
-                key={moment.id}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => onAction({ type: "toggle-moment", moment: moment.id })}
-                className={clsx(
-                  "flex h-6 items-center rounded-[7px] px-[7px] text-[11px] font-bold whitespace-nowrap",
-                  selected ? "bg-brand-wash text-brand" : "bg-cream text-muted hover:bg-sand",
-                )}
-              >
-                {moment.label}
-              </button>
-            );
-          })}
-        </div>
-      </fieldset>
     </div>
   );
 }
 
-/** "Customer Notes Setting": "Permitir observaciones del cliente" switch. */
-export function CustomerNotesSetting({ allow, onAction }: { allow: boolean; onAction: OnAction }) {
+type SectionProps = { draft: ProductDraft; errors: ProductFormErrors; onAction: OnAction };
+
+/** "Información general": image, name, base price, description, category and availability. */
+export function GeneralInformation({ draft, errors, onAction }: SectionProps) {
   return (
-    <div className="flex h-12 w-full shrink-0 items-center justify-between rounded-[10px] bg-surface px-3 outline-1 -outline-offset-[0.5px] outline-line">
-      <div className="flex flex-col gap-0.5">
-        <p id="customer-notes-title" className="text-[12px] font-bold text-ink">
-          Permitir observaciones del cliente
-        </p>
-        <p id="customer-notes-help" className="text-[11px] text-muted">
-          Usá opciones estructuradas para personalizaciones que modifican el precio.
-        </p>
+    <section aria-labelledby="general-information-title" className="flex w-full shrink-0 flex-col gap-3.5">
+      <div className="flex w-full items-center justify-between">
+        <div className="flex flex-col gap-0.5">
+          <h3 id="general-information-title" className="text-[14px] font-bold text-ink">
+            Información general
+          </h3>
+          <p className="text-[11px] text-muted">Datos visibles para el cliente</p>
+        </div>
+        <p className="text-[11px] text-muted">* Campos obligatorios</p>
       </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={allow}
-        aria-labelledby="customer-notes-title"
-        aria-describedby="customer-notes-help"
-        onClick={() => onAction({ type: "set-customer-notes", allow: !allow })}
-        className={clsx(
-          "flex h-[22px] w-[38px] shrink-0 items-center rounded-[11px] p-[3px] transition-colors",
-          allow ? "justify-end bg-brand" : "justify-start bg-line",
-        )}
-      >
-        <span aria-hidden="true" className="size-4 rounded-full bg-surface" />
-      </button>
+      <div className="flex w-full items-start gap-4">
+        <MainImageEditor image={draft.image} name={draft.name} error={errors.image} onAction={onAction} />
+        <div className="flex min-w-0 flex-1 flex-col gap-[9px]">
+          <div className="flex w-full items-start gap-2.5">
+            <Field label="Nombre *" error={errors.name} className="min-w-0 flex-1">
+              {(props) => (
+                <input
+                  {...props}
+                  type="text"
+                  value={draft.name}
+                  onChange={(event) => onAction({ type: "set-field", field: "name", value: event.target.value })}
+                />
+              )}
+            </Field>
+            <Field label="Precio base *" error={errors.price} className="w-[150px] shrink-0">
+              {({ className, ...props }) => (
+                <div
+                  className={clsx(
+                    className,
+                    "flex items-center gap-1 focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-brand",
+                  )}
+                >
+                  <span aria-hidden="true" className="text-[12px] text-muted">
+                    $
+                  </span>
+                  <input
+                    {...props}
+                    type="text"
+                    inputMode="numeric"
+                    value={draft.price.replace(/^\s*\$\s*/, "")}
+                    placeholder="0"
+                    onChange={(event) => onAction({ type: "set-field", field: "price", value: event.target.value })}
+                    className="h-full min-w-0 flex-1 bg-transparent text-[12px] text-ink outline-none placeholder:text-muted"
+                  />
+                </div>
+              )}
+            </Field>
+          </div>
+          <Field label="Descripción" error={errors.description}>
+            {(props) => (
+              <input
+                {...props}
+                type="text"
+                value={draft.description}
+                onChange={(event) => onAction({ type: "set-field", field: "description", value: event.target.value })}
+              />
+            )}
+          </Field>
+          <div className="flex w-full items-start gap-2.5">
+            <Field label="Categoría *" error={errors.categoryId} className="min-w-0 flex-1">
+              {(props) => (
+                <select
+                  {...props}
+                  value={draft.categoryId}
+                  onChange={(event) =>
+                    onAction({ type: "set-category", categoryId: event.target.value as ProductCategoryId })
+                  }
+                  className={clsx(props.className, "cursor-pointer")}
+                >
+                  <option value="" disabled>
+                    Elegí una categoría
+                  </option>
+                  {PRODUCT_CATEGORIES.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
+            <div className="flex w-[150px] shrink-0 flex-col gap-[5px]">
+              <p className="text-[11px] font-bold whitespace-nowrap text-ink">Disponibilidad</p>
+              <div className="flex h-9 items-center rounded-nav bg-surface px-2.5 outline-1 -outline-offset-[0.5px] outline-line">
+                <AvailabilitySwitch
+                  available={draft.available}
+                  label="Disponibilidad del producto"
+                  onChange={(available) => onAction({ type: "set-draft-availability", available })}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** "Consumption Moments Section": canonical moment chips, a check on the selected ones. */
+export function ConsumptionMoments({ moments, onAction }: { moments: readonly ConsumptionMomentId[]; onAction: OnAction }) {
+  return (
+    <div role="group" aria-labelledby="moments-title" className="flex w-full shrink-0 items-center justify-between gap-3">
+      <div className="flex flex-col gap-0.5">
+        <h3 id="moments-title" className="text-[13px] font-bold text-ink">
+          Momentos de consumo
+        </h3>
+        <p className="text-[11px] text-muted">Seleccioná dónde se recomienda mostrar el producto</p>
+      </div>
+      <div className="flex flex-wrap justify-end gap-1.5">
+        {CONSUMPTION_MOMENTS.map((moment) => {
+          const selected = moments.includes(moment.id);
+          return (
+            <button
+              key={moment.id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onAction({ type: "toggle-moment", moment: moment.id })}
+              className={clsx(
+                "flex h-7 items-center gap-[5px] rounded-[14px] px-2.5 outline-1 -outline-offset-[0.5px]",
+                selected ? "bg-brand text-white outline-brand" : "bg-surface text-muted outline-line hover:bg-cream",
+              )}
+            >
+              {selected && <Check size={11} aria-hidden="true" />}
+              <span className="text-[11px] font-bold whitespace-nowrap">{moment.label}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

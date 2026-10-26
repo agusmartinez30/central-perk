@@ -34,6 +34,8 @@ export type ProductDraft = {
   moments: ConsumptionMomentId[];
   image?: string;
   available: boolean;
+  /** 07B "Publication Control": the publication "Guardar cambios" saves with. */
+  published: boolean;
   allowCustomerNotes: boolean;
   optionGroups: OptionGroupDraft[];
 };
@@ -117,12 +119,13 @@ export function toProductDraft(product: Product): ProductDraft {
     moments: [...product.moments],
     image: product.image,
     available: product.available,
+    published: product.publication === "published",
     allowCustomerNotes: product.allowCustomerNotes,
     optionGroups: product.optionGroups.map(toOptionGroupDraft),
   };
 }
 
-/** "Nuevo producto": empty, available and accepting customer notes. */
+/** "Nuevo producto": empty, available, unpublished and accepting customer notes. */
 export function createEmptyDraft(): ProductDraft {
   return {
     name: "",
@@ -132,6 +135,7 @@ export function createEmptyDraft(): ProductDraft {
     moments: [],
     image: undefined,
     available: true,
+    published: false,
     allowCustomerNotes: true,
     optionGroups: [],
   };
@@ -326,6 +330,7 @@ export function getProductChanges(saved: ProductDraft, draft: ProductDraft): str
   ];
   const tail: [string, boolean][] = [
     ["Observaciones del cliente", saved.allowCustomerNotes !== draft.allowCustomerNotes],
+    ["Publicación", saved.published !== draft.published],
     ["Disponibilidad", saved.available !== draft.available],
   ];
   const changed = (list: [string, boolean][]) => list.filter(([, isChanged]) => isChanged).map(([label]) => label);
@@ -339,7 +344,17 @@ export function getMomentsLabel(moments: readonly ConsumptionMomentId[]): string
 }
 
 /** One option as the customer sees it. */
-export type PreviewOption = { id: string; name: string; priceLabel: string; selected: boolean };
+export type PreviewOption = {
+  id: string;
+  name: string;
+  /** Adjustment in whole pesos (0 when the typed one is invalid). */
+  priceDelta: number;
+  /** "Incluido", "Sin cargo", "+$800". */
+  priceLabel: string;
+  /** 07B phone chip: "Mediano +$800", or just the name for a free option. */
+  chipLabel: string;
+  selected: boolean;
+};
 
 /** One customization group as the customer sees it. */
 export type PreviewGroup = {
@@ -347,6 +362,8 @@ export type PreviewGroup = {
   title: string;
   selection: OptionSelection;
   required: boolean;
+  /** Limit of a multiple group, if any. */
+  max?: number;
   /** "Obligatorio · Elegí 1" / "Opcional · Hasta 2". */
   meta: string;
   options: PreviewOption[];
@@ -357,6 +374,8 @@ export type PreviewModel = {
   description: string;
   image?: string;
   price: string;
+  /** Base price in whole pesos, for the configured total. */
+  basePrice: number;
   /** Groups with at least one named option, in display order. */
   groups: PreviewGroup[];
   /** 07C "2 grupos · 6 opciones" of the shown groups. */
@@ -375,13 +394,20 @@ function toPreviewGroup(group: OptionGroupDraft): PreviewGroup {
     title: group.title.trim(),
     selection: group.selection,
     required: group.required,
+    max: group.selection === "multiple" ? group.max : undefined,
     meta: getCustomerGroupMeta(group),
-    options: group.options.map((option) => ({
-      id: option.id,
-      name: option.name.trim(),
-      priceLabel: getOptionPriceLabel(parsePriceInput(option.priceDelta) ?? 0, group.required),
-      selected: option.id === defaultOptionId,
-    })),
+    options: group.options.map((option) => {
+      const name = option.name.trim();
+      const priceDelta = parsePriceInput(option.priceDelta) ?? 0;
+      return {
+        id: option.id,
+        name,
+        priceDelta,
+        priceLabel: getOptionPriceLabel(priceDelta, group.required),
+        chipLabel: priceDelta > 0 ? `${name} ${formatOptionDelta(priceDelta)}` : name,
+        selected: option.id === defaultOptionId,
+      };
+    }),
   };
 }
 
@@ -400,6 +426,7 @@ export function getPreviewModel(draft: ProductDraft): PreviewModel {
     description: draft.description.trim(),
     image: draft.image,
     price: formatPrice(price),
+    basePrice: price,
     groups: groups.map(toPreviewGroup),
     optionsSummary: getOptionGroupsSummary(groups),
     addLabel: `Agregar · ${formatPrice(price + preselected)}`,
@@ -407,4 +434,16 @@ export function getPreviewModel(draft: ProductDraft): PreviewModel {
     momentsLabel: getMomentsLabel(draft.moments),
     availabilityLabel: draft.available ? "Disponible" : "No disponible",
   };
+}
+
+const IMAGE_FORMATS: Record<string, string> = { jpg: "JPG", jpeg: "JPG", png: "PNG", webp: "WEBP", avif: "AVIF", gif: "GIF" };
+
+/**
+ * 07B "Image Metadata": the format of the photo ("WEBP"), or the accepted formats without one. The
+ * export also shows the pixel size, which the optimized `next/image` cannot report.
+ */
+export function getImageFormatLabel(src: string | undefined): string {
+  if (!src) return "JPG, PNG o WEBP";
+  const extension = src.split(/[?#]/)[0].split(".").pop()?.toLowerCase() ?? "";
+  return src.startsWith("blob:") ? "Imagen local" : (IMAGE_FORMATS[extension] ?? "Imagen");
 }

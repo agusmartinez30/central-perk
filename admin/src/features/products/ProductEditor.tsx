@@ -1,12 +1,11 @@
 "use client";
 
 import clsx from "clsx";
-import { LockKeyhole, Maximize2, RefreshCw } from "lucide-react";
+import { CircleAlert, Clock3, LockKeyhole, Maximize2, Plus, Save } from "lucide-react";
 import type { EditorAction, EditorState, EditorView } from "./product-editor-state";
 import { CustomerProductPreview } from "./CustomerProductPreview";
 import { OptionGroupCard } from "./OptionGroupCard";
-import { CustomerNotesSetting, EditorImageUpload, GeneralInformation, ProductTaxonomy } from "./ProductEditorForm";
-import { AvailabilitySwitch, PublicationStatus } from "./ProductTags";
+import { ConsumptionMoments, GeneralInformation } from "./ProductEditorForm";
 
 type ProductEditorProps = {
   editor: EditorState;
@@ -14,12 +13,12 @@ type ProductEditorProps = {
   onAction: (action: EditorAction) => void;
 };
 
-/** "Carta digital / Productos / …" with "Productos" back to the list. */
+/** "CARTA DIGITAL / PRODUCTOS / …" with "Productos" back to the list. */
 export function ProductsBreadcrumb({ current, onAction }: { current: string; onAction: (action: EditorAction) => void }) {
   return (
-    <nav aria-label="Ruta" className="text-[11px] font-bold whitespace-nowrap text-brand">
+    <nav aria-label="Ruta" className="text-[11px] font-bold tracking-[0.6px] whitespace-nowrap text-brand uppercase">
       Carta digital /{" "}
-      <button type="button" onClick={() => onAction({ type: "close-editor" })} className="underline-offset-2 hover:underline">
+      <button type="button" onClick={() => onAction({ type: "close-editor" })} className="uppercase underline-offset-2 hover:underline">
         Productos
       </button>{" "}
       / <span aria-current="page">{current}</span>
@@ -27,128 +26,177 @@ export function ProductsBreadcrumb({ current, onAction }: { current: string; onA
   );
 }
 
-const SAVE_TONES = { neutral: "text-ink", warning: "text-warning", danger: "text-danger" } as const;
-
-/** "Editor Save Product Bar": state of the draft, "Guardar borrador" and "Publicar producto". */
-function EditorSaveProductBar({ view, onAction }: Omit<ProductEditorProps, "editor">) {
+/** "Publication Control": the publication "Guardar cambios" will save. */
+function PublicationControl({ view, onAction }: Omit<ProductEditorProps, "editor">) {
   return (
-    <div className="flex h-[60px] w-full shrink-0 items-center justify-between rounded-tile bg-surface px-3 outline-1 -outline-offset-[0.5px] outline-line">
-      <div role="status" className="flex flex-col gap-0.5">
-        <p className={clsx("text-[12px] font-bold whitespace-nowrap", SAVE_TONES[view.saveTone])}>{view.saveTitle}</p>
-        <p className="text-[11px] whitespace-nowrap text-muted">{view.saveMeta}</p>
-      </div>
-      <div className="flex items-center gap-[7px]">
-        {view.dirty && (
-          <button
-            type="button"
-            onClick={() => onAction({ type: "discard" })}
-            className="flex h-[38px] items-center rounded-nav px-[11px] text-[12px] font-bold text-muted hover:bg-cream hover:text-ink"
-          >
-            Descartar cambios
-          </button>
+    <div className="flex h-[34px] items-center gap-2 rounded-field bg-surface px-2.5 outline-1 -outline-offset-[0.5px] outline-line">
+      <span aria-hidden="true" className="text-[11px] font-bold whitespace-nowrap text-ink">
+        {view.publicationLabel}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={view.published}
+        aria-label="Producto publicado"
+        onClick={() => onAction({ type: "set-draft-publication", published: !view.published })}
+        className={clsx(
+          "flex h-[18px] w-[30px] shrink-0 items-center rounded-[9px] p-0.5 transition-colors",
+          view.published ? "justify-end bg-brand" : "justify-start bg-line",
         )}
+      >
+        <span aria-hidden="true" className="size-3.5 rounded-full bg-surface" />
+      </button>
+    </div>
+  );
+}
+
+/** "Persistent Save Bar": only while the draft has unsaved changes. */
+function PersistentSaveBar({ view, onAction }: Omit<ProductEditorProps, "editor">) {
+  const blocked = view.saveTone === "danger";
+  const Icon = blocked ? CircleAlert : Clock3;
+  return (
+    <div className="flex h-[58px] w-full shrink-0 items-center justify-between rounded-tile bg-surface px-3.5 outline-1 -outline-offset-[0.5px] outline-line">
+      <div role="status" className="flex items-center gap-[9px]">
+        <Icon size={15} aria-hidden="true" className={clsx("shrink-0", blocked ? "text-danger" : "text-warning")} />
+        <div className="flex flex-col gap-px">
+          <p className={clsx("text-[12px] font-bold whitespace-nowrap", blocked ? "text-danger" : "text-ink")}>{view.saveTitle}</p>
+          <p className="text-[11px] whitespace-nowrap text-muted">{view.saveHint}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
         <button
           type="button"
-          disabled={!view.canSaveDraft}
+          onClick={() => onAction({ type: "discard" })}
+          className="flex h-9 items-center rounded-nav px-3 text-[12px] font-bold text-muted hover:bg-cream hover:text-ink"
+        >
+          Descartar
+        </button>
+        <button
+          type="button"
           onClick={() => onAction({ type: "save", mode: "draft" })}
-          className="flex h-[38px] items-center rounded-nav bg-surface px-[11px] text-[12px] font-bold text-ink outline-1 -outline-offset-[0.5px] outline-line enabled:hover:bg-cream disabled:cursor-not-allowed disabled:text-muted"
+          className="flex h-9 items-center rounded-nav px-3 text-[12px] font-bold text-ink outline-1 -outline-offset-[0.5px] outline-line hover:bg-cream"
         >
           Guardar borrador
         </button>
         <button
           type="button"
-          disabled={!view.canPublish}
-          onClick={() => onAction({ type: "save", mode: "publish" })}
-          className="flex h-[38px] items-center rounded-nav bg-brand px-[11px] text-[12px] font-bold text-white outline-1 -outline-offset-[0.5px] outline-brand enabled:hover:bg-brand/92 disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={() => onAction({ type: "save", mode: view.primarySaveMode })}
+          className="flex h-9 items-center gap-1.5 rounded-nav bg-brand px-[15px] text-white hover:bg-brand/92"
         >
-          Publicar producto
+          <Save size={13} aria-hidden="true" />
+          <span className="text-[12px] font-bold whitespace-nowrap">Guardar cambios</span>
         </button>
       </div>
     </div>
   );
 }
 
-/** "Product Preview Column": the read-only customer preview of the draft. */
-function ProductPreviewColumn({ editor, view, onAction }: ProductEditorProps) {
+/** "Preview Column 34%": the customer preview of the draft and the way into 07C. */
+function PreviewColumn({ editor, view, onAction }: ProductEditorProps) {
   return (
-    <aside aria-label="Vista previa del cliente" className="flex h-full w-[380px] shrink-0 flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-[13px] font-bold text-ink">Vista previa del cliente</h3>
+    <aside
+      aria-label="Vista previa del cliente"
+      className="flex h-full min-w-0 flex-1 flex-col items-center gap-2.5 rounded-card bg-surface px-4 py-3.5 outline-1 -outline-offset-[0.5px] outline-line"
+    >
+      <div className="flex w-full items-center justify-between">
+        <div className="flex flex-col gap-0.5">
+          <h3 className="text-[14px] font-bold whitespace-nowrap text-ink">Vista previa del cliente</h3>
+          <p className="text-[11px] whitespace-nowrap text-muted">Cambios reflejados en tiempo real</p>
+        </div>
         <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => onAction({ type: "open-preview" })}
-            className="flex h-6 items-center gap-[5px] rounded-[7px] px-2 text-brand hover:bg-brand-wash"
+            className="flex h-6 items-center gap-[5px] rounded-xl px-2 text-brand hover:bg-brand-wash"
           >
-            <Maximize2 size={11} aria-hidden="true" />
+            <Maximize2 size={10} aria-hidden="true" />
             <span className="text-[11px] font-bold whitespace-nowrap">Ampliar</span>
           </button>
-          <p className="flex h-6 items-center gap-[5px] rounded-[7px] bg-sand px-2 text-muted">
-            <LockKeyhole size={11} aria-hidden="true" />
+          <p className="flex h-6 items-center gap-[5px] rounded-xl bg-sand px-2 text-muted">
+            <LockKeyhole size={10} aria-hidden="true" />
             <span className="text-[11px] font-bold whitespace-nowrap">Solo lectura</span>
           </p>
         </div>
       </div>
-      <CustomerProductPreview preview={view.preview} available={editor.draft.available} className="min-h-0 w-full flex-1" />
-      <p className="flex items-center gap-[7px] rounded-nav bg-warning-bg p-[9px] text-warning">
-        <RefreshCw size={12} aria-hidden="true" className="shrink-0" />
-        <span className="text-[11px] font-bold">La disponibilidad se revalida al confirmar el pedido.</span>
-      </p>
+      <CustomerProductPreview preview={view.preview} available={editor.draft.available} className="min-h-0 w-[330px] flex-1" />
     </aside>
   );
 }
 
 /**
- * 07B · Editar producto ("Product Editor Main"): header with the saved publication and the draft
- * availability, the form column and the live customer preview.
+ * 07B · Editar producto ("Premium Editor Main"): header with the unsaved badge and the
+ * publication control, the form column, the live customer preview and, while there are
+ * unsaved changes, the save bar.
  */
 export function ProductEditor({ editor, view, onAction }: ProductEditorProps) {
   const { draft } = editor;
   return (
-    <div className="flex h-[calc(100dvh-72px)] min-h-[760px] flex-col gap-2.5 px-7 pt-4 pb-3.5">
-      <header className="flex w-full shrink-0 items-end justify-between">
+    <div className="flex h-[calc(100dvh-72px)] min-h-[760px] flex-col gap-2.5 px-7 pt-[18px] pb-3.5">
+      <header className="flex h-[54px] w-full shrink-0 items-center justify-between">
         <div className="flex flex-col gap-[3px]">
           <ProductsBreadcrumb current={view.breadcrumb} onAction={onAction} />
-          <h2 className="text-[23px] font-bold whitespace-nowrap text-ink">{view.title}</h2>
-          <p className="text-[12px] whitespace-nowrap text-muted">
-            Configurá la información, opciones y disponibilidad del producto.
-          </p>
+          <h2 className="text-[25px] font-bold whitespace-nowrap text-ink">{view.title}</h2>
         </div>
-        <div className="flex items-center gap-2">
-          <PublicationStatus status={view.status} label={view.statusLabel} />
-          <AvailabilitySwitch
-            available={draft.available}
-            label="Disponibilidad del producto"
-            onChange={(available) => onAction({ type: "set-draft-availability", available })}
-          />
+        <div className="flex items-center gap-3">
+          {view.dirty && (
+            <p className="flex h-7 items-center gap-1.5 rounded-[14px] bg-warning-bg px-2.5 text-warning">
+              <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-warning" />
+              <span className="text-[11px] font-bold whitespace-nowrap">Cambios sin guardar</span>
+            </p>
+          )}
+          <PublicationControl view={view} onAction={onAction} />
         </div>
       </header>
-      <div className="flex min-h-0 w-full flex-1 gap-3">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-[9px]">
-          <div className="flex w-full shrink-0 items-start gap-[9px]">
-            <GeneralInformation draft={draft} errors={view.errors} onAction={onAction} />
-            <EditorImageUpload image={draft.image} name={draft.name} error={view.errors.image} onAction={onAction} />
-          </div>
-          <ProductTaxonomy draft={draft} onAction={onAction} />
-          <div className="flex min-h-0 w-full flex-1 gap-[9px]">
-            {view.optionGroups.map((group) => (
-              <OptionGroupCard
-                key={group.id}
-                groupId={group.id}
-                title={group.title}
-                meta={group.meta}
-                options={group.options}
-                editingOptionId={editor.editingOptionId}
-                errors={view.errors.optionGroups?.[group.id]?.options}
-                onAction={onAction}
-              />
-            ))}
-          </div>
-          <CustomerNotesSetting allow={draft.allowCustomerNotes} onAction={onAction} />
-          <EditorSaveProductBar view={view} onAction={onAction} />
+      <div className="flex min-h-0 w-full flex-1 items-start gap-3.5">
+        <div className="flex h-full w-[758px] shrink-0 flex-col gap-3.5 overflow-y-auto rounded-card bg-surface p-[18px] outline-1 -outline-offset-[0.5px] outline-line">
+          <GeneralInformation draft={draft} errors={view.errors} onAction={onAction} />
+          <hr className="w-full shrink-0 border-[#e9e6df]" />
+          <ConsumptionMoments moments={draft.moments} onAction={onAction} />
+          <hr className="w-full shrink-0 border-[#e9e6df]" />
+          <section aria-labelledby="customizations-title" className="flex w-full flex-1 flex-col gap-3.5">
+            <div className="flex w-full items-center justify-between">
+              <div className="flex flex-col gap-0.5">
+                <h3 id="customizations-title" className="text-[14px] font-bold text-ink">
+                  Personalizaciones
+                </h3>
+                <p className="text-[11px] text-muted">Opciones disponibles en la vista del cliente</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onAction({ type: "add-group" })}
+                className="flex h-7 items-center gap-[5px] rounded-[7px] px-[9px] text-brand hover:bg-brand-wash"
+              >
+                <Plus size={12} aria-hidden="true" />
+                <span className="text-[11px] font-bold whitespace-nowrap">Agregar grupo</span>
+              </button>
+            </div>
+            {view.optionGroups.length === 0 ? (
+              <p className="rounded-[9px] bg-[#faf9f6] p-3 text-[12px] text-muted">
+                Sin personalizaciones. Agregá un grupo para ofrecer tamaños, extras u otras opciones.
+              </p>
+            ) : (
+              <div className="grid w-full grid-cols-2 items-start gap-3">
+                {view.optionGroups.map((group) => {
+                  const draftGroup = draft.optionGroups.find((candidate) => candidate.id === group.id)!;
+                  return (
+                    <OptionGroupCard
+                      key={group.id}
+                      group={draftGroup}
+                      meta={group.meta}
+                      editingGroup={editor.editingGroupId === group.id}
+                      editingOptionId={editor.editingOptionId}
+                      errors={view.errors.optionGroups?.[group.id]}
+                      onAction={onAction}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </section>
         </div>
-        <ProductPreviewColumn editor={editor} view={view} onAction={onAction} />
+        <PreviewColumn editor={editor} view={view} onAction={onAction} />
       </div>
+      {(view.dirty || view.saveTone === "danger") && <PersistentSaveBar view={view} onAction={onAction} />}
     </div>
   );
 }
