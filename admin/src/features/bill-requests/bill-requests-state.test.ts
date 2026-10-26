@@ -8,8 +8,8 @@ const valueOf = (state: typeof initial, id: string) =>
   getRequestMetrics(state.requests).find((metric) => metric.id === id)?.value;
 
 describe("billRequestsReducer", () => {
-  it("selects the first active request by default and respects an explicit selection", () => {
-    expect(getSelectedRequest(initial)?.id).toBe("SC-010");
+  it("keeps the detail closed by default and respects an explicit selection", () => {
+    expect(initial.selectedId).toBeNull();
     const selected = createBillRequestsState(BILL_REQUESTS_BOARD.requests, { selectedId: "SC-010" });
     expect(getSelectedRequest(selected)?.tableNumber).toBe(10);
     expect(createBillRequestsState(BILL_REQUESTS_BOARD.requests, { selectedId: null }).selectedId).toBeNull();

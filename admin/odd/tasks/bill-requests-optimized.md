@@ -60,6 +60,11 @@ Staff need to prioritize bill requests, identify payment verification work, insp
   - Checks: full test suite, lint, typecheck, production build, and `/bill-requests?state=selected|empty|no-results` runtime checks.
   - Evidence: full candidate and correction commit `95fff6c` validated with 586 tests, lint, TypeScript, production build, and `git diff --check` passing. Production runtime smoke loaded `/bill-requests` plus `selected`, `empty`, and `no-results` states. The validator found no remaining severity findings after the displayed-count and focus-visible correction. Browser screenshot/DOM capture was unavailable after timing out, so exact 1440×900 pixel proof is explicitly skipped; source dimensions and semantic structure were verified instead.
 
+- [x] **BR-4 — Detail on demand, pagination and transition confirmations**
+  - Route: direct inline (parent already held the mapped context).
+  - Acceptance: the detail panel mounts only after "Ver detalle"; the table pages five rows with a shown-range count and resets to page 1 on filter/sort changes; columns spread with auto layout; every status transition asks for confirmation through the shared `ConfirmDialog`.
+  - Checks: RED observed for default-closed selection, page-based count, shared pagination and confirmation copy; GREEN with 589 tests, lint and TypeScript passing. Browser visual check not run.
+
 ## Delivery
 
 - Strategy: `single-pr`.

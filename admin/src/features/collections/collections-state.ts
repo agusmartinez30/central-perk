@@ -1,14 +1,14 @@
 import type { ManagedCollection } from "@/mocks/types";
+import { paginate, type Page } from "@/shared/lib/pagination";
 import {
   filterCollections,
   getPeriodRange,
-  paginate,
+  PAGE_SIZE,
   sortCollections,
   type CollectionPeriod,
   type CollectionSort,
   type DateRange,
   type MethodFilter,
-  type Page,
   type StaffFilter,
 } from "./collections-view";
 
@@ -109,5 +109,5 @@ export function getVisibleCollections(state: CollectionsState): VisibleCollectio
     staff: state.staff,
     query: state.query,
   });
-  return { ...paginate(sortCollections(matching, state.sort), state.page), range, periodCollections };
+  return { ...paginate(sortCollections(matching, state.sort), state.page, PAGE_SIZE), range, periodCollections };
 }

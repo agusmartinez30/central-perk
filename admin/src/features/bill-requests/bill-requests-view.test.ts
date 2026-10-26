@@ -27,7 +27,9 @@ import {
   finalizeRequest,
   sortRequests,
   verifyPayment,
+  getTransitionConfirm,
 } from "./bill-requests-view";
+import { formatPrice } from "@/shared/lib/format-price";
 
 const request = (overrides: Partial<ManagedBillRequest> & Pick<ManagedBillRequest, "id">): ManagedBillRequest => ({
   tableNumber: 1,
@@ -243,11 +245,9 @@ describe("copy", () => {
   });
 
   it("counts every displayed request in the table footer", () => {
-    expect(formatTableCount(requests)).toBe("6 solicitudes mostradas · Actualizado hace unos segundos");
-    expect(formatTableCount([request({ id: "a", status: "finalized" })])).toBe(
-      "1 solicitud mostrada · Actualizado hace unos segundos",
-    );
-    expect(formatTableCount([])).toBe("0 solicitudes mostradas · Actualizado hace unos segundos");
+    expect(formatTableCount({ from: 1, to: 5, total: 6 })).toBe("Mostrando 1–5 de 6 solicitudes");
+    expect(formatTableCount({ from: 1, to: 1, total: 1 })).toBe("Mostrando 1–1 de 1 solicitud");
+    expect(formatTableCount({ from: 0, to: 0, total: 0 })).toBe("Sin solicitudes para mostrar");
   });
 
   it("sums the active totals", () => {
@@ -351,5 +351,34 @@ describe("actions", () => {
       paymentVerification: { status: "pending", reportedAt: "12:04" },
     });
     expect(finalizeRequest(pending, "Sofía M.", "12:08")).toBe(pending);
+  });
+});
+
+describe("getTransitionConfirm", () => {
+  const target = request({ id: "SC-010", tableNumber: 10, total: 31200 });
+
+  it("asks before taking a request and names who will be assigned", () => {
+    expect(getTransitionConfirm("mark-attending", target, "Sofía M.")).toEqual({
+      title: "¿Atender la solicitud de Mesa 10?",
+      description: "Sofía M. queda como responsable y la solicitud pasa a En atención.",
+      confirmLabel: "Atender solicitud",
+      tone: "primary",
+    });
+  });
+
+  it("asks to confirm the credited amount before verifying a payment", () => {
+    expect(getTransitionConfirm("verify-payment", target, "Sofía M.")).toMatchObject({
+      title: "¿Confirmar el pago de Mesa 10?",
+      description: `Confirmá que la transferencia de ${formatPrice(31200)} está acreditada en la cuenta del local.`,
+      confirmLabel: "Confirmar pago",
+    });
+  });
+
+  it("warns that finalizing cannot be undone", () => {
+    expect(getTransitionConfirm("finalize", target, "Sofía M.")).toMatchObject({
+      title: "¿Finalizar la solicitud de Mesa 10?",
+      note: "Esta acción no se puede deshacer.",
+      confirmLabel: "Finalizar solicitud",
+    });
   });
 });

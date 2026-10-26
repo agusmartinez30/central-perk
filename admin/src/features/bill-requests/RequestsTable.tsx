@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { BadgeCheck, Hand, PanelRightOpen, ReceiptText, SearchX, WalletCards, type LucideIcon } from "lucide-react";
 import type { ManagedBillRequest } from "@/mocks/types";
+import { Pagination } from "@/shared/ui";
 import {
   formatRequestId,
   formatRequestTotal,
@@ -9,14 +10,17 @@ import {
 } from "./bill-requests-view";
 import { PaymentPreference, PaymentVerificationPill, StatusPill, WaitingIndicator } from "./BillRequestTags";
 
-/** Column widths of the "Table Header" cells; the actions column takes the rest of the row. */
+/**
+ * "Table Header" cells. The table lays out automatically so spare width spreads across the data
+ * columns whether or not the detail panel is open; the actions column shrinks to its buttons.
+ */
 const COLUMNS = [
-  { label: "Mesa / solicitud", width: "w-[178px]" },
-  { label: "Espera", width: "w-[90px]" },
-  { label: "Pago", width: "w-[130px]" },
-  { label: "Total", width: "w-[92px]" },
-  { label: "Estado", width: "w-[126px]" },
-  { label: "Acción", width: "" },
+  { label: "Mesa / solicitud", width: "" },
+  { label: "Espera", width: "" },
+  { label: "Pago", width: "" },
+  { label: "Total", width: "" },
+  { label: "Estado", width: "" },
+  { label: "Acción", width: "w-px" },
 ] as const;
 
 export type TableEmptyState = {
@@ -30,6 +34,9 @@ type RequestsTableProps = {
   requests: ManagedBillRequest[];
   emptyState: TableEmptyState | null;
   footerCount: string;
+  page: number;
+  pageCount: number;
+  onPageChange: (page: number) => void;
   selectedId: string | null;
   onMarkAttending: (id: string) => void;
   onVerifyPayment: (id: string) => void;
@@ -37,7 +44,7 @@ type RequestsTableProps = {
   onViewDetail: (id: string) => void;
 };
 
-const CELL = "px-3 align-middle";
+const CELL = "px-4 align-middle";
 
 /** "Solicitud · Mesa NN" row. */
 function RequestRow({
@@ -141,13 +148,16 @@ export const NO_REQUESTS_ICON = ReceiptText;
 export const NO_RESULTS_ICON = SearchX;
 
 /**
- * "Requests Table": sand "Table Header", one row per request (scrolling when they overflow)
- * and the "Table Footer" with the active count and the "Authority Note".
+ * "Requests Table": sand "Table Header", one row per request of the current page and the
+ * "Table Footer" with the shown range and the pagination.
  */
 export function RequestsTable({
   requests,
   emptyState,
   footerCount,
+  page,
+  pageCount,
+  onPageChange,
   selectedId,
   onMarkAttending,
   onVerifyPayment,
@@ -160,14 +170,14 @@ export function RequestsTable({
       className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-card bg-surface outline-1 -outline-offset-[0.5px] outline-line"
     >
       <div className="min-h-0 shrink overflow-y-auto">
-        <table className="w-full table-fixed border-collapse">
+        <table className="w-full table-auto border-collapse">
           <thead className="sticky top-0 z-[1] bg-sand">
             <tr className="h-11">
               {COLUMNS.map((column) => (
                 <th
                   key={column.label}
                   scope="col"
-                  className={clsx("px-2.5 text-left text-[9px] font-extrabold whitespace-nowrap text-muted uppercase", column.width)}
+                  className={clsx("px-4 text-left text-[9px] font-extrabold whitespace-nowrap text-muted uppercase", column.width)}
                 >
                   {column.label}
                 </th>
@@ -199,7 +209,7 @@ export function RequestsTable({
         )}
       >
         <p aria-live="polite" className="text-[10px] font-bold whitespace-nowrap text-muted">{footerCount}</p>
-        <p className="text-[9px] font-semibold whitespace-nowrap text-muted">Encabezado fijo · Desplazamiento vertical</p>
+        <Pagination page={page} pageCount={pageCount} onPageChange={onPageChange} />
       </footer>
     </section>
   );

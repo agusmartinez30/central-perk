@@ -1,6 +1,7 @@
 import { REQUEST_MODES, getRequestModeShortLabel } from "@/mocks/service-day/catalog";
 import type { BillPaymentMethod, BillRequestStatus, ManagedBillRequest, PaymentVerification } from "@/mocks/types";
 import { formatPrice } from "@/shared/lib/format-price";
+import type { Page } from "@/shared/lib/pagination";
 
 export type RequestTone = "brand" | "warning" | "success" | "danger";
 
@@ -178,11 +179,13 @@ export function getKitchenNote(request: ManagedBillRequest): string | null {
   return `${count} ${count === 1 ? "pedido" : "pedidos"} en preparación`;
 }
 
-/** "Table Count": the number of requests currently displayed by the table. */
-export function formatTableCount(requests: readonly ManagedBillRequest[]): string {
-  const count = requests.length;
-  const noun = count === 1 ? "solicitud mostrada" : "solicitudes mostradas";
-  return `${count} ${noun} · Actualizado hace unos segundos`;
+/** Rows per page of the "Requests Table": five 82px rows fit the 1440×900 frame without scrolling. */
+export const REQUESTS_PAGE_SIZE = 5;
+
+/** "Table Count": "Mostrando 1–5 de 6 solicitudes". */
+export function formatTableCount({ from, to, total }: Pick<Page<unknown>, "from" | "to" | "total">): string {
+  if (total === 0) return "Sin solicitudes para mostrar";
+  return `Mostrando ${from}–${to} de ${total} ${total === 1 ? "solicitud" : "solicitudes"}`;
 }
 
 /** Amount still to collect across the active requests. */
@@ -210,6 +213,50 @@ export function getAssigneeLabel(request: ManagedBillRequest): string {
 }
 
 export type RowAction = "mark-attending" | "verify-payment" | "finalize" | "view-detail";
+
+/** Status transitions that change a request; each one asks for confirmation first. */
+export type TransitionAction = Exclude<RowAction, "view-detail">;
+
+export type TransitionConfirm = {
+  title: string;
+  description: string;
+  note?: string;
+  confirmLabel: string;
+  tone: "primary" | "danger";
+};
+
+/** Copy of the confirmation dialog shown before a status transition. */
+export function getTransitionConfirm(
+  action: TransitionAction,
+  request: ManagedBillRequest,
+  staffName: string,
+): TransitionConfirm {
+  const table = formatTableLabel(request);
+  switch (action) {
+    case "mark-attending":
+      return {
+        title: `¿Atender la solicitud de ${table}?`,
+        description: `${staffName} queda como responsable y la solicitud pasa a En atención.`,
+        confirmLabel: "Atender solicitud",
+        tone: "primary",
+      };
+    case "verify-payment":
+      return {
+        title: `¿Confirmar el pago de ${table}?`,
+        description: `Confirmá que la transferencia de ${formatRequestTotal(request)} está acreditada en la cuenta del local.`,
+        confirmLabel: "Confirmar pago",
+        tone: "primary",
+      };
+    case "finalize":
+      return {
+        title: `¿Finalizar la solicitud de ${table}?`,
+        description: `La cuenta de ${formatRequestTotal(request)} se marca como cobrada y la solicitud deja de estar activa.`,
+        note: "Esta acción no se puede deshacer.",
+        confirmLabel: "Finalizar solicitud",
+        tone: "primary",
+      };
+  }
+}
 
 export function canMarkAttending(request: ManagedBillRequest): boolean {
   return request.status === "pending";

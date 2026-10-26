@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { BadgeCheck, Hand, PanelRightOpen, ReceiptText, TriangleAlert, WalletCards, X } from "lucide-react";
+import { BadgeCheck, Hand, ReceiptText, TriangleAlert, WalletCards, X } from "lucide-react";
 import type { BillRequestHistoryKind, ManagedBillRequest } from "@/mocks/types";
 import { formatPrice } from "@/shared/lib/format-price";
 import {
@@ -10,7 +10,8 @@ import {
   getPaymentLabel,
   getPaymentVerificationLabel,
   getRowActions,
-  type RowAction,
+  getWaitTone,
+  type TransitionAction,
 } from "./bill-requests-view";
 import { PaymentVerificationPill, StatusPill } from "./BillRequestTags";
 
@@ -25,34 +26,24 @@ const HISTORY_LABELS: Record<BillRequestHistoryKind, string> = {
   finalized: "Solicitud finalizada",
 };
 
-const ACTION_COPY: Record<Exclude<RowAction, "view-detail">, { label: string; icon: typeof Hand; className: string }> = {
+const ACTION_COPY: Record<TransitionAction, { label: string; icon: typeof Hand; className: string }> = {
   "mark-attending": { label: "Atender solicitud", icon: Hand, className: "bg-warning hover:bg-warning/90" },
   "verify-payment": { label: "Verificar pago", icon: BadgeCheck, className: "bg-danger hover:bg-danger/90" },
   finalize: { label: "Finalizar solicitud", icon: WalletCards, className: "bg-brand hover:bg-brand/92" },
 };
 
 type BillRequestDetailPanelProps = {
-  request: ManagedBillRequest | null;
+  request: ManagedBillRequest;
   onClose: () => void;
-  onAction: (action: Exclude<RowAction, "view-detail">, id: string) => void;
+  onAction: (action: TransitionAction, id: string) => void;
 };
 
 function SectionTitle({ children }: { children: string }) {
   return <h3 className="text-[9px] font-extrabold tracking-[0.8px] text-muted">{children}</h3>;
 }
 
-/** Persistent, non-modal request detail with account lines, verification and workflow history. */
+/** Non-modal request detail, shown only while a request is open, with account lines, verification and history. */
 export function BillRequestDetailPanel({ request, onClose, onAction }: BillRequestDetailPanelProps) {
-  if (!request) {
-    return (
-      <aside aria-label="Detalle de la solicitud" className={clsx(PANEL, "items-center justify-center text-center")}>
-        <PanelRightOpen size={26} aria-hidden="true" className="text-muted" />
-        <p className="text-[13px] font-bold text-ink">Ninguna solicitud seleccionada</p>
-        <p className="max-w-[250px] text-[12px] text-muted">Elegí una solicitud de la tabla para revisar su detalle.</p>
-      </aside>
-    );
-  }
-
   const titleId = `bill-request-detail-${request.id}`;
   const primary = getRowActions(request).find((action) => action !== "view-detail");
   const paymentPending = request.paymentVerification.status === "pending";
@@ -79,7 +70,7 @@ export function BillRequestDetailPanel({ request, onClose, onAction }: BillReque
         <p className="text-[13px] font-extrabold text-ink">
           {formatTableLabel(request)} · {request.spaceName} · {request.customer}
         </p>
-        <p className={clsx("text-[10px] font-bold", request.waitMinutes >= 20 ? "text-danger" : "text-muted")}>
+        <p className={clsx("text-[10px] font-bold", getWaitTone(request) === "danger" ? "text-danger" : "text-muted")}>
           Solicitud recibida hace {formatWait(request.waitMinutes)}
         </p>
       </div>

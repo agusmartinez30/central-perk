@@ -5,3 +5,4 @@ export { Checkbox } from "./Checkbox";
 export { Notice, type NoticeTone } from "./Notice";
 export { Card } from "./Card";
 export { ConfirmDialog, type ConfirmDialogProps } from "./ConfirmDialog";
+export { Pagination, type PaginationProps } from "./Pagination";

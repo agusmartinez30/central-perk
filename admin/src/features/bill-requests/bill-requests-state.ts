@@ -1,7 +1,7 @@
 import type { ManagedBillRequest } from "@/mocks/types";
-import { finalizeRequest, isActiveRequest, markAttending, verifyPayment } from "./bill-requests-view";
+import { finalizeRequest, markAttending, verifyPayment } from "./bill-requests-view";
 
-/** In-memory state of 04: the requests and the one shown in the persistent detail panel. */
+/** In-memory state of 04: the requests and the one shown in the detail panel (closed when null). */
 export type BillRequestsState = {
   requests: ManagedBillRequest[];
   selectedId: string | null;
@@ -18,11 +18,7 @@ export function createBillRequestsState(
   requests: ManagedBillRequest[],
   options: Partial<Pick<BillRequestsState, "selectedId">> = {},
 ): BillRequestsState {
-  const selectedId =
-    "selectedId" in options
-      ? (options.selectedId ?? null)
-      : (requests.find(isActiveRequest)?.id ?? requests[0]?.id ?? null);
-  return { requests, selectedId };
+  return { requests, selectedId: options.selectedId ?? null };
 }
 
 function findRequest(state: BillRequestsState, id: string | null): ManagedBillRequest | null {

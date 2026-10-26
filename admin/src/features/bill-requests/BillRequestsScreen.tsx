@@ -3,15 +3,20 @@
 import { useReducer, useState } from "react";
 import { BILL_REQUESTS_BOARD, SERVICE_DAY } from "@/mocks/service-day";
 import { DEMO_STAFF } from "@/mocks/staff";
+import { paginate } from "@/shared/lib/pagination";
 import { useScreenState } from "@/shared/lib/use-screen-state";
+import { ConfirmDialog } from "@/shared/ui";
 import {
   filterRequests,
   formatTableCount,
   getRequestMetrics,
+  getTransitionConfirm,
+  REQUESTS_PAGE_SIZE,
   sortRequests,
   type PaymentFilter,
   type RequestSort,
   type StatusFilter,
+  type TransitionAction,
 } from "./bill-requests-view";
 import {
   billRequestsReducer,
@@ -25,7 +30,7 @@ import { RequestToolbar } from "./RequestToolbar";
 import { NO_REQUESTS_ICON, NO_RESULTS_ICON, RequestsTable, type TableEmptyState } from "./RequestsTable";
 
 /**
- * Forced variants: `selected` (drawer of Mesa 10, as in the "Solicitud seleccionada" export),
+ * Forced variants: `selected` (detail panel of Mesa 10, as in the "Solicitud seleccionada" export),
  * `empty` (no bill requests yet) and `no-results` (search with no match). The empty and
  * no-results copy is not in the 04 exports.
  */
@@ -46,7 +51,7 @@ const NO_RESULTS_QUERY = "Mesa 99";
 
 /**
  * 04 · Solicitudes de cuenta. Container: owns the in-memory requests (pure
- * `billRequestsReducer`: quick-detail drawer and "Marcar en atención"), filters and sort, fed by
+ * `billRequestsReducer`: detail panel and confirmed status transitions), filters, sort and page, fed by
  * `BILL_REQUESTS_BOARD`.
  */
 export function BillRequestsScreen() {
@@ -58,17 +63,39 @@ export function BillRequestsScreen() {
   const [sort, setSort] = useState<RequestSort>("longest-wait");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [payment, setPayment] = useState<PaymentFilter>("all");
+  const [page, setPage] = useState(1);
+  const [pendingTransition, setPendingTransition] = useState<{ action: TransitionAction; id: string } | null>(null);
+  const pendingRequest = pendingTransition && requests.find((request) => request.id === pendingTransition.id);
 
-  const visible = sortRequests(filterRequests(requests, { status, payment, query }), sort);
+  const confirmTransition = () => {
+    if (!pendingTransition) return;
+    const { action, id } = pendingTransition;
+    const type = action === "finalize" ? "finalize-request" : action;
+    dispatch({ type, id, staffName: DEMO_STAFF.name, at: SERVICE_DAY.now });
+    setPendingTransition(null);
+  };
+
+  const visible = paginate(
+    sortRequests(filterRequests(requests, { status, payment, query }), sort),
+    page,
+    REQUESTS_PAGE_SIZE,
+  );
+
+  // Any change to what the table lists goes back to the first page.
+  const resetPage = <T,>(setter: (value: T) => void) => (value: T) => {
+    setter(value);
+    setPage(1);
+  };
 
   const clearFilters = () => {
     setQuery("");
     setStatus("all");
     setPayment("all");
+    setPage(1);
   };
 
   let emptyState: TableEmptyState | null = null;
-  if (visible.length === 0) {
+  if (visible.total === 0) {
     emptyState =
       requests.length > 0
         ? {
@@ -91,45 +118,43 @@ export function BillRequestsScreen() {
       <RequestMetrics metrics={getRequestMetrics(requests)} />
       <RequestToolbar
         query={query}
-        onQueryChange={setQuery}
+        onQueryChange={resetPage(setQuery)}
         sort={sort}
-        onSortChange={setSort}
+        onSortChange={resetPage(setSort)}
         status={status}
-        onStatusChange={setStatus}
+        onStatusChange={resetPage(setStatus)}
         payment={payment}
-        onPaymentChange={setPayment}
+        onPaymentChange={resetPage(setPayment)}
       />
       <div className="flex min-h-0 w-full flex-1 gap-3">
         <RequestsTable
-          requests={visible}
+          requests={visible.items}
           emptyState={emptyState}
           footerCount={formatTableCount(visible)}
+          page={visible.page}
+          pageCount={visible.pageCount}
+          onPageChange={setPage}
           selectedId={state.selectedId}
-          onMarkAttending={(id) =>
-            dispatch({ type: "mark-attending", id, staffName: DEMO_STAFF.name, at: SERVICE_DAY.now })
-          }
-          onVerifyPayment={(id) =>
-            dispatch({ type: "verify-payment", id, staffName: DEMO_STAFF.name, at: SERVICE_DAY.now })
-          }
-          onFinalize={(id) =>
-            dispatch({ type: "finalize-request", id, staffName: DEMO_STAFF.name, at: SERVICE_DAY.now })
-          }
+          onMarkAttending={(id) => setPendingTransition({ action: "mark-attending", id })}
+          onVerifyPayment={(id) => setPendingTransition({ action: "verify-payment", id })}
+          onFinalize={(id) => setPendingTransition({ action: "finalize", id })}
           onViewDetail={(id) => dispatch({ type: "open-detail", id })}
         />
-        <BillRequestDetailPanel
-          request={selectedRequest}
-          onClose={() => dispatch({ type: "close-detail" })}
-          onAction={(action, id) => {
-            if (action === "mark-attending") {
-              dispatch({ type: "mark-attending", id, staffName: DEMO_STAFF.name, at: SERVICE_DAY.now });
-            } else if (action === "verify-payment") {
-              dispatch({ type: "verify-payment", id, staffName: DEMO_STAFF.name, at: SERVICE_DAY.now });
-            } else {
-              dispatch({ type: "finalize-request", id, staffName: DEMO_STAFF.name, at: SERVICE_DAY.now });
-            }
-          }}
-        />
+        {selectedRequest && (
+          <BillRequestDetailPanel
+            request={selectedRequest}
+            onClose={() => dispatch({ type: "close-detail" })}
+            onAction={(action, id) => setPendingTransition({ action, id })}
+          />
+        )}
       </div>
+      {pendingTransition && pendingRequest && (
+        <ConfirmDialog
+          {...getTransitionConfirm(pendingTransition.action, pendingRequest, DEMO_STAFF.name)}
+          onCancel={() => setPendingTransition(null)}
+          onConfirm={confirmTransition}
+        />
+      )}
     </div>
   );
 }
