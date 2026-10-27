@@ -59,7 +59,7 @@ Own session auth, no JWT. `src/modules/auth` stores sessions in PostgreSQL and h
 - MFA is TOTP (authenticator app). Users with `mfaSecret` get a 10-minute `mfa_pending` session from login; verifying rotates it into a new authenticated session. Seed with `SEED_OWNER_MFA=true` to enroll the owner and print the `otpauth://` URI.
 - `remember: true` makes the cookie persistent (`Max-Age` = `SESSION_TTL_HOURS`); otherwise it is a browser-session cookie. The server expires sessions after `SESSION_TTL_HOURS` either way.
 - Reset links point to `<ADMIN_URL>/reset-password?token=…` and expire after 15 minutes. In development the `ConsoleMailer` prints them to the API log; replace it with a real mail adapter before production.
-- Password rules mirror the admin reset screen: 12+ characters and nothing guessable (`src/modules/auth/domain/password-policy.ts`).
+- Password rules mirror the admin reset screen: 6+ characters, no other strength rules (`src/modules/auth/domain/password-policy.ts`).
 - Login, verify, forgot and reset are rate limited per IP with `@nestjs/throttler`.
 - Other modules protect routes with `@UseGuards(SessionGuard)` and read the user with `@CurrentStaff()` (import `AuthModule`).
 

@@ -25,11 +25,10 @@ describe("isValidEmail", () => {
 });
 
 describe("getPasswordRequirements", () => {
-  it("lists the three rules of the reset screen in order", () => {
+  it("lists the rules of the reset screen in order", () => {
     expect(getPasswordRequirements("").map((rule) => rule.label)).toEqual([
       "6 caracteres como mínimo",
       "Se admiten frases largas",
-      "Evitá datos fáciles de adivinar",
     ]);
   });
 
@@ -44,27 +43,18 @@ describe("getPasswordRequirements", () => {
     expect(long.find((rule) => rule.id === "length")?.met).toBe(true);
   });
 
-  it("flags easy-to-guess passwords", () => {
-    const guessable = ["123456789012", "aaaaaaaaaaaa", "contraseña1234", "cafecentral2026"];
-    for (const password of guessable) {
-      const strength = getPasswordRequirements(password).find((rule) => rule.id === "strength");
-      expect(strength?.met, password).toBe(false);
-    }
-  });
-
-  it("flags passwords that contain the email name", () => {
-    const strength = getPasswordRequirements("turno-de-la-mañana", "turno@cafecentral.com").find(
-      (rule) => rule.id === "strength",
-    );
-    expect(strength?.met).toBe(false);
-  });
 });
 
 describe("isPasswordStrong", () => {
   it("is true only when every requirement is met", () => {
     expect(isPasswordStrong("Una frase larga y segura")).toBe(true);
     expect(isPasswordStrong("corta")).toBe(false);
-    expect(isPasswordStrong("123456789012")).toBe(false);
+  });
+
+  it("does not judge how guessable a long enough password is", () => {
+    for (const password of ["123456", "aaaaaa", "contraseña", "cafecentral"]) {
+      expect(isPasswordStrong(password), password).toBe(true);
+    }
   });
 });
 

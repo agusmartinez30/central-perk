@@ -14,7 +14,7 @@ export class ResetPassword {
     const user = await this.deps.users.findById(reset.userId);
     if (!user) throw new InvalidResetTokenError();
 
-    const unmet = unmetPasswordRequirements(password, user.email);
+    const unmet = unmetPasswordRequirements(password);
     if (unmet.length > 0) throw new WeakPasswordError(unmet);
 
     if (!(await this.deps.resetTokens.consume(reset.id, now))) throw new InvalidResetTokenError();

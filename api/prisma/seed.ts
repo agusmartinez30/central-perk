@@ -24,7 +24,7 @@ const env = z
   .parse(process.env);
 
 const email = normalizeEmail(env.SEED_OWNER_EMAIL);
-const unmet = unmetPasswordRequirements(env.SEED_OWNER_PASSWORD, email);
+const unmet = unmetPasswordRequirements(env.SEED_OWNER_PASSWORD);
 if (unmet.length > 0) throw new Error(`SEED_OWNER_PASSWORD does not meet: ${unmet.join(', ')}`);
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: env.DATABASE_URL }) });

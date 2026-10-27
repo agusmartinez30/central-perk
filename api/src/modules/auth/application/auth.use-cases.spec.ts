@@ -167,10 +167,10 @@ describe('auth use cases', () => {
     it('rejects a weak password without consuming the token', async () => {
       const token = await resetTokenFromMail();
 
-      const error = await resetPassword.execute({ token, password: 'turno-cafe-2026' }).catch((e: unknown) => e);
+      const error = await resetPassword.execute({ token, password: 'corta' }).catch((e: unknown) => e);
 
       expect(error).toBeInstanceOf(WeakPasswordError);
-      expect((error as WeakPasswordError).unmet).toEqual(['strength']);
+      expect((error as WeakPasswordError).unmet).toEqual(['length']);
       expect(deps.resetTokens.items[0]?.usedAt).toBeNull();
     });
   });
