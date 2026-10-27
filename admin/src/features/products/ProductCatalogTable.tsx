@@ -3,9 +3,8 @@
 import clsx from "clsx";
 import { Archive, ArchiveRestore, Copy, Pencil, SearchX } from "lucide-react";
 import { useState } from "react";
-import { Pagination } from "@/shared/ui";
+import { Pagination, RowMenu, type RowMenuItem } from "@/shared/ui";
 import type { ProductRowView } from "./products-state";
-import { ProductRowMenu, type RowMenuItem } from "./ProductRowMenu";
 import { ProductImage } from "./ProductTags";
 
 type ProductCatalogTableProps = {
@@ -206,7 +205,7 @@ export function ProductCatalogTable({
                           <Pencil size={12} aria-hidden="true" className="shrink-0" />
                           <span className="text-[11px] font-bold whitespace-nowrap">Editar</span>
                         </button>
-                        <ProductRowMenu
+                        <RowMenu
                           label={`Más acciones para ${row.name}`}
                           items={menuItems(row)}
                           open={menuOpen}

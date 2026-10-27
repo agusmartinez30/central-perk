@@ -46,25 +46,20 @@ const COLUMNS = "grid grid-cols-[206px_140px_130px_80px_50px_1fr] items-center";
 
 type CategoriesToolbarProps = { query: string; onQueryChange: (query: string) => void };
 
-/** "Category Toolbar": 340×38 search box and the drag hint (9–10px → 11–12px). */
+/** "Search Categories": 300×38 search box of the tabs row (9px → 12px). */
 export function CategoriesToolbar({ query, onQueryChange }: CategoriesToolbarProps) {
   return (
-    <div className="flex h-[38px] w-full shrink-0 items-start justify-between">
-      <label className="flex h-[38px] w-[340px] items-center gap-2 rounded-field bg-surface px-[11px] outline-1 -outline-offset-[0.5px] outline-line focus-within:outline-2 focus-within:outline-brand">
-        <Search size={14} aria-hidden="true" className="shrink-0 text-muted" />
-        <span className="sr-only">Buscar categoría</span>
-        <input
-          type="search"
-          value={query}
-          placeholder="Buscar categoría…"
-          onChange={(event) => onQueryChange(event.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-[12px] text-ink outline-none placeholder:text-muted"
-        />
-      </label>
-      <p className="text-[11px] whitespace-nowrap text-muted">
-        Arrastrá para reordenar · “Todos” se genera automáticamente
-      </p>
-    </div>
+    <label className="flex h-[38px] w-[300px] shrink-0 items-center gap-[7px] rounded-field bg-surface px-2.5 outline-1 -outline-offset-[0.5px] outline-line focus-within:outline-2 focus-within:outline-brand">
+      <Search size={13} aria-hidden="true" className="shrink-0 text-muted" />
+      <span className="sr-only">Buscar categoría</span>
+      <input
+        type="search"
+        value={query}
+        placeholder="Buscar categoría…"
+        onChange={(event) => onQueryChange(event.target.value)}
+        className="min-w-0 flex-1 bg-transparent text-[12px] text-ink outline-none placeholder:text-muted"
+      />
+    </label>
   );
 }
 

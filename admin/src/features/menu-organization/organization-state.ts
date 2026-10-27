@@ -628,7 +628,8 @@ function switchView(visible: boolean, save: VisibilitySave | undefined): SwitchV
   return { visible, visibilityState: "idle" };
 }
 
-export type MomentListCard = MomentCard & Omit<SwitchView, "visible">;
+/** 08A card: the "Accessible Reorder" chevrons are disabled at the ends of the grid. */
+export type MomentListCard = MomentCard & Omit<SwitchView, "visible"> & { canMoveUp: boolean; canMoveDown: boolean };
 
 export type MomentsListView = { metrics: MetricItem[]; cards: MomentListCard[] };
 
@@ -636,12 +637,14 @@ export function getMomentsListView(state: OrganizationState): MomentsListView {
   const cards = getMomentCards({ moments: state.moments, products: state.products, categories: state.categories });
   return {
     metrics: getMomentMetricItems(state.moments, state.products),
-    cards: cards.map((card) => {
+    cards: cards.map((card, index) => {
       const view = switchView(card.visible, state.momentVisibilitySaves[card.id]);
       return {
         ...card,
         ...view,
         visibilityLabel: view.visibilityState === "pending" ? UPDATING_LABEL : view.visible ? "Visible" : "Oculto",
+        canMoveUp: index > 0,
+        canMoveDown: index < cards.length - 1,
       };
     }),
   };

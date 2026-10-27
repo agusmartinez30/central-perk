@@ -52,6 +52,16 @@ describe("moments list (08A)", () => {
     expect(getMomentsListView(moved).cards.map((card) => card.id)).toEqual(["merendar", "desayunar", "cenar", "tomar"]);
     expect(moved.notice).toBe("Para desayunar pasó al orden 2.");
   });
+
+  it("numbers the cards and disables the order arrows at the ends", () => {
+    const cards = getMomentsListView(createOrganizationState()).cards;
+    expect(cards.map((card) => [card.order, card.canMoveUp, card.canMoveDown])).toEqual([
+      [1, false, true],
+      [2, true, true],
+      [3, true, true],
+      [4, true, false],
+    ]);
+  });
 });
 
 describe("moment editor (08B)", () => {

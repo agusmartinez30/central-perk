@@ -8,9 +8,11 @@ export type RowMenuItem = {
   label: string;
   icon: LucideIcon;
   onSelect: () => void;
+  /** Shown but inert (`aria-disabled`), so it stays reachable with the arrow keys. */
+  disabled?: boolean;
 };
 
-type ProductRowMenuProps = {
+type RowMenuProps = {
   /** Accessible name of the trigger, e.g. "Más acciones para Cappuccino". */
   label: string;
   items: readonly RowMenuItem[];
@@ -24,12 +26,12 @@ const ITEM_HEIGHT = 32;
 const MENU_PADDING = 4;
 
 /**
- * "More Actions": 30px trigger with a menu of the secondary row actions. The menu is fixed to the
+ * "More Actions": 30px trigger with a menu of secondary actions (07 table rows, 08A cards). The menu is fixed to the
  * viewport, so the scrolling table never clips it, and opens upwards near the bottom edge.
  * Keyboard: Enter/Space/ArrowDown open it on the first item, arrows and Home/End move, Escape
  * and Tab close it, and focus returns to the trigger.
  */
-export function ProductRowMenu({ label, items, open, onOpenChange }: ProductRowMenuProps) {
+export function RowMenu({ label, items, open, onOpenChange }: RowMenuProps) {
   const menuId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -141,17 +143,24 @@ export function ProductRowMenu({ label, items, open, onOpenChange }: ProductRowM
             !position && "invisible",
           )}
         >
-          {items.map(({ label: itemLabel, icon: Icon, onSelect }) => (
+          {items.map(({ label: itemLabel, icon: Icon, onSelect, disabled = false }) => (
             <button
               key={itemLabel}
               type="button"
               role="menuitem"
               tabIndex={-1}
+              aria-disabled={disabled || undefined}
               onClick={() => {
+                if (disabled) return;
                 closeAndFocusTrigger();
                 onSelect();
               }}
-              className="flex h-8 items-center gap-2 rounded-[6px] px-2.5 text-left text-[12px] font-semibold text-ink outline-none hover:bg-cream focus:bg-brand-wash focus:text-brand"
+              className={clsx(
+                "flex h-8 items-center gap-2 rounded-[6px] px-2.5 text-left text-[12px] font-semibold outline-none",
+                disabled
+                  ? "cursor-not-allowed text-muted opacity-60 focus:bg-cream"
+                  : "text-ink hover:bg-cream focus:bg-brand-wash focus:text-brand",
+              )}
             >
               <Icon size={13} aria-hidden="true" className="shrink-0" />
               {itemLabel}

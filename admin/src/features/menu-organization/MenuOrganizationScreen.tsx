@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer } from "react";
+import { useCallback, useReducer } from "react";
 import { Eye, Plus } from "lucide-react";
 import { useScreenState } from "@/shared/lib/use-screen-state";
 import { CategoriesTable, CategoriesToolbar } from "./CategoriesTable";
@@ -8,7 +8,14 @@ import { CategoryEditor } from "./CategoryEditor";
 import { ExplorePreviewPage } from "./ExplorePreviewPage";
 import { MomentEditor } from "./MomentEditor";
 import { MomentsGrid } from "./MomentsGrid";
-import { MetricCards, OrganizationTabs, PageHeader } from "./OrganizationParts";
+import {
+  CATEGORY_METRIC_TONES,
+  HeaderAction,
+  MetricStrip,
+  MOMENT_METRIC_TONES,
+  OrganizationTabs,
+  PageHeader,
+} from "./OrganizationParts";
 import {
   createOrganizationState,
   getCategoriesListView,
@@ -19,7 +26,9 @@ import {
   organizationReducer,
   type OrganizationAction,
   type OrganizationState,
+  type OrganizationTab,
 } from "./organization-state";
+import { saveVisibility } from "./visibility-save";
 
 /**
  * Forced variants: `moment-edit` (08B: Para desayunar with Limonada associated and not saved),
@@ -72,36 +81,6 @@ function initState(forcedState: ForcedState | null): OrganizationState {
   return { ...FORCED_ACTIONS[forcedState].reduce(organizationReducer, state), notice: null };
 }
 
-/** Entry to 08E from the lists (invented: the exports do not show how 08E is reached). */
-function PreviewAction({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex h-10 items-center gap-[7px] rounded-field bg-surface px-3.5 text-ink outline-1 -outline-offset-[0.5px] outline-line hover:bg-cream"
-    >
-      <Eye size={15} aria-hidden="true" className="shrink-0" />
-      <span className="text-[12px] font-bold whitespace-nowrap">Vista previa del cliente</span>
-    </button>
-  );
-}
-
-type PrimaryActionProps = { label: string; onClick: () => void };
-
-/** "Primary Action": 40px brand button, 10px label → 12px. */
-function PrimaryAction({ label, onClick }: PrimaryActionProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex h-10 items-center gap-[7px] rounded-field bg-brand px-3.5 text-white hover:bg-brand/92"
-    >
-      <Plus size={15} aria-hidden="true" className="shrink-0" />
-      <span className="text-[12px] font-bold whitespace-nowrap">{label}</span>
-    </button>
-  );
-}
-
 /**
  * 08 · Categorías y momentos. Container: owns the moments, categories and product assignments
  * as edited in this session (pure `organizationReducer`, seeded from the canonical catalogue)
@@ -113,11 +92,24 @@ export function MenuOrganizationScreen() {
   const forcedState = useScreenState(ORGANIZATION_FORCED_STATES);
   const [state, dispatch] = useReducer(organizationReducer, forcedState, initState);
 
+  const changeMomentVisibility = useCallback(async (id: string, visible: boolean) => {
+    dispatch({ type: "start-moment-visibility-save", id, visible });
+    try {
+      await saveVisibility("moment", id, visible);
+      dispatch({ type: "finish-moment-visibility-save", id, ok: true });
+    } catch {
+      dispatch({ type: "finish-moment-visibility-save", id, ok: false });
+    }
+  }, []);
+
   let content;
   const momentEditorView = getMomentEditorView(state);
   const categoryEditorView = getCategoryEditorView(state);
   const previewView = getPreviewView(state);
   const openPreview = () => dispatch({ type: "open-preview" });
+  const changeTab = (tab: OrganizationTab) => dispatch({ type: "set-tab", tab });
+  // Kept from the previous 08 (documented deviation): the exports do not show how 08E is reached.
+  const previewAction = <HeaderAction label="Vista previa del cliente" icon={Eye} tone="neutral" onClick={openPreview} />;
   if (state.view === "preview" && previewView) {
     content = <ExplorePreviewPage view={previewView} onAction={dispatch} />;
   } else if (state.view === "moment-editor" && state.momentEditor && momentEditorView) {
@@ -129,26 +121,29 @@ export function MenuOrganizationScreen() {
   } else if (state.view === "categories") {
     const categories = getCategoriesListView(state);
     content = (
-      <div className="flex h-[calc(100dvh-72px)] min-h-[760px] flex-col gap-3 px-7 pt-[18px] pb-4">
+      <div className="flex h-[calc(100dvh-72px)] min-h-[760px] flex-col gap-[11px] px-7 pt-[18px] pb-4">
         <PageHeader
           title="Organización de la carta"
-          subtitle="Gestioná filtros de producto independientes de los momentos."
+          subtitle="Gestioná categorías, visibilidad y orden de navegación."
           actions={
             <>
-              <PreviewAction onClick={openPreview} />
-              <PrimaryAction label="Crear categoría" onClick={() => dispatch({ type: "open-new-category" })} />
+              {previewAction}
+              <HeaderAction
+                label="Crear categoría"
+                icon={Plus}
+                tone="primary"
+                onClick={() => dispatch({ type: "open-new-category" })}
+              />
             </>
           }
         />
-        <MetricCards
-          height="66"
-          items={categories.metrics}
-        />
-        <OrganizationTabs active="categories" onChange={(tab) => dispatch({ type: "set-tab", tab })} />
-        <CategoriesToolbar
-          query={state.categoryQuery}
-          onQueryChange={(query) => dispatch({ type: "set-category-query", query })}
-        />
+        <MetricStrip label="Resumen de categorías" items={categories.metrics} tones={CATEGORY_METRIC_TONES} />
+        <OrganizationTabs active="categories" onChange={changeTab} hint="Arrastrá o usá las flechas para ordenar">
+          <CategoriesToolbar
+            query={state.categoryQuery}
+            onQueryChange={(query) => dispatch({ type: "set-category-query", query })}
+          />
+        </OrganizationTabs>
         <CategoriesTable
           rows={categories.rows}
           filtered={state.categoryQuery.trim().length > 0}
@@ -156,34 +151,45 @@ export function MenuOrganizationScreen() {
           onReorder={(id, toIndex) => dispatch({ type: "reorder-category", id, toIndex })}
           onMove={(id, step) => dispatch({ type: "move-category", id, step })}
         />
+        <p className="shrink-0 text-[11px] text-muted">{categories.footer}</p>
       </div>
     );
   } else {
     const moments = getMomentsListView(state);
     content = (
       // The list fills the viewport under the 72px top bar, as in the 1440×900 export.
-      <div className="flex h-[calc(100dvh-72px)] min-h-[760px] flex-col gap-3 px-7 pt-[18px] pb-4">
+      <div className="flex h-[calc(100dvh-72px)] min-h-[760px] flex-col gap-[11px] px-7 pt-[18px] pb-4">
         <PageHeader
           title="Organización de la carta"
-          subtitle="Definí cómo los clientes exploran tu menú."
+          subtitle="Ordená los momentos en que los clientes exploran tu menú."
           actions={
             <>
-              <PreviewAction onClick={openPreview} />
-              <PrimaryAction label="Crear momento" onClick={() => dispatch({ type: "open-new-moment" })} />
+              {previewAction}
+              <HeaderAction
+                label="Crear momento"
+                icon={Plus}
+                tone="primary"
+                onClick={() => dispatch({ type: "open-new-moment" })}
+              />
             </>
           }
         />
-        <MetricCards
-          height="74"
-          items={moments.metrics}
+        <MetricStrip label="Resumen de momentos" items={moments.metrics} tones={MOMENT_METRIC_TONES} />
+        <OrganizationTabs
+          active="moments"
+          onChange={changeTab}
+          hint="Arrastrá para reordenar · También podés usar las flechas"
         />
-        <OrganizationTabs active="moments" onChange={(tab) => dispatch({ type: "set-tab", tab })} />
         <MomentsGrid
           cards={moments.cards}
           onEdit={(id) => dispatch({ type: "open-moment", id })}
-          onVisibilityChange={(id, visible) => dispatch({ type: "set-moment-visibility", id, visible })}
+          onVisibilityChange={changeMomentVisibility}
           onReorder={(id, toIndex) => dispatch({ type: "reorder-moment", id, toIndex })}
           onMove={(id, step) => dispatch({ type: "move-moment", id, step })}
+          onPreview={(id) => {
+            dispatch({ type: "open-preview" });
+            dispatch({ type: "set-preview-moment", id });
+          }}
         />
       </div>
     );

@@ -47,6 +47,8 @@ export type MomentCard = {
   visible: boolean;
   /** "Visible" (export) or "Oculto" (invented). */
   visibilityLabel: string;
+  /** Display position, 1-based ("Order Badge"). */
+  order: number;
   orderLabel: string;
   productLabel: string;
   categoryLabel: string;
@@ -70,6 +72,7 @@ export function getMomentCards({ moments, products, categories }: CatalogInput):
       image: moment.image,
       visible: moment.visible,
       visibilityLabel: moment.visible ? "Visible" : "Oculto",
+      order: moment.order,
       orderLabel: `Orden ${moment.order}`,
       productLabel: formatCount(getMomentProductIds(products, moment.id).length, "producto", "productos"),
       categoryLabel: formatCount(associated.length, "categoría", "categorías"),
