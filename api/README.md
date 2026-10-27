@@ -8,13 +8,15 @@ Requires Node 22+ and Docker.
 
 ```bash
 cd api
-docker compose up -d          # PostgreSQL 17 on localhost:5432
 cp .env.example .env
+docker compose up -d          # PostgreSQL 17 on localhost:5432 (or POSTGRES_PORT)
 npm ci                        # also runs `prisma generate`
 npm run db:migrate            # apply migrations to the local database
 npm run db:seed               # create the venue and the first owner (needs SEED_OWNER_* in .env)
 npm run dev                   # http://localhost:3001/health
 ```
+
+If port 5432 is already taken (for example by a local Postgres), set `POSTGRES_PORT=5434` in `.env` and use the same port in `DATABASE_URL`; Docker Compose reads `.env` for the port mapping.
 
 The app validates its environment at boot (`src/shared/config/env.ts`) and exits with a list of invalid keys when something is missing.
 
