@@ -6,6 +6,7 @@ import {
   getActiveCategories,
   type CatalogProductRef,
   type MenuCategory,
+  type MetricItem,
 } from "@/features/categories/category-catalog";
 import { formatPrice } from "@/shared/lib/format-price";
 import { moveByStep, moveToIndex, nextOrder, sortByOrder } from "@/shared/lib/ordering";
@@ -77,16 +78,42 @@ export function getMomentCards({ moments, products, categories }: CatalogInput):
   });
 }
 
-export type MomentMetrics = { visibleMoments: number; activeCategories: number; totalCategories: number };
+/**
+ * 08A metric strip: "Momentos" (all), "Visibles" and "Productos asignados" (distinct
+ * non-archived products assigned to any of the moments; a product in several counts once).
+ */
+export function getMomentMetricItems(
+  moments: readonly MenuMoment[],
+  products: readonly CatalogProductRef[],
+): MetricItem[] {
+  const ids = new Set(moments.map((moment) => moment.id));
+  const assigned = products.filter(
+    (product) => !product.archived && product.moments.some((momentId) => ids.has(momentId)),
+  ).length;
+  return [
+    { label: "Momentos", value: moments.length, detail: "Total configurados" },
+    { label: "Visibles", value: moments.filter((moment) => moment.visible).length, detail: "En la carta digital" },
+    {
+      label: "Productos asignados",
+      value: assigned,
+      // "Entre los 4 momentos" (export); the singular is invented.
+      detail: moments.length === 1 ? "En 1 momento" : `Entre los ${moments.length} momentos`,
+    },
+  ];
+}
 
-/** 08A metrics: "Momentos visibles", "Categorías activas" (visible) and "Categorías totales". */
-export function getMomentMetrics(moments: readonly MenuMoment[], categories: readonly MenuCategory[]): MomentMetrics {
-  const active = getActiveCategories(categories);
-  return {
-    visibleMoments: moments.filter((moment) => moment.visible).length,
-    activeCategories: active.filter((category) => category.visible).length,
-    totalCategories: active.length,
-  };
+/**
+ * 08B "Products Hint": "18 productos · 16 visibles en la carta". Visible means published, as
+ * in the customer menu (unavailable products stay listed as "Temporalmente agotado").
+ */
+export function getMomentProductSummary(productIds: readonly string[], products: readonly CatalogProductRef[]): string {
+  const byId = new Map(products.map((product) => [product.id, product]));
+  const own = productIds.flatMap((id) => {
+    const product = byId.get(id);
+    return product && !product.archived ? [product] : [];
+  });
+  const visible = own.filter((product) => product.publication === "published").length;
+  return `${formatCount(own.length, "producto", "productos")} · ${formatCount(visible, "visible", "visibles")} en la carta`;
 }
 
 export function setMomentVisibility(moments: readonly MenuMoment[], id: string, visible: boolean): MenuMoment[] {
@@ -146,14 +173,24 @@ export function removeDraftProduct(draft: MomentDraft, id: string): MomentDraft 
   return { ...draft, productIds: draft.productIds.filter((productId) => productId !== id) };
 }
 
-export type AssociatedProductRow = { id: string; name: string; available: boolean; availabilityLabel: string };
+export type AssociatedProductRow = {
+  id: string;
+  name: string;
+  image?: string;
+  /** "Product Category" line under the name. */
+  categoryLabel: string;
+  available: boolean;
+  availabilityLabel: string;
+};
 
-/** 08B "Productos asociados" rows in association order ("Disponible" / "Agotado"). */
+/** 08B "Productos asociados" rows in association order ("Disponible" / "No disponible"). */
 export function getAssociatedProducts(
   draft: MomentDraft,
   products: readonly CatalogProductRef[],
+  categories: readonly MenuCategory[],
 ): AssociatedProductRow[] {
   const byId = new Map(products.map((product) => [product.id, product]));
+  const categoryLabels = new Map(categories.map((category) => [category.id, category.label]));
   return draft.productIds.flatMap((id) => {
     const product = byId.get(id);
     if (!product) return [];
@@ -161,8 +198,10 @@ export function getAssociatedProducts(
       {
         id,
         name: product.name,
+        image: product.image,
+        categoryLabel: categoryLabels.get(product.categoryId) ?? "",
         available: product.available,
-        availabilityLabel: product.available ? "Disponible" : "Agotado",
+        availabilityLabel: product.available ? "Disponible" : "No disponible",
       },
     ];
   });
@@ -271,7 +310,18 @@ export function applyMomentDraft(
 
 export type ExploreFilter = { id: string; label: string; active: boolean };
 
-export type ExploreProductCard = { id: string; name: string; priceLabel: string; image?: string };
+export type ExploreProductCard = {
+  id: string;
+  name: string;
+  /** Product description, or "Temporalmente agotado" when it cannot be ordered (08E). */
+  description: string;
+  priceLabel: string;
+  image?: string;
+  available: boolean;
+};
+
+/** 08E card copy of an unavailable product, which stays listed. */
+export const SOLD_OUT_LABEL = "Temporalmente agotado";
 
 export type ExplorePreview = {
   title: string;
@@ -321,8 +371,10 @@ export function getExplorePreview(
     products: products.map((product) => ({
       id: product.id,
       name: product.name,
+      description: product.available ? product.description : SOLD_OUT_LABEL,
       priceLabel: formatPrice(product.price),
       image: product.image,
+      available: product.available,
     })),
   };
 }

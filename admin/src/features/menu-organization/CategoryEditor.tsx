@@ -39,15 +39,24 @@ const fieldClass = "w-full rounded-nav bg-cream p-3 text-[12px] text-ink outline
 /**
  * 08D · Crear y editar categoría ("Category Editor Main"): status bar with "Archivar" and
  * "Guardar cambios", "Información de la categoría" (name, optional description, optional image,
- * visibility and order) and the summary column (derived product count, archive warning, audit
- * rules). Saving and archiving only change the in-memory catalogue of this screen.
+ * visibility and order) and the summary column (derived product count, archive card whose
+ * "Revisar archivado" opens the confirmation, contextual update info). Saving and archiving only
+ * change the in-memory catalogue of this screen.
  */
 export function CategoryEditor({ editor, view, onAction }: CategoryEditorProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const { draft } = editor;
+  // The session object URL plus the 08D metadata; the pixel size is read once the image loads.
   const pickFile = (file: File | undefined) => {
-    if (file?.type.startsWith("image/")) onAction({ type: "category-set-image", image: URL.createObjectURL(file) });
+    if (!file?.type.startsWith("image/")) return;
+    const image = { src: URL.createObjectURL(file), fileName: file.name, width: 0, height: 0, bytes: file.size };
+    const probe = new window.Image();
+    probe.onload = () =>
+      onAction({ type: "category-set-image", image: { ...image, width: probe.naturalWidth, height: probe.naturalHeight } });
+    probe.onerror = () => onAction({ type: "category-set-image", image });
+    probe.src = image.src;
   };
+  const save = () => onAction({ type: "category-save", at: new Date().toISOString() });
 
   return (
     <div className="flex min-h-[calc(100dvh-72px)] flex-col gap-3 px-7 pt-[18px] pb-4">
@@ -62,7 +71,7 @@ export function CategoryEditor({ editor, view, onAction }: CategoryEditorProps) 
           label="Guardar cambios"
           tone="primary"
           disabled={!view.canSave}
-          onClick={() => onAction({ type: "category-save" })}
+          onClick={save}
         />
       </EditorStatusBar>
 
@@ -113,7 +122,7 @@ export function CategoryEditor({ editor, view, onAction }: CategoryEditorProps) 
             }}
           />
           {draft.image ? (
-            <CoverImage src={draft.image} alt={`Imagen de ${draft.label || "la categoría"}`} sizes="722px" className="h-[150px] w-full rounded-[10px]">
+            <CoverImage src={draft.image.src} alt={`Imagen de ${draft.label || "la categoría"}`} sizes="722px" className="h-[150px] w-full rounded-[10px]">
               <span className="absolute right-3 bottom-3 flex gap-2">
                 <button
                   type="button"
@@ -167,8 +176,21 @@ export function CategoryEditor({ editor, view, onAction }: CategoryEditorProps) 
           {view.canArchive && (
             <div role={view.confirmingArchive ? "alert" : undefined} className="flex flex-col gap-2 rounded-card bg-danger-bg p-4">
               <TriangleAlert size={20} aria-hidden="true" className="text-danger" />
-              <p className="text-[13px] font-bold text-danger">{view.archiveTitle}</p>
-              <p className="text-[12px] leading-4 text-ink">{view.archiveMessage}</p>
+              <p className="text-[13px] font-bold text-danger">
+                {view.confirmingArchive ? view.archiveTitle : view.archiveCard.title}
+              </p>
+              <p className="text-[12px] leading-4 text-ink">
+                {view.confirmingArchive ? view.archiveMessage : view.archiveCard.description}
+              </p>
+              {!view.confirmingArchive && (
+                <button
+                  type="button"
+                  onClick={() => onAction({ type: "category-archive" })}
+                  className="mt-1 flex h-8 w-fit items-center rounded-nav bg-surface px-3 text-[11px] font-bold text-danger hover:bg-cream"
+                >
+                  {view.archiveCard.actionLabel}
+                </button>
+              )}
               {view.confirmingArchive && (
                 <div className="mt-1 flex gap-2">
                   <button
@@ -190,9 +212,9 @@ export function CategoryEditor({ editor, view, onAction }: CategoryEditorProps) 
             </div>
           )}
           <ul className="flex flex-col gap-2 rounded-card bg-surface p-4 outline-1 -outline-offset-[0.5px] outline-line">
-            {view.auditRules.map((rule) => (
-              <li key={rule} className="text-[11px] text-muted">
-                {rule}
+            {view.contextLines.map((line) => (
+              <li key={line} className="text-[11px] text-muted">
+                {line}
               </li>
             ))}
           </ul>

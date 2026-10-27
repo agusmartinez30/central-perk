@@ -78,6 +78,17 @@ export type Product = {
   optionGroups: ProductOptionGroup[];
 };
 
+/** An uploaded image with the metadata 08D shows ("categoria-cafes.jpg", "1200 × 600 px · 284 KB"). */
+export type ImageAsset = {
+  /** Public path or session object URL. */
+  src: string;
+  fileName: string;
+  /** Pixel size; 0 when unknown. */
+  width: number;
+  height: number;
+  bytes: number;
+};
+
 /**
  * A product category: the 07 taxonomy and an 08C filter of the customer "Explore" screen.
  * Product counts are never stored: they are derived from `Product.categoryId`.
@@ -87,8 +98,8 @@ export type ProductCategoryInfo = {
   label: string;
   /** 08D "Descripción opcional". */
   description: string;
-  /** 08D "Imagen opcional"; unset shows the upload area. */
-  image?: string;
+  /** 08D "Imagen de categoría"; unset shows the upload area. */
+  image?: ImageAsset;
   /** "Visible en la carta". */
   visible: boolean;
   /** 08C "Orden" (1-based display order of the filters). */

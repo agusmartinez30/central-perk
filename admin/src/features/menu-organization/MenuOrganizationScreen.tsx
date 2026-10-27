@@ -142,11 +142,7 @@ export function MenuOrganizationScreen() {
         />
         <MetricCards
           height="66"
-          items={[
-            { label: "Categorías activas", value: categories.metrics.active },
-            { label: "Con productos", value: categories.metrics.withProducts },
-            { label: "Vacías", value: categories.metrics.empty },
-          ]}
+          items={categories.metrics}
         />
         <OrganizationTabs active="categories" onChange={(tab) => dispatch({ type: "set-tab", tab })} />
         <CategoriesToolbar
@@ -179,11 +175,7 @@ export function MenuOrganizationScreen() {
         />
         <MetricCards
           height="74"
-          items={[
-            { label: "Momentos visibles", value: moments.metrics.visibleMoments },
-            { label: "Categorías activas", value: moments.metrics.activeCategories },
-            { label: "Categorías totales", value: moments.metrics.totalCategories },
-          ]}
+          items={moments.metrics}
         />
         <OrganizationTabs active="moments" onChange={(tab) => dispatch({ type: "set-tab", tab })} />
         <MomentsGrid

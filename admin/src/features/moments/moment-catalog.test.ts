@@ -11,8 +11,9 @@ import {
   getExplorePreview,
   getMomentCards,
   getMomentChanges,
-  getMomentMetrics,
+  getMomentMetricItems,
   getMomentProductIds,
+  getMomentProductSummary,
   moveMoment,
   removeDraftCategory,
   removeDraftProduct,
@@ -73,13 +74,37 @@ describe("moment cards (08A)", () => {
     const hidden = setMomentVisibility(moments, "cenar", false);
     const cards = getMomentCards({ moments: hidden, products: PRODUCTS, categories });
     expect(cards[2]).toMatchObject({ visible: false, visibilityLabel: "Oculto" });
-    expect(getMomentMetrics(hidden, categories)).toEqual({ visibleMoments: 3, activeCategories: 9, totalCategories: 9 });
+    expect(getMomentMetricItems(hidden, PRODUCTS)[1]).toEqual({ label: "Visibles", value: 3, detail: "En la carta digital" });
   });
 
-  it("counts visible, active and total categories", () => {
-    expect(getMomentMetrics(moments, categories)).toEqual({ visibleMoments: 4, activeCategories: 9, totalCategories: 9 });
-    const changed = archiveCategory(setCategoryVisibility(categories, "postres", false), "licuados");
-    expect(getMomentMetrics(moments, changed)).toEqual({ visibleMoments: 4, activeCategories: 7, totalCategories: 8 });
+  it("builds the metric strip: moments, visible ones and distinct assigned products", () => {
+    expect(getMomentMetricItems(moments, PRODUCTS)).toEqual([
+      { label: "Momentos", value: 4, detail: "Total configurados" },
+      { label: "Visibles", value: 4, detail: "En la carta digital" },
+      { label: "Productos asignados", value: 13, detail: "Entre los 4 momentos" },
+    ]);
+    // A product in several moments counts once; archived products and orphan moment ids do not count.
+    const changed = PRODUCTS.map((product) =>
+      product.id === "limonada" ? { ...product, archived: true } : product.id === "cheesecake" ? { ...product, moments: ["brunch"] } : product,
+    );
+    expect(getMomentMetricItems(moments.slice(0, 1), changed)[2]).toEqual({
+      label: "Productos asignados",
+      value: 7,
+      detail: "En 1 momento",
+    });
+    expect(getMomentMetricItems(moments, changed)[2].value).toBe(11);
+  });
+
+  it("summarizes a moment's products and how many the menu shows", () => {
+    expect(getMomentProductSummary(getMomentProductIds(PRODUCTS, "desayunar"), PRODUCTS)).toBe(
+      "7 productos · 7 visibles en la carta",
+    );
+    // Cheesecake is a draft: associated but not in the menu.
+    expect(getMomentProductSummary(getMomentProductIds(PRODUCTS, "merendar"), PRODUCTS)).toBe(
+      "9 productos · 8 visibles en la carta",
+    );
+    expect(getMomentProductSummary(["cheesecake"], PRODUCTS)).toBe("1 producto · 0 visibles en la carta");
+    expect(getMomentProductSummary(["limonada"], PRODUCTS)).toBe("1 producto · 1 visible en la carta");
   });
 
   it("reorders moments by dragging or one step at a time", () => {
@@ -114,15 +139,20 @@ describe("moment editor (08B)", () => {
     expect(removeDraftProduct(added, "cappuccino").productIds).not.toContain("cappuccino");
   });
 
-  it("lists associated products with their availability", () => {
-    const rows = getAssociatedProducts(addDraftProduct(toMomentDraft(momentOf(moments, "cenar"), PRODUCTS), "limonada"), PRODUCTS);
-    expect(rows.map((row) => [row.name, row.availabilityLabel])).toEqual([
-      ["Tostado clásico", "Disponible"],
-      ["Tostado de jamón y queso", "Disponible"],
-      ["Sándwich de pollo", "Disponible"],
-      ["Hamburguesa clásica", "Agotado"],
-      ["Limonada", "Disponible"],
+  it("lists associated products with their photo, category and availability", () => {
+    const rows = getAssociatedProducts(
+      addDraftProduct(toMomentDraft(momentOf(moments, "cenar"), PRODUCTS), "limonada"),
+      PRODUCTS,
+      categories,
+    );
+    expect(rows.map((row) => [row.name, row.categoryLabel, row.availabilityLabel])).toEqual([
+      ["Tostado clásico", "Tostados", "Disponible"],
+      ["Tostado de jamón y queso", "Tostados", "Disponible"],
+      ["Sándwich de pollo", "Sándwiches", "Disponible"],
+      ["Hamburguesa clásica", "Hamburguesas", "No disponible"],
+      ["Limonada", "Bebidas", "Disponible"],
     ]);
+    expect(rows[0].image).toBe("/images/products/tostado-jamon-queso.webp");
   });
 
   it("searches unassigned products and categories only", () => {
@@ -198,7 +228,20 @@ describe("explore preview (08E)", () => {
       ["Bebidas", false],
     ]);
     expect(preview.countLabel).toBe("7 productos");
-    expect(preview.products[0]).toMatchObject({ name: "Café con leche", priceLabel: "$3.800" });
+    expect(preview.products[0]).toMatchObject({
+      name: "Café con leche",
+      description: "Espresso con leche caliente, servido en taza.",
+      priceLabel: "$3.800",
+      available: true,
+    });
+  });
+
+  it("keeps unavailable published products listed as temporarily sold out", () => {
+    const dinner = toMomentDraft(momentOf(moments, "cenar"), PRODUCTS);
+    const preview = getExplorePreview(dinner, { products: PRODUCTS, categories }, "hamburguesas");
+    expect(preview.products).toEqual([
+      expect.objectContaining({ name: "Hamburguesa clásica", description: "Temporalmente agotado", available: false }),
+    ]);
   });
 
   it("filters by category", () => {

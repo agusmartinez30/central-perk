@@ -1,4 +1,10 @@
-import { PRODUCT_CATEGORIES, type ProductCategoryInfo, type ProductPublication } from "@/mocks/service-day";
+import {
+  PRODUCT_CATEGORIES,
+  type ImageAsset,
+  type ProductCategoryInfo,
+  type ProductPublication,
+} from "@/mocks/service-day";
+import { DEMO_STAFF } from "@/mocks/staff";
 import { normalizeText } from "@/features/products/product-catalog";
 import { formatOrderNumber, moveByStep, moveToIndex, nextOrder, renumber, sortByOrder } from "@/shared/lib/ordering";
 
@@ -9,6 +15,8 @@ import { formatOrderNumber, moveByStep, moveToIndex, nextOrder, renumber, sortBy
 export type CatalogProductRef = {
   id: string;
   name: string;
+  /** 08E card copy ("Espresso y leche"). */
+  description: string;
   price: number;
   image?: string;
   available: boolean;
@@ -18,8 +26,22 @@ export type CatalogProductRef = {
   moments: readonly string[];
 };
 
-/** A category as edited in 08: the catalogue fields plus the session-only archive flag. */
-export type MenuCategory = Omit<ProductCategoryInfo, "id"> & { id: string; archived: boolean };
+/**
+ * A category as edited in 08: the catalogue fields plus the session-only archive flag and the
+ * 08D "Información contextual" (ISO `updatedAt`, `updatedBy` staff name), which is mock data.
+ */
+export type MenuCategory = Omit<ProductCategoryInfo, "id"> & {
+  id: string;
+  archived: boolean;
+  updatedAt: string;
+  updatedBy: string;
+};
+
+/** A metric of the 08A/08C strip: value, label and its detail line. */
+export type MetricItem = { label: string; value: number; detail: string };
+
+/** Mock author of the seeded categories and of the saves of this session (the signed-in staff). */
+export const CATEGORY_EDITOR = DEMO_STAFF;
 
 export type CategoryStatus = "visible" | "empty" | "hidden";
 
@@ -47,8 +69,24 @@ export function createSlugId(name: string, existingIds: readonly string[], fallb
   return candidate;
 }
 
-export function createMenuCategories(source: readonly ProductCategoryInfo[] = PRODUCT_CATEGORIES): MenuCategory[] {
-  return sortByOrder(source.map((category) => ({ ...category, archived: false })));
+/**
+ * Mock "Última actualización" of the seeded categories: 10:32 (the 08D export) of `now`'s day,
+ * or of the day before when `now` is earlier, so it is never in the future.
+ */
+export function seedCategoryUpdatedAt(now: Date): string {
+  const seeded = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 32);
+  if (seeded.getTime() > now.getTime()) seeded.setDate(seeded.getDate() - 1);
+  return seeded.toISOString();
+}
+
+export function createMenuCategories(
+  source: readonly ProductCategoryInfo[] = PRODUCT_CATEGORIES,
+  now: Date = new Date(),
+): MenuCategory[] {
+  const updatedAt = seedCategoryUpdatedAt(now);
+  return sortByOrder(
+    source.map((category) => ({ ...category, archived: false, updatedAt, updatedBy: CATEGORY_EDITOR.name })),
+  );
 }
 
 /** Non-archived categories in display order. */
@@ -87,14 +125,81 @@ export function getCategoryMetrics(
   };
 }
 
+/** 08C metric strip: the same counts as `getCategoryMetrics` with the export detail lines. */
+export function getCategoryMetricItems(
+  categories: readonly MenuCategory[],
+  products: readonly CatalogProductRef[],
+): MetricItem[] {
+  const metrics = getCategoryMetrics(categories, products);
+  return [
+    { label: "Categorías activas", value: metrics.active, detail: "Visibles en la carta" },
+    { label: "Con productos", value: metrics.withProducts, detail: "Contenido asignado" },
+    { label: "Vacías", value: metrics.empty, detail: "Requiere productos" },
+  ];
+}
+
+export type CategoryProductBreakdown = {
+  /** "Productos asociados": non-archived products of the category. */
+  total: number;
+  /** "Visibles en la carta": the published ones (unavailable ones stay listed in the menu). */
+  visible: number;
+  /** "No disponible": switched off in 07, published or not. */
+  unavailable: number;
+  /** "Momentos vinculados": moments offering the category as a filter. */
+  moments: number;
+};
+
+/** 08D "Productos asociados" card, derived from the product assignments. */
+export function getCategoryProductBreakdown(
+  products: readonly CatalogProductRef[],
+  moments: readonly { categoryIds: readonly string[] }[],
+  categoryId: string,
+): CategoryProductBreakdown {
+  const own = products.filter((product) => !product.archived && product.categoryId === categoryId);
+  return {
+    total: own.length,
+    visible: own.filter((product) => product.publication === "published").length,
+    unavailable: own.filter((product) => !product.available).length,
+    moments: countCategoryMoments(moments, categoryId),
+  };
+}
+
+export type CategoryVisibilityFilter = "all" | "visible" | "hidden";
+
+/** 08C filter menu ("Todas" in the export; "Visibles" / "Ocultas" are invented options). */
+export const CATEGORY_VISIBILITY_FILTERS: readonly { id: CategoryVisibilityFilter; label: string }[] = [
+  { id: "all", label: "Todas" },
+  { id: "visible", label: "Visibles" },
+  { id: "hidden", label: "Ocultas" },
+];
+
+/** 08C rows per page ("Mostrando 1–9 de 12 categorías"). */
+export const CATEGORIES_PAGE_SIZE = 9;
+
+/** 08C footer: "Mostrando 1–9 de 12 categorías · «Todos» se genera automáticamente". */
+export function formatCategoriesFooter({ from, to, total }: { from: number; to: number; total: number }): string {
+  const range =
+    total === 0
+      ? "Sin categorías para mostrar"
+      : `Mostrando ${from}–${to} de ${formatCount(total, "categoría", "categorías")}`;
+  return `${range} · «Todos» se genera automáticamente`;
+}
+
 export type CategoryRow = {
   id: string;
   label: string;
+  /** "Category Metadata" line under the name. */
+  description: string;
   productCount: number;
   productLabel: string;
   momentCount: number;
   momentLabel: string;
   visible: boolean;
+  /** "Visible" / "Oculta" (the VISIBILIDAD column). */
+  visibilityLabel: string;
+  /** CONTENIDO badge: "Con productos" / "Sin productos". */
+  hasProducts: boolean;
+  contentLabel: string;
   status: CategoryStatus;
   statusLabel: string;
   orderLabel: string;
@@ -105,13 +210,21 @@ type CategoryRowsInput = {
   products: readonly CatalogProductRef[];
   moments: readonly { categoryIds: readonly string[] }[];
   query: string;
+  visibility?: CategoryVisibilityFilter;
 };
 
-/** 08C table rows: active categories in display order, filtered by the search box. */
-export function getCategoryRows({ categories, products, moments, query }: CategoryRowsInput): CategoryRow[] {
+/** 08C table rows: active categories in display order, filtered by the search box and visibility. */
+export function getCategoryRows({
+  categories,
+  products,
+  moments,
+  query,
+  visibility = "all",
+}: CategoryRowsInput): CategoryRow[] {
   const needle = normalizeText(query);
   return getActiveCategories(categories)
     .filter((category) => !needle || normalizeText(category.label).includes(needle))
+    .filter((category) => visibility === "all" || category.visible === (visibility === "visible"))
     .map((category) => {
       const productCount = countCategoryProducts(products, category.id);
       const momentCount = countCategoryMoments(moments, category.id);
@@ -119,11 +232,15 @@ export function getCategoryRows({ categories, products, moments, query }: Catego
       return {
         id: category.id,
         label: category.label,
+        description: category.description,
         productCount,
         productLabel: formatCount(productCount, "producto", "productos"),
         momentCount,
         momentLabel: formatCount(momentCount, "momento", "momentos"),
         visible: category.visible,
+        visibilityLabel: category.visible ? CATEGORY_STATUS_LABELS.visible : CATEGORY_STATUS_LABELS.hidden,
+        hasProducts: productCount > 0,
+        contentLabel: productCount > 0 ? "Con productos" : "Sin productos",
         status,
         statusLabel: CATEGORY_STATUS_LABELS[status],
         orderLabel: formatOrderNumber(category.order),
@@ -150,8 +267,17 @@ export function setCategoryVisibility(categories: readonly MenuCategory[], id: s
   return categories.map((category) => (category.id === id ? { ...category, visible } : category));
 }
 
+const numberFormat = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1 });
+
+/** 08D "Image Metadata": "1200 × 600 px · 284 KB" (just the weight when the size is unknown). */
+export function formatImageMetadata(image: Pick<ImageAsset, "width" | "height" | "bytes">): string {
+  const kb = image.bytes / 1024;
+  const weight = kb < 1024 ? `${Math.round(kb)} KB` : `${numberFormat.format(kb / 1024)} MB`;
+  return image.width > 0 && image.height > 0 ? `${image.width} × ${image.height} px · ${weight}` : weight;
+}
+
 /** Editable fields of 08D. */
-export type CategoryDraft = { label: string; description: string; image?: string; visible: boolean };
+export type CategoryDraft = { label: string; description: string; image?: ImageAsset; visible: boolean };
 
 export type CategoryFormErrors = Partial<Record<"label" | "description", string>>;
 
@@ -195,17 +321,23 @@ export function getCategoryChanges(saved: CategoryDraft, draft: CategoryDraft): 
   return changes;
 }
 
-/** Saves the draft over `editingId`, or appends a new category after the last active one. */
+/**
+ * Saves the draft over `editingId`, or appends a new category after the last active one, and
+ * records who saved it and when (`meta.at` is an ISO timestamp).
+ */
 export function applyCategoryDraft(
   categories: readonly MenuCategory[],
   editingId: string | null,
   draft: CategoryDraft,
+  meta: { at: string; by: string },
 ): { categories: MenuCategory[]; id: string } {
   const fields = {
     label: draft.label.trim(),
     description: draft.description.trim(),
     image: draft.image,
     visible: draft.visible,
+    updatedAt: meta.at,
+    updatedBy: meta.by,
   };
   if (editingId) {
     return {
