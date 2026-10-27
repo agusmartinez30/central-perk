@@ -7,7 +7,6 @@ describe("NAV_ITEMS", () => {
       "Resumen",
       "Mesas",
       "Gestión de mesas",
-      "Mesas y códigos QR",
       "Pedidos",
       "Solicitudes de cuenta",
       "Historial",
@@ -33,7 +32,7 @@ describe("findActiveNavItem", () => {
 
   it("prefers the most specific nested route", () => {
     expect(findActiveNavItem("/tables")?.id).toBe("tables");
-    expect(findActiveNavItem("/tables/qr")?.id).toBe("table-qr");
+    expect(findActiveNavItem("/tables/management")?.id).toBe("table-management");
     expect(findActiveNavItem("/menu/products/42")?.id).toBe("products");
     expect(findActiveNavItem("/settings/payments")?.id).toBe("settings");
   });
@@ -122,10 +121,4 @@ describe("getTopbarConfig", () => {
     });
   });
 
-  it("shows the table management title and the secure-tokens pill on the 09 tables and QR screen", () => {
-    expect(getTopbarConfig("/tables/qr")).toEqual({
-      variant: "credentials",
-      title: "Café Central · Gestión de mesas",
-    });
-  });
 });

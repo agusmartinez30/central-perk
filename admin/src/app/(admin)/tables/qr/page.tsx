@@ -1,14 +1,14 @@
-import { Suspense } from "react";
-import type { Metadata } from "next";
-import { TableQrScreen } from "@/features/table-qr";
+import { redirect } from "next/navigation";
+import { getLegacyQrRedirect } from "@/features/table-management/tables-view";
 
-export const metadata: Metadata = { title: "Mesas y códigos QR · Café Central" };
+/**
+ * The former "Mesas y códigos QR" screen is now the "Códigos QR" tab of Gestión de mesas:
+ * old links (and their `?state=` variants) land there. The page only redirects, so it reads
+ * `searchParams` outside `<Suspense>` and opts out of the instant (prerendered) shell.
+ */
+export const instant = false;
 
-export default function TableQrPage() {
-  return (
-    // `?state=` is read on the client, so the screen needs a Suspense boundary.
-    <Suspense fallback={null}>
-      <TableQrScreen />
-    </Suspense>
-  );
+export default async function TableQrPage({ searchParams }: PageProps<"/tables/qr">) {
+  const { state } = await searchParams;
+  redirect(getLegacyQrRedirect(state));
 }

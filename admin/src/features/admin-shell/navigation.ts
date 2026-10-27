@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   LayoutGrid,
   Package,
-  QrCode,
   ReceiptText,
   Settings,
   Tags,
@@ -23,7 +22,7 @@ export type NavItem = {
   icon: LucideIcon;
   /** Top bar layout of the module's export; defaults to the 10A section title. */
   topbar?: TopbarVariant;
-  /** Title of a `catalog` or `credentials` top bar (08 "Organización de la carta", 09 "Gestión de mesas"). */
+  /** Title of a `catalog` top bar (08 "Organización de la carta"). */
   topbarTitle?: string;
 };
 
@@ -39,8 +38,6 @@ export type NavItem = {
  *   dot-less bell of 05.
  * `catalog`: 07 top bar, "Café Central · Carta digital" with a "Sincronizado" pill and the dot-less
  *   bell of 05; 08 reuses it titled "Café Central · Organización de la carta" (`topbarTitle`).
- * `credentials`: 09 top bar, "Café Central · Gestión de mesas" with a "Tokens seguros" pill, the bare
- *   bell and the profile of 10A.
  */
 export type TopbarVariant =
   | "section"
@@ -48,8 +45,7 @@ export type TopbarVariant =
   | "live-location"
   | "verified-location"
   | "admin-location"
-  | "catalog"
-  | "credentials";
+  | "catalog";
 
 /** Branch and shift shown by the `location` top bar. */
 export const TOPBAR_LOCATION = `${BRAND_NAME} · Sede Centro · Turno mañana`;
@@ -59,9 +55,6 @@ export const TOPBAR_CATALOG = `${BRAND_NAME} · Carta digital`;
 
 /** Title of the 08 `catalog` top bar. */
 export const TOPBAR_MENU_ORGANIZATION = `${BRAND_NAME} · Organización de la carta`;
-
-/** Title of the 09 `credentials` top bar. */
-export const TOPBAR_TABLE_MANAGEMENT = `${BRAND_NAME} · Gestión de mesas`;
 
 /** Branch alone, as the `admin-location` top bar shows it. */
 export const TOPBAR_BRANCH = `${BRAND_NAME} · Sede Centro`;
@@ -73,15 +66,8 @@ export const TOPBAR_BRANCH = `${BRAND_NAME} · Sede Centro`;
 export const NAV_ITEMS: readonly NavItem[] = [
   { id: "overview", label: "Resumen", href: "/", icon: LayoutDashboard },
   { id: "tables", label: "Mesas", href: "/tables", icon: Armchair, topbar: "location" },
+  // Its "Códigos QR" tab (`?view=qr`) replaced the former "Mesas y códigos QR" module (`/tables/qr`).
   { id: "table-management", label: "Gestión de mesas", href: "/tables/management", icon: LayoutGrid, topbar: "location" },
-  {
-    id: "table-qr",
-    label: "Mesas y códigos QR",
-    href: "/tables/qr",
-    icon: QrCode,
-    topbar: "credentials",
-    topbarTitle: TOPBAR_TABLE_MANAGEMENT,
-  },
   { id: "orders", label: "Pedidos", href: "/orders", icon: ClipboardList, topbar: "live-location" },
   {
     id: "bill-requests",
@@ -148,6 +134,5 @@ export function getTopbarConfig(pathname: string): TopbarConfig {
   const variant = item?.topbar ?? "section";
   if (variant === "section") return { variant, title: getSectionTitle(pathname) };
   if (variant === "catalog") return { variant, title: item?.topbarTitle ?? TOPBAR_CATALOG };
-  if (variant === "credentials") return { variant, title: item?.topbarTitle ?? getSectionTitle(pathname) };
   return { variant, title: variant === "admin-location" ? TOPBAR_BRANCH : TOPBAR_LOCATION };
 }

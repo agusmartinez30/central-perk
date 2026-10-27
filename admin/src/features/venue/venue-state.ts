@@ -13,7 +13,7 @@ import { moveTable, resizeTable, setTableShape, type TableShape } from "./table-
 import { deleteTable, getTableNumbersWithHistory, getTableRemoval } from "./table-removal";
 
 /**
- * The venue configuration shared by `/tables`, `/tables/management` and `/tables/qr`: spaces
+ * The venue configuration shared by `/tables` and `/tables/management` (both tabs): spaces
  * and tables as the API serves them, plus the live service-day facts the rules need (sessions
  * and history still come from the service-day mocks).
  */

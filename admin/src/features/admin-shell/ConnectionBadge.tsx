@@ -4,9 +4,8 @@ type ConnectionBadgeProps = {
   /**
    * `online`: 10A "Live Connection" pill. `live`: 03 "Connection Status" pill. `verified`: 05
    * "History Sync Status" pill (same shape as `live`). `synced`: 07 "Catalog Sync" pill (same shape).
-   * `secure`: 09 "Security Status" pill (same shape).
    */
-  variant?: "online" | "live" | "verified" | "synced" | "secure";
+  variant?: "online" | "live" | "verified" | "synced";
 };
 
 const BADGE_LABELS = {
@@ -14,7 +13,6 @@ const BADGE_LABELS = {
   live: "En vivo",
   verified: "Datos verificados",
   synced: "Sincronizado",
-  secure: "Tokens seguros",
 } as const;
 
 /** Green connection pill of the top bar. */

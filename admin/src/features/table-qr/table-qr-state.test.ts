@@ -171,16 +171,6 @@ describe("bulk print (09E)", () => {
   });
 });
 
-describe("spaces (09A)", () => {
-  it("shows the space cards with their derived table counts", () => {
-    expect(getListView(createTableQrState()).spaces.map((card) => [card.name, card.countLabel])).toEqual([
-      ["Salón", "5 mesas"],
-      ["Terraza", "3 mesas"],
-      ["Patio", "4 mesas"],
-    ]);
-  });
-});
-
 describe("shared venue (Gestión de mesas)", () => {
   it("lists a space and a table created in Gestión de mesas, with its QR and no session", () => {
     const local = [
@@ -195,7 +185,6 @@ describe("shared venue (Gestión de mesas)", () => {
     const qr = { token: "N3wT0k3nAa", generatedOn: "2026-10-21", generatedBy: "Sofía M." };
     const venue = { ...local, tables: local.tables.map((table) => (table.id === "tbl_13" ? { ...table, qr } : table)) };
     const view = getListView(createTableQrState(venue));
-    expect(view.spaces.at(-1)).toMatchObject({ name: "Barra", countLabel: "1 mesa" });
     expect(view.rows.at(-1)).toMatchObject({
       label: "Mesa 13",
       spaceName: "Barra",

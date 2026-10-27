@@ -53,8 +53,7 @@ function NotificationsButton({ dot = "outlined" }: { dot?: "outlined" | "small" 
  * White top bar ("AdminTopbar" / "Topbar · Desktop"). Modules pick the layout of their
  * export through `NavItem.topbar`: the 10A section title, the 02 branch and shift, the 03
  * branch and shift with the "En vivo" pill (or 05 "Datos verificados"), the 06 branch with the
- * "Administrador" pill, the 07 "Carta digital" title with the "Sincronizado" pill, or the 09 "Gestión de mesas" title with
- * the "Tokens seguros" pill. The staff profile is the signed-in member from `GET /auth/me`
+ * "Administrador" pill, or the 07 "Carta digital" title with the "Sincronizado" pill. The staff profile is the signed-in member from `GET /auth/me`
  * (blank until it answers).
  */
 export function AdminTopbar() {
@@ -105,9 +104,9 @@ export function AdminTopbar() {
           <StaffProfile name={staffName} role={staffRole} compact />
         </div>
       )}
-      {(variant === "section" || variant === "credentials") && (
+      {variant === "section" && (
         <div className="flex items-center gap-3.5">
-          <ConnectionBadge variant={variant === "credentials" ? "secure" : "online"} />
+          <ConnectionBadge variant="online" />
           <button
             type="button"
             aria-label="Notificaciones"

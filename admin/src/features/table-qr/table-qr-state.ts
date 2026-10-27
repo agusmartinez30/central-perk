@@ -1,5 +1,5 @@
 import { SERVICE_DAY, type VenueSpace, type VenueTable } from "@/mocks/service-day";
-import { getSpaceCards, getSpaceName, type SpaceCard } from "@/features/venue/space-config";
+import { getSpaceName } from "@/features/venue/space-config";
 import { formatCapacity, getQuickToggle, setTableEnabled, type QuickToggle, type SessionStatus } from "@/features/venue/table-config";
 import { createVenueState, type VenueAction, type VenueState } from "@/features/venue/venue-state";
 import {
@@ -29,13 +29,24 @@ import {
   type TableRow,
 } from "./qr-config";
 
-/** Views of the single `/tables/qr` route. Tables and spaces are configured in Gestión de mesas. */
+/**
+ * Views of the "Códigos QR" tab of Gestión de mesas (`/tables/management?view=qr`). Tables and
+ * spaces are configured in its "Plano" tab.
+ */
 export type TableQrView = "list" | "detail" | "material";
+
+/**
+ * Forced variants of the "Códigos QR" tab: `detail` (09C: Mesa 07), `regenerate` (09F over 09C),
+ * `material` (09D: Mesa 07) and `bulk-print` (09E over 09A with every printable table selected).
+ */
+export const TABLE_QR_FORCED_STATES = ["detail", "regenerate", "material", "bulk-print"] as const;
+
+export type TableQrForcedState = (typeof TABLE_QR_FORCED_STATES)[number];
 
 export type BulkPrintState = { space: SpaceFilter; size: PrintSizeId; selection: string[] };
 
 export type TableQrState = {
-  /** 09A "Espacios", from the shared venue store. */
+  /** Spaces of the "Espacio" filter, from the shared venue store. */
   spaces: readonly VenueSpace[];
   /** Tables and credentials, from the shared venue store. */
   tables: readonly VenueTable[];
@@ -193,13 +204,12 @@ export function getVenueCommand(state: TableQrState, action: TableQrAction): Ven
 /** A row plus its "Más" quick enable/disable action. */
 export type ListRow = TableRow & { toggle: QuickToggle };
 
-export type ListView = { metrics: TableMetrics; spaces: SpaceCard[]; rows: ListRow[]; total: number };
+export type ListView = { metrics: TableMetrics; rows: ListRow[]; total: number };
 
 export function getListView(state: TableQrState): ListView {
   const rows = getTableRows(state.tables, state.sessions, state.spaces);
   return {
     metrics: getTableMetrics(state.tables),
-    spaces: getSpaceCards(state.spaces, state.tables),
     rows: filterTableRows(rows, { query: state.query, spaceId: state.space, configuration: state.configuration }).map(
       (row) => {
         const table = state.tables.find((candidate) => candidate.id === row.id)!;

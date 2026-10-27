@@ -1,14 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, Printer } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Printer } from "lucide-react";
 import { toLocalDate } from "@/features/venue/tables-mapper";
 import { describeVenueError } from "@/features/venue/venue-errors";
-import { VenueGate } from "@/features/venue/VenueGate";
 import { commitVenue, useVenue } from "@/features/venue/venue-store";
 import type { VenueState } from "@/features/venue/venue-state";
-import { parseScreenState } from "@/shared/lib/screen-state";
 import { useScreenState } from "@/shared/lib/use-screen-state";
 import { BulkPrintModal } from "./BulkPrintModal";
 import { buildCardSvgMarkup, getQrFileName } from "./print-card";
@@ -22,6 +19,7 @@ import { QrDetail, type DownloadFormat } from "./QrDetail";
 import { PrintMaterial } from "./PrintMaterial";
 import { RegenerateDialog } from "./RegenerateDialog";
 import {
+  TABLE_QR_FORCED_STATES,
   createTableQrState,
   getBulkView,
   getDetailView,
@@ -30,42 +28,23 @@ import {
   getVenueCommand,
   tableQrReducer,
   type TableQrAction,
+  type TableQrForcedState,
   type TableQrState,
 } from "./table-qr-state";
 import { TableConfigurationList, TableToolbar } from "./TableList";
-import { HeaderButton, HeaderLink, PageHeader } from "./TableQrParts";
-import { SpacesManagement } from "./SpacesManagement";
+import { HeaderButton } from "./TableQrParts";
 
-/**
- * Forced variants: `detail` (09C: Mesa 07), `regenerate` (09F over 09C), `material` (09D:
- * Mesa 07) and `bulk-print` (09E over 09A with every printable table selected).
- */
-export const TABLE_QR_FORCED_STATES = ["detail", "regenerate", "material", "bulk-print"] as const;
-
-type ForcedState = (typeof TABLE_QR_FORCED_STATES)[number];
-
-const FORCED_ACTIONS: Record<ForcedState, TableQrAction[]> = {
+const FORCED_ACTIONS: Record<TableQrForcedState, TableQrAction[]> = {
   detail: [{ type: "open-detail", id: "tbl_07" }],
   regenerate: [{ type: "open-detail", id: "tbl_07" }, { type: "open-regenerate" }],
   material: [{ type: "open-material", id: "tbl_07" }],
   "bulk-print": [{ type: "open-bulk" }],
 };
 
-/** Table and space editing moved to Gestión de mesas: its old `?state=` values redirect there. */
-export const MOVED_STATES = {
-  edit: "/tables/management?state=table-edit",
-  new: "/tables/management?state=table-new",
-  errors: "/tables/management?state=errors",
-  "space-edit": "/tables/management?state=space-edit",
-  "space-new": "/tables/management?state=space-new",
-} as const;
+/** The "Plano" tab of Gestión de mesas opened on a table, in its edit modal. */
+const tableEditHref = (id: string) => `/tables/management?table=${encodeURIComponent(id)}`;
 
-const MOVED_STATE_IDS = Object.keys(MOVED_STATES) as (keyof typeof MOVED_STATES)[];
-
-/** Gestión de mesas opened on a table (`new` for the creation form). */
-const tableManagementHref = (id: string) => `/tables/management?table=${encodeURIComponent(id)}`;
-
-function initState(venue: VenueState, forcedState: ForcedState | null): TableQrState {
+function initState(venue: VenueState, forcedState: TableQrForcedState | null): TableQrState {
   // Credentials carry the date the API issued them; "hoy" is the browser's local date.
   const state = createTableQrState(venue, toLocalDate(new Date().toISOString()) ?? undefined);
   if (!forcedState) return state;
@@ -76,32 +55,28 @@ function initState(venue: VenueState, forcedState: ForcedState | null): TableQrS
 const QR_PNG_WIDTH = 1024;
 const CARD_PNG_WIDTH = 960;
 
-/**
- * 09 · Mesas y códigos QR. Container: spaces and tables come from the shared venue store (loaded
- * from the API, configured in Gestión de mesas); this screen owns which view is open: the 09A
- * list (with the 09E bulk print modal), the 09C QR detail (with the 09F confirmation) or the 09D
- * printable material. Enabling/disabling and QR rotations go to the API, which issues the new
- * token, its date and issuer.
- */
-export function TableQrScreen() {
-  return (
-    <VenueGate>
-      <TableQr />
-    </VenueGate>
-  );
-}
+type TableQrPanelProps = {
+  /**
+   * Lays out the 09A list inside the host screen (its header and tabs): `actions` go in the
+   * header, `body` below the tabs. The 09C detail and 09D material take the whole page instead,
+   * and their back actions return to the list.
+   */
+  frame: (parts: { actions: ReactNode; body: ReactNode }) => ReactNode;
+};
 
-function TableQr() {
+/**
+ * 09 · Códigos QR, the "Códigos QR" tab of Gestión de mesas (render it inside `VenueGate`).
+ * Container: spaces and tables come from the shared venue store (loaded from the API, configured
+ * in the "Plano" tab); this panel owns which view is open: the 09A list (with the 09E bulk print
+ * modal), the 09C QR detail (with the 09F confirmation) or the 09D printable material.
+ * Enabling/disabling and QR rotations go to the API, which issues the new token, its date and
+ * issuer. `?state=` forces one of `TABLE_QR_FORCED_STATES`.
+ */
+export function TableQrPanel({ frame }: TableQrPanelProps) {
   const forcedState = useScreenState(TABLE_QR_FORCED_STATES);
-  const movedState = parseScreenState(useSearchParams().get("state"), MOVED_STATE_IDS);
-  const router = useRouter();
   const venue = useVenue();
   const [ui, setUi] = useState(() => initState(venue, forcedState));
   const state: TableQrState = { ...ui, spaces: venue.spaces, tables: venue.tables, sessions: venue.sessions };
-
-  useEffect(() => {
-    if (movedState) router.replace(MOVED_STATES[movedState]);
-  }, [movedState, router]);
 
   /**
    * Runs the pure reducer over the store's tables. A configuration change goes to the API first:
@@ -161,49 +136,36 @@ function TableQr() {
     content = <PrintMaterial view={material} onBack={() => dispatch({ type: "close-detail" })} onExport={exportCard} />;
   } else {
     const list = getListView(state);
-    content = (
-      // The list fills the viewport under the 72px top bar, as in the 1440×900 export.
-      <div className="flex h-[calc(100dvh-72px)] min-h-[760px] flex-col gap-[11px] px-7 pt-[18px] pb-4">
-        <PageHeader
-          breadcrumb="Mesas / Espacios / Códigos QR"
-          title="Mesas y códigos QR"
-          subtitle="Administrá los accesos a la carta digital. Las mesas y los espacios se configuran en Gestión de mesas."
-          actions={
-            <>
-              <HeaderButton
-                label="Imprimir códigos QR"
-                icon={Printer}
-                tone="neutral"
-                onClick={() => dispatch({ type: "open-bulk" })}
-              />
-              <HeaderLink href={tableManagementHref("new")} label="Nueva mesa" icon={Plus} tone="primary" />
-            </>
-          }
-        />
-        <SpacesManagement cards={list.spaces} />
-        <TableToolbar
-          query={state.query}
-          spaces={state.spaces}
-          space={state.space}
-          configuration={state.configuration}
-          onQueryChange={(query) => dispatch({ type: "set-query", query })}
-          onSpaceChange={(space) => dispatch({ type: "set-space", space })}
-          onConfigurationChange={(configuration) => dispatch({ type: "set-configuration", configuration })}
-        />
-        <TableConfigurationList
-          rows={list.rows}
-          filtered={list.rows.length < list.total}
-          actions={{
-            editHref: tableManagementHref,
-            onToggleEnabled: (id) => dispatch({ type: "toggle-enabled", id }),
-            onViewQr: (id) => dispatch({ type: "open-detail", id }),
-            onDownload: (id) => downloadQr(id, "png"),
-            onOpenMaterial: (id) => dispatch({ type: "open-material", id }),
-            onRegenerate: (id) => dispatch({ type: "open-regenerate", id }),
-          }}
-        />
-      </div>
-    );
+    content = frame({
+      actions: (
+        <HeaderButton label="Imprimir códigos QR" icon={Printer} tone="neutral" onClick={() => dispatch({ type: "open-bulk" })} />
+      ),
+      body: (
+        <>
+          <TableToolbar
+            query={state.query}
+            spaces={state.spaces}
+            space={state.space}
+            configuration={state.configuration}
+            onQueryChange={(query) => dispatch({ type: "set-query", query })}
+            onSpaceChange={(space) => dispatch({ type: "set-space", space })}
+            onConfigurationChange={(configuration) => dispatch({ type: "set-configuration", configuration })}
+          />
+          <TableConfigurationList
+            rows={list.rows}
+            filtered={list.rows.length < list.total}
+            actions={{
+              editHref: tableEditHref,
+              onToggleEnabled: (id) => dispatch({ type: "toggle-enabled", id }),
+              onViewQr: (id) => dispatch({ type: "open-detail", id }),
+              onDownload: (id) => downloadQr(id, "png"),
+              onOpenMaterial: (id) => dispatch({ type: "open-material", id }),
+              onRegenerate: (id) => dispatch({ type: "open-regenerate", id }),
+            }}
+          />
+        </>
+      ),
+    });
   }
 
   return (
