@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { Search } from "lucide-react";
 import { useId } from "react";
 
@@ -12,18 +13,37 @@ type SuggestionSearchProps = {
   emptyLabel: string;
   onChange: (value: string) => void;
   onPick: (id: string) => void;
+  /** 08B "Category Search": 220×34 white field (default: full-width 36px cream field). */
+  compact?: boolean;
+  autoFocus?: boolean;
 };
 
 /**
- * "Category Search" / "Product Search": 36px cream field with a search icon (10px text → 12px).
- * Typing lists the matches that can still be associated; picking one adds it and clears the box.
+ * "Category Search" / "Product Search": search field with an icon (8–10px text → 12px). Typing
+ * lists the matches that can still be associated; picking one adds it and clears the box.
+ * Escape clears the query.
  */
-export function SuggestionSearch({ label, placeholder, value, suggestions, emptyLabel, onChange, onPick }: SuggestionSearchProps) {
+export function SuggestionSearch({
+  label,
+  placeholder,
+  value,
+  suggestions,
+  emptyLabel,
+  onChange,
+  onPick,
+  compact = false,
+  autoFocus = false,
+}: SuggestionSearchProps) {
   const listId = useId();
   const open = value.trim().length > 0;
   return (
-    <div className="relative w-full shrink-0">
-      <label className="flex h-9 w-full items-center gap-2 rounded-nav bg-cream px-2.5 focus-within:outline-2 focus-within:outline-brand">
+    <div className={clsx("relative shrink-0", compact ? "w-[220px]" : "w-full")}>
+      <label
+        className={clsx(
+          "flex w-full items-center gap-2 rounded-nav focus-within:outline-2 focus-within:outline-brand",
+          compact ? "h-[34px] bg-surface px-[9px] outline-1 -outline-offset-[0.5px] outline-line" : "h-9 bg-cream px-2.5",
+        )}
+      >
         <Search size={14} aria-hidden="true" className="shrink-0 text-muted" />
         <span className="sr-only">{label}</span>
         <input
@@ -32,6 +52,8 @@ export function SuggestionSearch({ label, placeholder, value, suggestions, empty
           aria-autocomplete="list"
           value={value}
           placeholder={placeholder}
+          // Only the "Asociar productos" panel focuses its field when it opens.
+          autoFocus={autoFocus}
           aria-controls={open ? listId : undefined}
           aria-expanded={open}
           onChange={(event) => onChange(event.target.value)}
@@ -49,7 +71,7 @@ export function SuggestionSearch({ label, placeholder, value, suggestions, empty
         <ul
           id={listId}
           aria-label={`Resultados de ${label.toLowerCase()}`}
-          className="absolute top-10 right-0 left-0 z-20 max-h-48 overflow-y-auto rounded-nav bg-surface py-1 shadow-modal outline-1 -outline-offset-[0.5px] outline-line"
+          className="absolute top-[calc(100%+4px)] right-0 left-0 z-20 max-h-48 overflow-y-auto rounded-nav bg-surface py-1 shadow-modal outline-1 -outline-offset-[0.5px] outline-line"
         >
           {suggestions.map((suggestion) => (
             <li key={suggestion.id}>

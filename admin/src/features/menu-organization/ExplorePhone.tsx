@@ -1,25 +1,120 @@
 import clsx from "clsx";
-import { Armchair, Compass, ShoppingBag } from "lucide-react";
-import type { ExplorePreview } from "@/features/moments/moment-catalog";
+import { ArrowLeft, Armchair, Compass, Search, ShoppingBag } from "lucide-react";
+import { ALL_FILTER_ID, type ExplorePreview } from "@/features/moments/moment-catalog";
 import { ProductImage } from "@/features/products/ProductTags";
 import { CoverImage } from "./OrganizationParts";
 
 type ExplorePhoneProps = {
   preview: ExplorePreview;
-  onFilterChange: (filterId: string) => void;
   /** Accessible name of the phone region. */
   label: string;
   className?: string;
-};
+} & (
+  | {
+      /** 08E: 390px phone with the "Todos" + category filters and the bottom navigation. */
+      variant?: "full";
+      onFilterChange: (filterId: string) => void;
+    }
+  | {
+      /** 08B "Moment Mobile Viewport": read-only 330px customer screen. */
+      variant: "compact";
+    }
+);
 
 /**
- * "Customer Preview" (08B) / "Explore Preview" (08E): 390px phone with the moment cover, its
- * description, the "Todos" + category filters, the product count, two-column product cards and
- * the bottom navigation. Text maps the 8–11px export copy to 11–13px. The product cards scroll
- * between the count and the navigation, which sits on the bottom edge (the exports place it
- * below the visible area).
+ * "Customer Preview" (08B) / "Explore Preview" (08E): the customer explore screen of a moment.
+ * Text maps the 7–11px export copy to 11–13px.
  */
-export function ExplorePhone({ preview, onFilterChange, label, className }: ExplorePhoneProps) {
+export function ExplorePhone(props: ExplorePhoneProps) {
+  return props.variant === "compact" ? (
+    <CompactExplorePhone preview={props.preview} label={props.label} className={props.className} />
+  ) : (
+    <FullExplorePhone {...props} />
+  );
+}
+
+/**
+ * 08B "Moment Mobile Viewport": device handle, café top bar with the back arrow, 165px hero,
+ * title, description, the associated categories as chips (no "Todos", not interactive),
+ * "Recomendados para vos" and a two-column card grid. The content scrolls inside the phone; no
+ * bottom navigation.
+ */
+function CompactExplorePhone({ preview, label, className }: { preview: ExplorePreview; label: string; className?: string }) {
+  const categories = preview.filters.filter((filter) => filter.id !== ALL_FILTER_ID);
+  const title = preview.title || "Momento sin nombre";
+  return (
+    <section
+      aria-label={label}
+      className={clsx(
+        "flex w-[330px] shrink-0 flex-col items-center overflow-hidden rounded-[22px] bg-[#fbfaf7] outline-1 -outline-offset-[0.5px] outline-[#d4d0c8]",
+        className,
+      )}
+    >
+      <span aria-hidden="true" className="my-[7px] h-1 w-[66px] shrink-0 rounded-[2px] bg-[#d4d0c8]" />
+      <div aria-hidden="true" className="flex h-10 w-full shrink-0 items-center justify-between bg-surface px-3.5 text-ink">
+        <ArrowLeft size={14} />
+        <span className="text-[11px] font-bold tracking-[0.7px]">CAFÉ CENTRAL</span>
+        <Search size={14} />
+      </div>
+      <div className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto [scrollbar-width:thin]">
+        <CoverImage src={preview.image} alt={`Portada de ${title}`} sizes="330px" className="h-[165px] w-full" />
+        <div className="flex w-full flex-col gap-[9px] px-3.5 py-3">
+          <p className="text-[19px] leading-tight font-bold text-ink">{title}</p>
+          {preview.description && <p className="text-[11px] text-muted">{preview.description}</p>}
+          {categories.length > 0 && (
+            <ul aria-label="Categorías del momento" className="flex flex-wrap gap-[5px]">
+              {categories.map((category) => (
+                <li
+                  key={category.id}
+                  className="flex h-[23px] items-center rounded-xl bg-brand-wash px-2 text-[11px] font-bold whitespace-nowrap text-brand"
+                >
+                  {category.label}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="text-[12px] font-bold text-ink">Recomendados para vos</p>
+          <ul className="grid grid-cols-2 gap-[7px]">
+            {preview.products.map((product) => (
+              <li
+                key={product.id}
+                className="flex flex-col overflow-hidden rounded-nav bg-surface outline-1 -outline-offset-[0.5px] outline-line"
+              >
+                <ProductImage src={product.image} alt={product.name} sizes="144px" className="h-[78px] w-full" iconSize={18} />
+                <div className="flex flex-col gap-0.5 p-[7px]">
+                  <p className="truncate text-[11px] font-bold text-ink">{product.name}</p>
+                  <p className="text-[11px] font-bold text-brand">{product.priceLabel}</p>
+                  {!product.available && <p className="truncate text-[11px] text-warning">{product.description}</p>}
+                </div>
+              </li>
+            ))}
+            {preview.products.length === 0 && (
+              <li className="col-span-2 text-[12px] text-muted">Este momento todavía no tiene productos publicados.</li>
+            )}
+          </ul>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * 08E "Explore Preview": 390px phone with the moment cover, its description, the "Todos" +
+ * category filters, the product count, two-column product cards and the bottom navigation. The
+ * product cards scroll between the count and the navigation, which sits on the bottom edge (the
+ * exports place it below the visible area).
+ */
+function FullExplorePhone({
+  preview,
+  onFilterChange,
+  label,
+  className,
+}: {
+  preview: ExplorePreview;
+  onFilterChange: (filterId: string) => void;
+  label: string;
+  className?: string;
+}) {
   return (
     <section
       aria-label={label}

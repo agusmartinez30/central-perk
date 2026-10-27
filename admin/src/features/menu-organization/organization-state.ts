@@ -221,6 +221,9 @@ export function createOrganizationState(
   };
 }
 
+/** Notice and save bar title after a save blocked by validation errors. */
+const BLOCKED_SAVE_MESSAGE = "Revisá los campos marcados antes de guardar.";
+
 const titleOf = (state: OrganizationState, id: string) =>
   state.moments.find((moment) => moment.id === id)?.title ?? "El momento";
 
@@ -283,7 +286,7 @@ function saveCategory(state: OrganizationState, at: string): OrganizationState {
     return {
       ...state,
       categoryEditor: { ...editor, submitted: true },
-      notice: "Revisá los campos marcados antes de guardar.",
+      notice: BLOCKED_SAVE_MESSAGE,
     };
   }
   const saved = applyCategoryDraft(state.categories, editor.id, editor.draft, { at, by: CATEGORY_EDITOR.name });
@@ -332,7 +335,7 @@ function saveMoment(state: OrganizationState): OrganizationState {
     return {
       ...state,
       momentEditor: { ...editor, submitted: true },
-      notice: "Revisá los campos marcados antes de guardar.",
+      notice: BLOCKED_SAVE_MESSAGE,
     };
   }
   const saved = applyMomentDraft({ moments: state.moments, products: state.products }, editor.id, editor.draft);
@@ -650,8 +653,13 @@ export function getMomentsListView(state: OrganizationState): MomentsListView {
   };
 }
 
-/** 08B/08D save bar: title and the copy under it. */
-export type SaveBarView = { title: string; hint: string };
+/** 08B/08D save bar: title and the copy under it; `blocked` after a save stopped by errors. */
+export type SaveBarView = { title: string; hint: string; blocked: boolean };
+
+function getSaveBar(pendingLabel: string | null, hint: string, errors: object): SaveBarView {
+  const blocked = Object.keys(errors).length > 0;
+  return { title: blocked ? BLOCKED_SAVE_MESSAGE : (pendingLabel ?? "Sin cambios"), hint, blocked };
+}
 
 export type MomentEditorView = {
   title: string;
@@ -697,6 +705,7 @@ export function getMomentEditorView(state: OrganizationState): MomentEditorView 
   if (isNew) pendingLabel = "Momento nuevo sin guardar";
   else if (dirty) pendingLabel = "Cambios sin guardar";
   const selectedCategories = getAssociatedCategories(draft.categoryIds, state.categories);
+  const errors = editor.submitted ? validateMomentDraft(draft, { moments: state.moments, editingId: editor.id }) : {};
   return {
     title: isNew ? "Crear momento" : "Editar momento",
     statusLabel,
@@ -707,11 +716,8 @@ export function getMomentEditorView(state: OrganizationState): MomentEditorView 
     breadcrumb: ["CARTA DIGITAL", "MOMENTOS", isNew ? "NUEVO MOMENTO" : editor.saved.title.toLocaleUpperCase("es")],
     order,
     pendingLabel,
-    saveBar: {
-      title: pendingLabel ?? "Sin cambios",
-      hint: `Versión ${state.version} · La publicación actual no cambia hasta guardar`,
-    },
-    errors: editor.submitted ? validateMomentDraft(draft, { moments: state.moments, editingId: editor.id }) : {},
+    saveBar: getSaveBar(pendingLabel, `Versión ${state.version} · La publicación actual no cambia hasta guardar`, errors),
+    errors,
     selectedCategories,
     categorySuggestions: editor.categoryQuery.trim()
       ? searchAssignableCategories(draft, state.categories, editor.categoryQuery)
@@ -814,6 +820,9 @@ export function getCategoryEditorView(state: OrganizationState, now: Date = new 
   else if (dirty) pendingLabel = "Cambios sin guardar";
   const { image } = editor.draft;
   const permission = `Permiso: ${CATEGORY_EDITOR.role}`;
+  const errors = editor.submitted
+    ? validateCategoryDraft(editor.draft, { categories: state.categories, editingId: editor.id })
+    : {};
   return {
     title: isNew ? "Crear categoría" : "Editar categoría",
     statusLabel,
@@ -824,10 +833,8 @@ export function getCategoryEditorView(state: OrganizationState, now: Date = new 
     breadcrumb: ["CARTA DIGITAL", "CATEGORÍAS", isNew ? "NUEVA CATEGORÍA" : editor.saved.label.toLocaleUpperCase("es")],
     positionLabel: formatOrderNumber(order),
     pendingLabel,
-    saveBar: { title: pendingLabel ?? "Sin cambios", hint: "La categoría publicada no cambia hasta guardar." },
-    errors: editor.submitted
-      ? validateCategoryDraft(editor.draft, { categories: state.categories, editingId: editor.id })
-      : {},
+    saveBar: getSaveBar(pendingLabel, "La categoría publicada no cambia hasta guardar.", errors),
+    errors,
     image: image ? { src: image.src, fileName: image.fileName, metaLabel: formatImageMetadata(image) } : null,
     productCount,
     breakdown: editor.id ? getCategoryProductBreakdown(state.products, state.moments, editor.id) : EMPTY_BREAKDOWN,

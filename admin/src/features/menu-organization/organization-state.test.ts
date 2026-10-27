@@ -161,8 +161,13 @@ describe("moment editor (08B)", () => {
       { type: "moment-set-field", field: "title", value: "" },
     ]);
     expect(getMomentEditorView(state)?.errors).toEqual({});
+    expect(getMomentEditorView(state)?.saveBar.blocked).toBe(false);
     const blocked = organizationReducer(state, { type: "moment-save" });
     expect(getMomentEditorView(blocked)?.errors).toEqual({ title: "Ingresá un nombre." });
+    expect(getMomentEditorView(blocked)?.saveBar).toMatchObject({
+      title: "Revisá los campos marcados antes de guardar.",
+      blocked: true,
+    });
     expect(blocked.moments).toBe(state.moments);
     expect(blocked.notice).toBe("Revisá los campos marcados antes de guardar.");
   });
