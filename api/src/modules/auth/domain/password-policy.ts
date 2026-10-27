@@ -3,7 +3,7 @@
  * `admin/src/features/auth/validation.ts`.
  */
 
-export const MIN_PASSWORD_LENGTH = 12;
+export const MIN_PASSWORD_LENGTH = 6;
 
 export type PasswordRequirementId = 'length' | 'passphrase' | 'strength';
 

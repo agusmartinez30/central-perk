@@ -6,7 +6,7 @@ export function isValidEmail(value: string): boolean {
   return EMAIL_PATTERN.test(value.trim());
 }
 
-export const MIN_PASSWORD_LENGTH = 12;
+export const MIN_PASSWORD_LENGTH = 6;
 
 export type PasswordRequirementId = "length" | "passphrase" | "strength";
 
@@ -46,7 +46,7 @@ export function getPasswordRequirements(password: string, email?: string): Passw
   return [
     {
       id: "length",
-      label: "12 caracteres como mínimo",
+      label: "6 caracteres como mínimo",
       met: password.length >= MIN_PASSWORD_LENGTH,
     },
     { id: "passphrase", label: "Se admiten frases largas", met: password.length > 0 },

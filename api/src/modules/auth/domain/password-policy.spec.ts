@@ -6,8 +6,9 @@ describe('unmetPasswordRequirements (mirrors admin 11C rules)', () => {
     expect(unmetPasswordRequirements('Mostrador de la noche larga', 'turno@cafecentral.com')).toEqual([]);
   });
 
-  it('requires 12 characters', () => {
-    expect(unmetPasswordRequirements('Corta!x9', undefined)).toEqual(['length']);
+  it('requires 6 characters', () => {
+    expect(unmetPasswordRequirements('luna7', undefined)).toEqual(['length']);
+    expect(unmetPasswordRequirements('luna73', undefined)).toEqual([]);
   });
 
   it('reports an empty password as failing every rule', () => {

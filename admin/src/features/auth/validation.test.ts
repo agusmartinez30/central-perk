@@ -27,7 +27,7 @@ describe("isValidEmail", () => {
 describe("getPasswordRequirements", () => {
   it("lists the three rules of the reset screen in order", () => {
     expect(getPasswordRequirements("").map((rule) => rule.label)).toEqual([
-      "12 caracteres como mínimo",
+      "6 caracteres como mínimo",
       "Se admiten frases largas",
       "Evitá datos fáciles de adivinar",
     ]);
@@ -37,10 +37,10 @@ describe("getPasswordRequirements", () => {
     expect(getPasswordRequirements("").every((rule) => !rule.met)).toBe(true);
   });
 
-  it("requires at least 12 characters", () => {
-    const short = getPasswordRequirements("corta");
+  it("requires at least 6 characters", () => {
+    const short = getPasswordRequirements("luna7");
     expect(short.find((rule) => rule.id === "length")?.met).toBe(false);
-    const long = getPasswordRequirements("Una frase larga y segura");
+    const long = getPasswordRequirements("luna73");
     expect(long.find((rule) => rule.id === "length")?.met).toBe(true);
   });
 
