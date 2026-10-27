@@ -10,6 +10,10 @@ export type RowMenuItem = {
   onSelect: () => void;
   /** Shown but inert (`aria-disabled`), so it stays reachable with the arrow keys. */
   disabled?: boolean;
+  /** Why the item is disabled, shown as its tooltip. */
+  hint?: string;
+  /** Destructive actions are red. */
+  tone?: "danger";
 };
 
 type RowMenuProps = {
@@ -18,6 +22,9 @@ type RowMenuProps = {
   items: readonly RowMenuItem[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Trigger glyph; defaults to the horizontal ellipsis. */
+  triggerIcon?: LucideIcon;
+  menuWidth?: number;
 };
 
 const MENU_WIDTH = 168;
@@ -31,7 +38,14 @@ const MENU_PADDING = 4;
  * Keyboard: Enter/Space/ArrowDown open it on the first item, arrows and Home/End move, Escape
  * and Tab close it, and focus returns to the trigger.
  */
-export function RowMenu({ label, items, open, onOpenChange }: RowMenuProps) {
+export function RowMenu({
+  label,
+  items,
+  open,
+  onOpenChange,
+  triggerIcon: TriggerIcon = Ellipsis,
+  menuWidth = MENU_WIDTH,
+}: RowMenuProps) {
   const menuId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -44,7 +58,7 @@ export function RowMenu({ label, items, open, onOpenChange }: RowMenuProps) {
       const height = items.length * ITEM_HEIGHT + 2 * MENU_PADDING;
       const below = trigger.bottom + GAP;
       const top = below + height > window.innerHeight ? trigger.top - GAP - height : below;
-      setPosition({ top, left: Math.max(8, trigger.right - MENU_WIDTH) });
+      setPosition({ top, left: Math.max(8, trigger.right - menuWidth) });
     }
     onOpenChange(true);
   };
@@ -128,7 +142,7 @@ export function RowMenu({ label, items, open, onOpenChange }: RowMenuProps) {
           open ? "outline-2 -outline-offset-1 outline-brand" : "outline-1 -outline-offset-[0.5px] outline-line",
         )}
       >
-        <Ellipsis size={14} aria-hidden="true" />
+        <TriggerIcon size={14} aria-hidden="true" />
       </button>
       {open && (
         <div
@@ -137,19 +151,20 @@ export function RowMenu({ label, items, open, onOpenChange }: RowMenuProps) {
           role="menu"
           aria-label={label}
           onKeyDown={onMenuKeyDown}
-          style={{ top: position?.top ?? 0, left: position?.left ?? 0, width: MENU_WIDTH }}
+          style={{ top: position?.top ?? 0, left: position?.left ?? 0, width: menuWidth }}
           className={clsx(
             "fixed z-20 flex flex-col rounded-nav bg-surface p-1 shadow-modal outline-1 -outline-offset-[0.5px] outline-line",
             !position && "invisible",
           )}
         >
-          {items.map(({ label: itemLabel, icon: Icon, onSelect, disabled = false }) => (
+          {items.map(({ label: itemLabel, icon: Icon, onSelect, disabled = false, hint, tone }) => (
             <button
               key={itemLabel}
               type="button"
               role="menuitem"
               tabIndex={-1}
               aria-disabled={disabled || undefined}
+              title={hint}
               onClick={() => {
                 if (disabled) return;
                 closeAndFocusTrigger();
@@ -159,7 +174,9 @@ export function RowMenu({ label, items, open, onOpenChange }: RowMenuProps) {
                 "flex h-8 items-center gap-2 rounded-[6px] px-2.5 text-left text-[12px] font-semibold outline-none",
                 disabled
                   ? "cursor-not-allowed text-muted opacity-60 focus:bg-cream"
-                  : "text-ink hover:bg-cream focus:bg-brand-wash focus:text-brand",
+                  : tone === "danger"
+                    ? "text-danger hover:bg-cream focus:bg-cream"
+                    : "text-ink hover:bg-cream focus:bg-brand-wash focus:text-brand",
               )}
             >
               <Icon size={13} aria-hidden="true" className="shrink-0" />

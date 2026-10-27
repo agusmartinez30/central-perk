@@ -1,9 +1,20 @@
 "use client";
 
 import clsx from "clsx";
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Download, Ellipsis, Pencil, QrCode as QrCodeIcon, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import {
+  ChevronDown,
+  Download,
+  EllipsisVertical,
+  Pencil,
+  Power,
+  Printer,
+  QrCode as QrCodeIcon,
+  RefreshCw,
+  Search,
+} from "lucide-react";
+import { RowMenu, type RowMenuItem } from "@/shared/ui";
 import type { VenueSpace } from "@/mocks/service-day";
 import type { SessionStatus } from "@/features/venue/table-config";
 import type { ConfigurationFilter, QrStatus, SpaceFilter } from "./qr-config";
@@ -94,7 +105,7 @@ const SESSION_TONES: Record<SessionStatus, ChipTone> = {
 const QR_TONES: Record<QrStatus, ChipTone> = { active: "brand", paused: "neutral", missing: "warning" };
 
 export type RowActions = {
-  /** "Editar" opens the table in Gestión de mesas. */
+  /** "Editar mesa" opens the table in the Plano tab. */
   editHref: (id: string) => string;
   onToggleEnabled: (id: string) => void;
   onViewQr?: (id: string) => void;
@@ -103,112 +114,52 @@ export type RowActions = {
   onRegenerate?: (id: string) => void;
 };
 
-type IconActionProps = {
-  label: string;
-  icon: typeof Pencil;
-  onClick: () => void;
-  expanded?: boolean;
-  /** "Action · Ver QR" is brand blue in 09A. */
-  brand?: boolean;
-};
-
-/** 15px row icons; the 26px hit area keeps the export's 11px gap between them. */
-function IconAction({ label, icon: Icon, onClick, expanded, brand = false }: IconActionProps) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      aria-haspopup={expanded === undefined ? undefined : "menu"}
-      aria-expanded={expanded}
-      onClick={onClick}
-      className={clsx(
-        "flex size-[26px] items-center justify-center rounded-chip hover:bg-cream",
-        brand ? "text-brand" : "text-ink",
-      )}
-    >
-      <Icon size={15} aria-hidden="true" />
-    </button>
-  );
-}
-
-type MenuItem = { label: string; onSelect: () => void; disabled?: boolean; hint?: string; tone?: "danger" };
-
-/** "Action · Más" menu (invented: the exports only show the ellipsis). */
-function RowMenu({ items, onClose, up }: { items: MenuItem[]; onClose: () => void; up: boolean }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    ref.current?.querySelector<HTMLButtonElement>("button:not([disabled])")?.focus();
-    const onPointer = (event: MouseEvent) => {
-      if (!ref.current?.parentElement?.contains(event.target as Node)) onClose();
-    };
-    document.addEventListener("mousedown", onPointer);
-    return () => document.removeEventListener("mousedown", onPointer);
-  }, [onClose]);
-
-  return (
-    <div
-      ref={ref}
-      role="menu"
-      onKeyDown={(event) => {
-        if (event.key === "Escape") onClose();
-        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-          event.preventDefault();
-          const buttons = [...(ref.current?.querySelectorAll<HTMLButtonElement>("button:not([disabled])") ?? [])];
-          const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
-          const next = buttons[(index + (event.key === "ArrowDown" ? 1 : buttons.length - 1)) % buttons.length];
-          next?.focus();
-        }
-      }}
-      className={clsx(
-        "absolute right-0 z-20 flex w-[230px] flex-col rounded-card bg-surface p-1.5 shadow-modal outline-1 -outline-offset-[0.5px] outline-line",
-        up ? "bottom-8" : "top-8",
-      )}
-    >
-      {items.map((item) => (
-        <button
-          key={item.label}
-          type="button"
-          role="menuitem"
-          disabled={item.disabled}
-          onClick={() => {
-            item.onSelect();
-            onClose();
-          }}
-          className={clsx(
-            "flex flex-col items-start gap-0.5 rounded-[7px] px-2.5 py-2 text-left enabled:hover:bg-cream disabled:cursor-not-allowed",
-            item.tone === "danger" ? "text-danger" : "text-ink",
-          )}
-        >
-          <span className={clsx("text-[12px] font-semibold", item.disabled && "text-muted")}>{item.label}</span>
-          {item.hint && <span className="text-[11px] text-muted">{item.hint}</span>}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 type TableConfigurationListProps = { rows: readonly ListRow[]; filtered: boolean; actions: RowActions };
 
 /**
  * "Table Configuration List": 36px sand header, then the rows sharing the remaining height
- * (44.8px each for twelve tables at 1440×900) and scrolling when there are more.
+ * (44.8px each for twelve tables at 1440×900) and scrolling when there are more. Clicking a row
+ * opens its QR detail; every row action lives in the vertical "more" menu.
  */
 export function TableConfigurationList({ rows, filtered, actions }: TableConfigurationListProps) {
+  const router = useRouter();
   const [menuId, setMenuId] = useState<string | null>(null);
 
-  const menuItems = (row: ListRow): MenuItem[] => [
+  const menuItems = (row: ListRow): RowMenuItem[] => [
+    ...(actions.onViewQr
+      ? [{ label: "Ver código QR", icon: QrCodeIcon, onSelect: () => actions.onViewQr?.(row.id) }]
+      : []),
+    ...(actions.onDownload
+      ? [
+          {
+            label: "Descargar QR",
+            icon: Download,
+            disabled: row.qr.status === "missing",
+            hint: row.qr.status === "missing" ? "La mesa no tiene código QR." : undefined,
+            onSelect: () => actions.onDownload?.(row.id),
+          },
+        ]
+      : []),
+    { label: "Editar mesa", icon: Pencil, onSelect: () => router.push(actions.editHref(row.id)) },
     ...(actions.onOpenMaterial
-      ? [{ label: "Material imprimible", onSelect: () => actions.onOpenMaterial?.(row.id) }]
+      ? [{ label: "Material imprimible", icon: Printer, onSelect: () => actions.onOpenMaterial?.(row.id) }]
       : []),
     {
       label: row.toggle.label,
+      icon: Power,
       disabled: !row.toggle.allowed,
       hint: row.toggle.reason,
       onSelect: () => actions.onToggleEnabled(row.id),
     },
     ...(actions.onRegenerate
-      ? [{ label: "Regenerar código QR", tone: "danger" as const, onSelect: () => actions.onRegenerate?.(row.id) }]
+      ? [
+          {
+            label: "Regenerar código QR",
+            icon: RefreshCw,
+            tone: "danger" as const,
+            onSelect: () => actions.onRegenerate?.(row.id),
+          },
+        ]
       : []),
   ];
 
@@ -223,7 +174,7 @@ export function TableConfigurationList({ rows, filtered, actions }: TableConfigu
             <span role="columnheader" className="w-[130px]">CONFIGURACIÓN</span>
             <span role="columnheader" className="w-[160px]">SESIÓN</span>
             <span role="columnheader" className="w-[120px]">QR</span>
-            <span role="columnheader" className="flex-1">ACCIONES</span>
+            <span role="columnheader" className="flex-1 text-right">ACCIONES</span>
           </div>
         </div>
         <div role="rowgroup" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -232,14 +183,33 @@ export function TableConfigurationList({ rows, filtered, actions }: TableConfigu
               {filtered ? "No hay mesas que coincidan con la búsqueda." : "Todavía no hay mesas configuradas."}
             </p>
           )}
-          {rows.map((row, index) => (
+          {rows.map((row) => (
             <div
               key={row.id}
               role="row"
-              className="flex flex-[1_0_44px] items-center border-b border-line px-3 last:border-b-0"
+              // Mouse shortcut for the whole row; keyboard users reach the same action on the table name.
+              onClick={actions.onViewQr ? () => actions.onViewQr?.(row.id) : undefined}
+              className={clsx(
+                "flex flex-[1_0_44px] items-center border-b border-line px-3 last:border-b-0",
+                actions.onViewQr && "cursor-pointer hover:bg-cream",
+              )}
             >
               <span role="cell" className="w-[160px] truncate pr-2 text-[13px] font-bold text-ink">
-                {row.label}
+                {actions.onViewQr ? (
+                  <button
+                    type="button"
+                    aria-label={`Ver código QR de ${row.label}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      actions.onViewQr?.(row.id);
+                    }}
+                    className="rounded-chip text-left hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                  >
+                    {row.label}
+                  </button>
+                ) : (
+                  row.label
+                )}
               </span>
               <span role="cell" className="w-[120px] text-[12px] text-muted">{row.spaceName}</span>
               <span role="cell" className="w-[120px] text-[12px] text-muted">{row.capacityLabel}</span>
@@ -257,40 +227,16 @@ export function TableConfigurationList({ rows, filtered, actions }: TableConfigu
               <span role="cell" className="w-[120px]">
                 <StatusChip label={row.qr.label} tone={QR_TONES[row.qr.status]} className="w-fit" />
               </span>
-              <span role="cell" className="relative flex flex-1 items-center justify-end">
-                <Link
-                  href={actions.editHref(row.id)}
-                  aria-label={`Editar ${row.label} en Gestión de mesas`}
-                  title="Editar en Gestión de mesas"
-                  className="flex size-[26px] items-center justify-center rounded-chip text-ink hover:bg-cream"
-                >
-                  <Pencil size={15} aria-hidden="true" />
-                </Link>
-                {actions.onViewQr && (
-                  <IconAction
-                    label={`Ver QR de ${row.label}`}
-                    icon={QrCodeIcon}
-                    brand
-                    onClick={() => actions.onViewQr?.(row.id)}
-                  />
-                )}
-                {actions.onDownload && row.qr.status !== "missing" && (
-                  <IconAction
-                    label={`Descargar QR de ${row.label}`}
-                    icon={Download}
-                    onClick={() => actions.onDownload?.(row.id)}
-                  />
-                )}
-                <IconAction
+              {/* The menu renders inside this cell, so its clicks must not reach the row. */}
+              <span role="cell" className="flex flex-1 items-center justify-end" onClick={(event) => event.stopPropagation()}>
+                <RowMenu
                   label={`Más acciones de ${row.label}`}
-                  icon={Ellipsis}
-                  expanded={menuId === row.id}
-                  onClick={() => setMenuId((current) => (current === row.id ? null : row.id))}
+                  items={menuItems(row)}
+                  open={menuId === row.id}
+                  onOpenChange={(open) => setMenuId(open ? row.id : null)}
+                  triggerIcon={EllipsisVertical}
+                  menuWidth={200}
                 />
-                {menuId === row.id && (
-                  // The last rows open the menu upwards so it stays inside the list.
-                  <RowMenu items={menuItems(row)} onClose={() => setMenuId(null)} up={index >= 3 && index >= rows.length - 3} />
-                )}
               </span>
             </div>
           ))}

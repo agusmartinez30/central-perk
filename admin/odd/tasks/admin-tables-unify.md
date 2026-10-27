@@ -19,6 +19,7 @@ The QR screen repeats management entry points ("Nueva mesa", "Crear espacio"/spa
 
 ## Tasks
 - [x] U1 Tabs + QR view inside management, redirect, nav/topbar cleanup, dead code removal, tests and docs. Route: delegated (2+ non-trivial files).
+- [x] U2 QR list: clicking a row (or the table name, for keyboard) opens the QR detail; row actions collapse into a vertical-dots menu with icon + label items. Route: inline (one feature file + mechanical extension of shared `RowMenu`).
 
 ## Acceptance criteria
 - Sidebar shows only "Gestión de mesas" for this area; `/tables/qr` and `/tables/qr?state=…` land on the management QR tab (moved states land on the matching management state).
@@ -39,6 +40,8 @@ lint, tsc, vitest, build.
   - Decisions: tabs are `Link`s (`replace`, `scroll={false}`) in a `nav` with `aria-current`, since each tab is a URL; the QR panel takes a `frame` render prop so `table-qr` does not import `table-management`; QR detail/material keep replacing the page and return to the list with their close/back actions; `TableQrParts.tsx` stays in `table-qr` (no churn); `instant = false` because Cache Components refuses `searchParams` outside `<Suspense>` at prerender.
   - Size: `git diff --stat` 16 files, +281 / −242 (before this doc update).
   - Commit 9738f75. Parent spot check: `npx tsc --noEmit` clean. Review assess (base 47ec998, committed-only): medium, `slice_budget_reached`; native review consent declined by the user for this candidate.
+
+- U2 (inline, user request 2026-10-27): `TableList.tsx` drops the inline edit/QR/download icons and its local menu; uses shared `RowMenu` with `EllipsisVertical`, 200px menu: Ver código QR, Descargar QR (disabled without QR), Editar mesa (`router.push` to the Plano deep link), Material imprimible, Habilitar/Deshabilitar (disabled with reason tooltip), Regenerar código QR (danger). `RowMenu` gains optional `triggerIcon`, `menuWidth`, item `hint` (tooltip) and `tone: "danger"`; defaults keep Productos/Categorías unchanged. No new pure logic, so no RED test (UI-only). Checks: tsc clean, eslint clean, vitest 55 files / 731 passed, build OK. No browser check.
 
 ## Next step
 Optional browser check of both tabs; then push / PR (user decision).
