@@ -39,5 +39,7 @@ lint, tsc, vitest, build; Playwright/visual check of the modal when the local AP
   - UI: shared `Modal` (`src/shared/ui/Modal.tsx`, exported from the ui index): centered, full-viewport scrim z-30 (below `ConfirmDialog` z-40), `role="dialog"`, `aria-modal`, `aria-labelledby` the form title, focus to first field, Tab trap via pure `getTrapTarget`, Escape / scrim / "Cerrar" (X) close, focus back to the opener when it still exists. Form titles became `h2` 17px like `ConfirmDialog`. Aside narrowed 360 → 320px, labelled "Lista de espacios", only the "Espacios" list with a per-row "Editar <name>" pencil.
   - Known edge: a settle of an unrelated earlier commit arriving while a save is pending would also close the modal (saving is a single flag, not per-commit).
 
+- M2 (user report 2026-10-27: the plan canvas does not fill the container width; user chose option 1, fit instead of enlarging the 780×620 area). Route: inline (2 small edits + 1 pure helper). `plan-fit.ts` `getPlanFitTransform` (whole editable area, 16px padding, zoom limits); `PlanEditor` fits before first paint (`useLayoutEffect`), again on `fitKey` (active space) change and on viewport resize (`ResizeObserver`, which also drops a manual zoom); "Ajustar a la vista" uses the same fit; the screen no longer resets the transform on space change. RED: `plan-fit.test.ts` failed (module missing); GREEN 3/3. Checks: tsc OK, lint clean, vitest 54 files / 726 passed, build OK (`/tables/management` static). Browser check pending (needs a signed-in session).
+
 ## Next step
-Parent: native review assessment for 460eef5, then optional browser check of the modal with a signed-in session.
+User browser check of the modal and the fitted plan; native review assessment; merge is the user's decision.
