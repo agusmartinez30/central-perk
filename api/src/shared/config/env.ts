@@ -13,6 +13,10 @@ const envSchema = z.object({
         .map((origin) => origin.trim())
         .filter(Boolean),
     ),
+  /** Lifetime of a signed-in staff session (and of its cookie when "remember me" is set). */
+  SESSION_TTL_HOURS: z.coerce.number().positive().max(24 * 30).default(12),
+  /** Admin app base URL, used to build password-reset links. */
+  ADMIN_URL: z.url().default('http://localhost:3000'),
 });
 
 export type Env = z.infer<typeof envSchema>;

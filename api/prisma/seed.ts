@@ -1,0 +1,45 @@
+import 'dotenv/config';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { hash } from 'argon2';
+import { z } from 'zod';
+import { PrismaClient } from '../src/generated/prisma/client.js';
+import { unmetPasswordRequirements } from '../src/modules/auth/domain/password-policy.js';
+import { normalizeEmail } from '../src/modules/auth/domain/staff-user.js';
+import { Rfc6238Totp } from '../src/modules/auth/infrastructure/rfc6238-totp.js';
+
+/**
+ * Creates (or updates) the initial owner from environment variables. Run with `npm run db:seed`.
+ * Credentials always come from the environment; nothing is hardcoded.
+ */
+const env = z
+  .object({
+    DATABASE_URL: z.string().min(1),
+    SEED_OWNER_EMAIL: z.email(),
+    SEED_OWNER_PASSWORD: z.string().min(1),
+    SEED_OWNER_NAME: z.string().min(1).default('Owner'),
+    SEED_OWNER_MFA: z.stringbool().default(false),
+  })
+  .parse(process.env);
+
+const email = normalizeEmail(env.SEED_OWNER_EMAIL);
+const unmet = unmetPasswordRequirements(env.SEED_OWNER_PASSWORD, email);
+if (unmet.length > 0) throw new Error(`SEED_OWNER_PASSWORD does not meet: ${unmet.join(', ')}`);
+
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: env.DATABASE_URL }) });
+const passwordHash = await hash(env.SEED_OWNER_PASSWORD);
+const mfaSecret = env.SEED_OWNER_MFA ? new Rfc6238Totp().generateSecret() : null;
+
+try {
+  await prisma.staffUser.upsert({
+    where: { email },
+    create: { email, name: env.SEED_OWNER_NAME, role: 'OWNER', passwordHash, mfaSecret },
+    update: { name: env.SEED_OWNER_NAME, role: 'OWNER', passwordHash, mfaSecret, mfaLastUsedStep: null },
+  });
+  console.log(`Seeded owner ${email}.`);
+  if (mfaSecret) {
+    const label = encodeURIComponent(`Cafe Central:${email}`);
+    console.log(`Add this to your authenticator app: otpauth://totp/${label}?secret=${mfaSecret}&issuer=Cafe%20Central`);
+  }
+} finally {
+  await prisma.$disconnect();
+}

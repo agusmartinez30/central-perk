@@ -2,7 +2,7 @@
 // The connection URL lives in prisma.config.ts (Prisma 7).
 
 generator client {
-  provider = "prisma-client"
+  provider            = "prisma-client"
   output              = "../src/generated/prisma"
   moduleFormat        = "esm"
   importFileExtension = "js"
@@ -10,4 +10,65 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ── auth (src/modules/auth) ──────────────────────────────────────────────
+
+enum StaffRole {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum SessionStage {
+  MFA_PENDING
+  AUTHENTICATED
+}
+
+model StaffUser {
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  name                String
+  role                StaffRole            @default(STAFF)
+  passwordHash        String
+  /// Base32 TOTP secret; null when no authenticator app is enrolled.
+  mfaSecret           String?
+  mfaLastUsedStep     Int?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@map("staff_users")
+}
+
+model Session {
+  id         String       @id @default(cuid())
+  /// SHA-256 of the cookie token.
+  tokenHash  String       @unique
+  userId     String
+  user       StaffUser    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stage      SessionStage
+  remember   Boolean      @default(false)
+  expiresAt  DateTime
+  createdAt  DateTime     @default(now())
+  lastUsedAt DateTime     @default(now())
+  revokedAt  DateTime?
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  /// SHA-256 of the emailed token.
+  tokenHash String    @unique
+  userId    String
+  user      StaffUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }

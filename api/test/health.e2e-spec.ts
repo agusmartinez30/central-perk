@@ -5,6 +5,7 @@ import request from 'supertest';
 import type { Server } from 'node:http';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../src/app.module.js';
+import { AUTH_CONFIG } from '../src/modules/auth/auth.tokens.js';
 import { PrismaService } from '../src/shared/prisma/prisma.service.js';
 
 describe('GET /health (e2e)', () => {
@@ -14,6 +15,8 @@ describe('GET /health (e2e)', () => {
     // The health check is DB-free, so PrismaService is replaced and no database is needed.
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PrismaService)
+      .useValue({})
+      .overrideProvider(AUTH_CONFIG)
       .useValue({})
       .compile();
     app = moduleRef.createNestApplication();
