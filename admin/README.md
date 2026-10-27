@@ -13,6 +13,17 @@ npm run dev      # http://localhost:3000
 
 Checks: `npm run lint`, `npx tsc --noEmit`, `npm test`, `npm run build`.
 
+## API
+
+Browser calls go to `/api/*`, which `next.config.ts` rewrites to the Café Central API
+(`../api`), so its httpOnly `cp_session` cookie is first-party and no CORS is involved.
+`src/features/auth/auth-api.ts` is the typed client for `/auth/login`, `/auth/mfa/verify`,
+`/auth/logout` and `/auth/me`.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `API_URL` | `http://localhost:3001` | API base URL the `/api/*` rewrite targets. Server-only; read when `next dev` / `next build` loads the config, so set it before building (e.g. in `.env.local`). |
+
 ## Demo credentials
 
 | Field | Value |
