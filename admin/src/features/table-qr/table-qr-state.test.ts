@@ -6,6 +6,7 @@ import {
   getDetailView,
   getListView,
   getMaterialView,
+  getVenueCommand,
   tableQrReducer,
   type TableQrAction,
   type TableQrState,
@@ -71,21 +72,30 @@ describe("QR detail (09C) and regeneration (09F)", () => {
     expect(getDetailView(cancelled)?.url).toBe(getDetailView(asked)?.url);
   });
 
-  it("rotates the token on confirm: the URL changes and the old token is revoked", () => {
-    const state = run(
-      { type: "open-detail", id: "tbl_07" },
-      { type: "open-regenerate" },
-      { type: "confirm-regenerate", token: "Q7wE3rT9yU" },
-    );
-    const view = getDetailView(state);
+  it("closes the confirmation on confirm and announces the rotation the API made", () => {
+    const state = run({ type: "open-detail", id: "tbl_07" }, { type: "open-regenerate" }, { type: "confirm-regenerate" });
     expect(state.regenerating).toBe(false);
+    expect(state.notice).toBe("Código QR de Mesa 07 regenerado. El código anterior dejó de funcionar.");
+  });
+
+  it("shows the credential the API issued and the rotated ones", () => {
+    const seed = createTableQrState();
+    const tables = seed.tables.map((table) =>
+      table.id === "tbl_07" && table.qr
+        ? {
+            ...table,
+            qr: { token: "Q7wE3rT9yU", generatedOn: "2026-10-21", generatedBy: "Sofía M." },
+            revokedQrs: [{ ...table.qr, revokedOn: "2026-10-21", auditId: "QR-119" }, ...table.revokedQrs],
+          }
+        : table,
+    );
+    const view = getDetailView(tableQrReducer({ ...seed, tables }, { type: "open-detail", id: "tbl_07" }));
     expect(view?.url).toBe("http://localhost:3000/?mesa=07&qr=Q7wE3rT9yU");
     expect(view?.history.map((row) => row.meta)).toEqual([
       "Generado hoy · Sofía M.",
       "Rotado hoy · auditoría #QR-119",
       "Rotado hoy · auditoría #QR-118",
     ]);
-    expect(state.notice).toBe("Código QR de Mesa 07 regenerado. El código anterior dejó de funcionar.");
   });
 
   it("opens the regeneration straight from the list menu", () => {
@@ -173,16 +183,17 @@ describe("spaces (09A)", () => {
 
 describe("shared venue (Gestión de mesas)", () => {
   it("lists a space and a table created in Gestión de mesas, with its QR and no session", () => {
-    const credential = { token: "N3wT0k3nAa", today: "2026-10-21", staffName: "Sofía M." };
-    const venue = [
+    const local = [
       { type: "save-space", editingId: null, name: "Barra" },
       {
         type: "save-table",
         editingId: null,
         draft: { label: "Mesa 13", spaceId: "barra", capacity: "2", description: "", enabled: true },
-        credential,
       },
     ].reduce((state, action) => venueReducer(state, action as VenueAction), createVenueState());
+    // The API issues the credential of a new table.
+    const qr = { token: "N3wT0k3nAa", generatedOn: "2026-10-21", generatedBy: "Sofía M." };
+    const venue = { ...local, tables: local.tables.map((table) => (table.id === "tbl_13" ? { ...table, qr } : table)) };
     const view = getListView(createTableQrState(venue));
     expect(view.spaces.at(-1)).toMatchObject({ name: "Barra", countLabel: "1 mesa" });
     expect(view.rows.at(-1)).toMatchObject({
@@ -194,5 +205,17 @@ describe("shared venue (Gestión de mesas)", () => {
     expect(getDetailView(tableQrReducer(createTableQrState(venue), { type: "open-detail", id: "tbl_13" }))?.url).toBe(
       "http://localhost:3000/?mesa=13&qr=N3wT0k3nAa",
     );
+  });
+});
+
+describe("venue commands", () => {
+  it("sends allowed quick toggles and confirmed rotations to the venue store", () => {
+    const state = createTableQrState();
+    expect(getVenueCommand(state, { type: "toggle-enabled", id: "tbl_01" })).toEqual({ type: "set-table-enabled", id: "tbl_01", enabled: false });
+    expect(getVenueCommand(state, { type: "toggle-enabled", id: "tbl_07" })).toBeNull();
+    const asked = run({ type: "open-detail", id: "tbl_07" }, { type: "open-regenerate" });
+    expect(getVenueCommand(asked, { type: "confirm-regenerate" })).toEqual({ type: "regenerate-qr", id: "tbl_07" });
+    expect(getVenueCommand(state, { type: "confirm-regenerate" })).toBeNull();
+    expect(getVenueCommand(state, { type: "open-detail", id: "tbl_07" })).toBeNull();
   });
 });

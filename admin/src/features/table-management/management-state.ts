@@ -21,10 +21,27 @@ import {
 } from "@/features/venue/table-config";
 import { resolveMove, resolveResize, type MoveResult, type TableShape } from "@/features/venue/table-layout";
 import { getTableRemoval, type TableRemoval } from "@/features/venue/table-removal";
-import { sessionOf, venueReducer, type CredentialInput, type VenueAction, type VenueState } from "@/features/venue/venue-state";
+import type { TablesApiError } from "@/features/venue/tables-api";
+import { describeVenueError, spaceIssueError, tableIssueErrors } from "@/features/venue/venue-errors";
+import { sessionOf, venueReducer, type VenueAction, type VenueState } from "@/features/venue/venue-state";
 
-export type TableForm = { id: string | null; draft: TableDraft; shape: TableShape; submitted: boolean };
-export type SpaceForm = { id: SpaceId | null; name: string; icon: SpaceIcon; tone: SpaceTone; submitted: boolean };
+export type TableForm = {
+  id: string | null;
+  draft: TableDraft;
+  shape: TableShape;
+  submitted: boolean;
+  /** Field errors the API reported for the last save; cleared on the next edit. */
+  serverErrors?: TableDraftErrors;
+};
+export type SpaceForm = {
+  id: SpaceId | null;
+  name: string;
+  icon: SpaceIcon;
+  tone: SpaceTone;
+  submitted: boolean;
+  /** Name error the API reported for the last save; cleared on the next edit. */
+  serverError?: string | null;
+};
 
 /** Right panel: the selected (or new) table, otherwise the active (or new) space. */
 export type Panel = { kind: "table"; form: TableForm } | { kind: "space"; form: SpaceForm };
@@ -48,7 +65,7 @@ export type ManagementAction =
   | { type: "set-table-field"; field: "label" | "capacity" | "description" | "spaceId"; value: string }
   | { type: "set-table-field"; field: "enabled"; value: boolean }
   | { type: "set-table-shape"; shape: TableShape }
-  | { type: "save-table"; credential: CredentialInput }
+  | { type: "save-table" }
   | { type: "new-space" }
   | { type: "set-space-field"; field: "name"; value: string }
   | { type: "set-space-field"; field: "icon"; value: SpaceIcon }
@@ -100,7 +117,7 @@ const error = (text: string): Notice => ({ tone: "error", text });
 const refusal = (result: Exclude<MoveResult, { ok: true }>) =>
   result.reason === "overlap" ? `se superpone con ${result.conflict.label}` : "no está disponible";
 
-function saveTable(ui: ManagementState, form: TableForm, venue: VenueState, credential: CredentialInput): ManagementResult {
+function saveTable(ui: ManagementState, form: TableForm, venue: VenueState): ManagementResult {
   const errors = validateTableDraft(form.draft, venue.tables, form.id, venue.spaces);
   if (Object.keys(errors).length > 0) {
     return { ui: { ...ui, panel: { kind: "table", form: { ...form, submitted: true } }, notice: error("Revisá los datos marcados.") } };
@@ -109,7 +126,7 @@ function saveTable(ui: ManagementState, form: TableForm, venue: VenueState, cred
   if (saved && getTableChanges(saved, form.draft).length === 0 && saved.layout.shape === form.shape) {
     return { ui: { ...ui, notice: info(`Sin cambios en ${saved.label}.`) } };
   }
-  const action: VenueAction = { type: "save-table", editingId: form.id, draft: form.draft, shape: form.shape, credential };
+  const action: VenueAction = { type: "save-table", editingId: form.id, draft: form.draft, shape: form.shape };
   const next = venueReducer(venue, action);
   const table = findTable(next, form.id ?? nextTableId(venue.tables))!;
   return {
@@ -172,7 +189,9 @@ function confirmDelete(ui: ManagementState, venue: VenueState): ManagementResult
 
 /**
  * Pure UI reducer of the management screen. It never mutates the venue: when an action changes
- * the configuration it also returns the `VenueAction` the screen sends to the shared store.
+ * the configuration it also returns the `VenueAction` the screen sends to the API through the
+ * shared store, and the UI predicted from the local rules. Once the API answers, the screen
+ * reconciles with `settleManagement` (success) or `failManagement` (refusal).
  */
 export function reduceManagement(ui: ManagementState, action: ManagementAction, venue: VenueState): ManagementResult {
   const { panel } = ui;
@@ -192,18 +211,21 @@ export function reduceManagement(ui: ManagementState, action: ManagementAction, 
     case "set-table-field":
       if (panel.kind !== "table") return { ui };
       return {
-        ui: { ...ui, panel: { kind: "table", form: { ...panel.form, draft: { ...panel.form.draft, [action.field]: action.value } } } },
+        ui: {
+          ...ui,
+          panel: { kind: "table", form: { ...panel.form, serverErrors: undefined, draft: { ...panel.form.draft, [action.field]: action.value } } },
+        },
       };
     case "set-table-shape":
       if (panel.kind !== "table") return { ui };
       return { ui: { ...ui, panel: { kind: "table", form: { ...panel.form, shape: action.shape } } } };
     case "save-table":
-      return panel.kind === "table" ? saveTable(ui, panel.form, venue, action.credential) : { ui };
+      return panel.kind === "table" ? saveTable(ui, panel.form, venue) : { ui };
     case "new-space":
       return { ui: { ...ui, panel: { kind: "space", form: { ...spaceForm(venue, ""), id: null } }, notice: null } };
     case "set-space-field":
       if (panel.kind !== "space") return { ui };
-      return { ui: { ...ui, panel: { kind: "space", form: { ...panel.form, [action.field]: action.value } } } };
+      return { ui: { ...ui, panel: { kind: "space", form: { ...panel.form, serverError: undefined, [action.field]: action.value } } } };
     case "save-space":
       return panel.kind === "space" ? saveSpaceForm(ui, panel.form, venue) : { ui };
     case "move-space":
@@ -240,6 +262,45 @@ export function reduceManagement(ui: ManagementState, action: ManagementAction, 
     case "dismiss-notice":
       return { ui: { ...ui, notice: null } };
   }
+}
+
+/**
+ * Reconciles the predicted UI with the configuration the API answered: a table or space the
+ * API created gets the id it assigned (numbers are never reused, so it may differ from the
+ * prediction), and a vanished space falls back to the first one.
+ */
+export function settleManagement(ui: ManagementState, before: VenueState, after: VenueState): ManagementState {
+  const { panel } = ui;
+  const isNew = <T extends { id: string }>(list: readonly T[], id: string) => !list.some((item) => item.id === id);
+  if (panel.kind === "table" && panel.form.id && isNew(before.tables, panel.form.id) && isNew(after.tables, panel.form.id)) {
+    const created = after.tables.find((table) => isNew(before.tables, table.id));
+    if (created) return { ...ui, spaceId: created.spaceId, panel: tablePanel(created) };
+  }
+  if (panel.kind === "space" && panel.form.id && isNew(before.spaces, panel.form.id) && isNew(after.spaces, panel.form.id)) {
+    const created = after.spaces.find((space) => isNew(before.spaces, space.id));
+    if (created) return { ...ui, spaceId: created.id, panel: spacePanel(after, created.id) };
+  }
+  if (isNew(after.spaces, ui.spaceId)) {
+    const spaceId = after.spaces[0]?.id ?? "";
+    return { ...ui, spaceId, panel: panel.kind === "space" ? spacePanel(after, spaceId) : panel };
+  }
+  return ui;
+}
+
+/**
+ * The API refused `action`: back to the UI before it (forms keep what was typed) with the
+ * reason, the fields it rejected marked, and any delete dialog closed.
+ */
+export function failManagement(ui: ManagementState, action: VenueAction, apiError: TablesApiError, venue: VenueState): ManagementState {
+  const failed: ManagementState = { ...ui, confirm: null, notice: error(describeVenueError(apiError, action, venue)) };
+  if (apiError.kind !== "invalid") return failed;
+  if (action.type === "save-table" && ui.panel.kind === "table") {
+    return { ...failed, panel: { kind: "table", form: { ...ui.panel.form, submitted: true, serverErrors: tableIssueErrors(apiError.issues) } } };
+  }
+  if (action.type === "save-space" && ui.panel.kind === "space") {
+    return { ...failed, panel: { kind: "space", form: { ...ui.panel.form, submitted: true, serverError: spaceIssueError(apiError.issues) } } };
+  }
+  return failed;
 }
 
 // Views
@@ -315,7 +376,7 @@ export function getTableFormView(ui: ManagementState, venue: VenueState): TableF
   if (ui.panel.kind !== "table") return null;
   const { form } = ui.panel;
   const table = findTable(venue, form.id);
-  const errors = form.submitted ? validateTableDraft(form.draft, venue.tables, form.id, venue.spaces) : {};
+  const errors = form.submitted ? { ...form.serverErrors, ...validateTableDraft(form.draft, venue.tables, form.id, venue.spaces) } : {};
   if (!table) {
     return {
       form,
@@ -346,7 +407,7 @@ export function getSpaceFormView(ui: ManagementState, venue: VenueState): SpaceF
     title: form.id ? "Espacio" : "Nuevo espacio",
     id: form.id,
     name: form.name,
-    error: form.submitted ? validateSpaceName(form.name, venue.spaces, form.id) : null,
+    error: form.submitted ? (validateSpaceName(form.name, venue.spaces, form.id) ?? form.serverError ?? null) : null,
     cards: getSpaceCards(venue.spaces, venue.tables),
   };
 }

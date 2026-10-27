@@ -1,21 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { SERVICE_DAY } from "@/mocks/service-day";
 import { createVenueState, venueReducer, type VenueState } from "@/features/venue/venue-state";
 import {
   createManagementState,
   getConfirmView,
   getDeepLinkActions,
+  failManagement,
   initManagementState,
   getPlanView,
   getSpaceFormView,
   getSpaceTabs,
   getTableFormView,
   reduceManagement,
+  settleManagement,
   type ManagementAction,
   type ManagementState,
 } from "./management-state";
-
-const credential = { token: "N3wT0k3nAa", today: SERVICE_DAY.date, staffName: "Sofía M." };
 
 type World = { ui: ManagementState; venue: VenueState };
 
@@ -87,7 +86,7 @@ describe("tables", () => {
       { type: "select-table", id: "tbl_07" },
       { type: "set-table-field", field: "label", value: "Mesa 05" },
       { type: "set-table-field", field: "capacity", value: "0" },
-      { type: "save-table", credential },
+      { type: "save-table" },
     );
     expect(getTableFormView(saved.ui, saved.venue)?.errors).toEqual({
       label: "Ya existe una mesa con ese nombre.",
@@ -102,7 +101,7 @@ describe("tables", () => {
       { type: "select-table", id: "tbl_07" },
       { type: "set-table-field", field: "capacity", value: "6" },
       { type: "set-table-shape", shape: "round" },
-      { type: "save-table", credential },
+      { type: "save-table" },
     );
     expect(tableOf(world, "tbl_07")).toMatchObject({ capacity: 6, layout: { shape: "round" }, version: 20 });
     expect(world.ui.notice).toEqual({ tone: "info", text: "Mesa 07 guardada." });
@@ -110,7 +109,7 @@ describe("tables", () => {
   });
 
   it("reports when nothing changed", () => {
-    const world = run({ type: "select-table", id: "tbl_02" }, { type: "save-table", credential });
+    const world = run({ type: "select-table", id: "tbl_02" }, { type: "save-table" });
     expect(world.ui.notice).toEqual({ tone: "info", text: "Sin cambios en Mesa 02." });
     expect(world.venue).toEqual(createVenueState());
   });
@@ -122,8 +121,8 @@ describe("tables", () => {
       idLabel: "ID estable · tbl_13 · se asigna al guardar",
       canRemove: false,
     });
-    const world = run({ type: "select-space", id: "terraza" }, { type: "new-table" }, { type: "save-table", credential });
-    expect(tableOf(world, "tbl_13")).toMatchObject({ label: "Mesa 13", spaceId: "terraza", qr: { token: "N3wT0k3nAa" } });
+    const world = run({ type: "select-space", id: "terraza" }, { type: "new-table" }, { type: "save-table" });
+    expect(tableOf(world, "tbl_13")).toMatchObject({ label: "Mesa 13", spaceId: "terraza", qr: null });
     expect(world.ui.notice?.text).toBe("Mesa 13 creada.");
     expect(getTableFormView(world.ui, world.venue)?.title).toBe("Editar mesa");
   });
@@ -132,7 +131,7 @@ describe("tables", () => {
     const world = run(
       { type: "select-table", id: "tbl_01" },
       { type: "set-table-field", field: "spaceId", value: "patio" },
-      { type: "save-table", credential },
+      { type: "save-table" },
     );
     expect(world.ui.spaceId).toBe("patio");
     expect(tableOf(world, "tbl_01")?.spaceId).toBe("patio");
@@ -152,7 +151,7 @@ describe("tables", () => {
     const world = run(
       { type: "select-table", id: "tbl_01" },
       { type: "set-table-field", field: "enabled", value: false },
-      { type: "save-table", credential },
+      { type: "save-table" },
     );
     expect(getPlanView(world.ui, world.venue).tables[0]).toMatchObject({ id: "tbl_01", enabled: false });
   });
@@ -223,7 +222,7 @@ describe("spaces", () => {
 
 describe("deleting", () => {
   it("deletes a table that never had a session after confirming", () => {
-    const created = [{ type: "new-table" }, { type: "save-table", credential }] as ManagementAction[];
+    const created = [{ type: "new-table" }, { type: "save-table" }] as ManagementAction[];
     const asked = run(...created, { type: "request-delete" });
     expect(getConfirmView(asked.ui, asked.venue)).toEqual({
       title: "¿Eliminar Mesa 13?",
@@ -296,5 +295,67 @@ describe("deep links and forced variants", () => {
     expect(ui.panel.kind).toBe("table");
     expect(ui.notice).toBeNull();
     expect(venue.tables.find((table) => table.id === "tbl_09")?.layout).toMatchObject({ x: 38, y: 408 });
+  });
+});
+
+describe("settling with the API", () => {
+  it("selects the table the API created, whatever number it got", () => {
+    const before = run({ type: "select-space", id: "terraza" }, { type: "new-table" });
+    const result = reduceManagement(before.ui, { type: "save-table" }, before.venue);
+    expect(result.venue?.type).toBe("save-table");
+    // The API never reuses numbers: Mesa 13 was deleted earlier, so the new table is tbl_14.
+    const created = { ...venueReducer(before.venue, result.venue!).tables.at(-1)!, id: "tbl_14", number: 14 };
+    const after = { ...before.venue, tables: [...before.venue.tables, created] };
+    const settled = settleManagement(result.ui, before.venue, after);
+    expect(settled.panel).toMatchObject({ kind: "table", form: { id: "tbl_14" } });
+    expect(settled.spaceId).toBe("terraza");
+    expect(getTableFormView(settled, after)?.idLabel).toBe("ID estable · tbl_14 · versión 1");
+  });
+
+  it("opens the space the API created", () => {
+    const before = run({ type: "new-space" }, { type: "set-space-field", field: "name", value: "Barra" });
+    const result = reduceManagement(before.ui, { type: "save-space" }, before.venue);
+    const after = { ...before.venue, spaces: [...before.venue.spaces, { id: "barra-2", name: "Barra", icon: "map-pin" as const, tone: "neutral" as const }] };
+    const settled = settleManagement(result.ui, before.venue, after);
+    expect(settled.spaceId).toBe("barra-2");
+    expect(settled.panel).toMatchObject({ kind: "space", form: { id: "barra-2", name: "Barra" } });
+  });
+
+  it("keeps the UI when the API agrees with the prediction", () => {
+    const before = run({ type: "select-table", id: "tbl_07" }, { type: "set-table-field", field: "capacity", value: "6" });
+    const result = reduceManagement(before.ui, { type: "save-table" }, before.venue);
+    const after = venueReducer(before.venue, result.venue!);
+    expect(settleManagement(result.ui, before.venue, after)).toEqual(result.ui);
+  });
+
+  it("restores the previous UI with the API's reason when it refuses", () => {
+    const opened = run({ type: "select-table", id: "tbl_07" }, { type: "set-table-field", field: "label", value: "Mesa 99" });
+    const action = reduceManagement(opened.ui, { type: "save-table" }, opened.venue).venue!;
+    const failed = failManagement(opened.ui, action, { kind: "invalid", issues: [{ path: "label", code: "duplicate" }] }, opened.venue);
+    expect(failed.notice).toEqual({ tone: "error", text: "Revisá los datos marcados." });
+    expect(getTableFormView(failed, opened.venue)?.errors).toEqual({ label: "Ya existe una mesa con ese nombre." });
+    expect(failed.panel).toMatchObject({ form: { draft: { label: "Mesa 99" } } });
+    // Typing again clears the server's verdict.
+    const typed = reduceManagement(failed, { type: "set-table-field", field: "label", value: "Mesa 98" }, opened.venue).ui;
+    expect(getTableFormView(typed, opened.venue)?.errors).toEqual({});
+  });
+
+  it("shows the space name issue the API reports", () => {
+    const opened = run({ type: "new-space" }, { type: "set-space-field", field: "name", value: "Barra" });
+    const action = reduceManagement(opened.ui, { type: "save-space" }, opened.venue).venue!;
+    const failed = failManagement(opened.ui, action, { kind: "invalid", issues: [{ path: "name", code: "duplicate" }] }, opened.venue);
+    expect(getSpaceFormView(failed, opened.venue)?.error).toBe("Ese espacio ya existe.");
+    expect(failed.notice).toEqual({ tone: "error", text: "Revisá el nombre del espacio." });
+  });
+
+  it("closes the delete dialog and explains a conflict", () => {
+    const asked = run({ type: "new-table" }, { type: "save-table" }, { type: "request-delete" });
+    const action = reduceManagement(asked.ui, { type: "confirm-delete" }, asked.venue).venue!;
+    const failed = failManagement(asked.ui, action, { kind: "conflict", code: "table_has_history" }, asked.venue);
+    expect(failed.confirm).toBeNull();
+    expect(failed.notice).toEqual({
+      tone: "error",
+      text: "Mesa 13 tiene sesiones registradas: su historial se conserva, por eso no se puede eliminar.",
+    });
   });
 });

@@ -1,6 +1,5 @@
 import {
   deriveTable,
-  type QrCredential,
   type ServiceDay,
   type SpaceId,
   type VenueSpace,
@@ -85,12 +84,23 @@ export function createEmptyTableDraft(tables: readonly VenueTable[], spaces: rea
   };
 }
 
-function parseCapacity(value: string): number | null {
+/** The draft's capacity as an integer within range, or `null`. */
+export function parseCapacity(value: string): number | null {
   const trimmed = value.trim();
   if (!/^\d+$/.test(trimmed)) return null;
   const capacity = Number(trimmed);
   return capacity >= CAPACITY_MIN && capacity <= CAPACITY_MAX ? capacity : null;
 }
+
+/** Field messages of the 09B form, shared by the client rules and the API's `issues`. */
+export const TABLE_DRAFT_MESSAGES = {
+  labelRequired: "Ingresá el nombre o número de la mesa.",
+  labelTooLong: `Usá hasta ${LABEL_MAX_LENGTH} caracteres.`,
+  labelDuplicate: "Ya existe una mesa con ese nombre.",
+  unknownSpace: "Elegí un espacio.",
+  capacity: `Ingresá un número entero entre ${CAPACITY_MIN} y ${CAPACITY_MAX}.`,
+  descriptionTooLong: `Usá hasta ${DESCRIPTION_MAX_LENGTH} caracteres.`,
+} as const;
 
 /** "Identificador único dentro del negocio" and "Capacidad: entero positivo" (messages invented). */
 export function validateTableDraft(
@@ -102,18 +112,14 @@ export function validateTableDraft(
 ): TableDraftErrors {
   const errors: TableDraftErrors = {};
   const label = normalize(draft.label);
-  if (label === "") errors.label = "Ingresá el nombre o número de la mesa.";
-  else if (draft.label.trim().length > LABEL_MAX_LENGTH) errors.label = `Usá hasta ${LABEL_MAX_LENGTH} caracteres.`;
+  if (label === "") errors.label = TABLE_DRAFT_MESSAGES.labelRequired;
+  else if (draft.label.trim().length > LABEL_MAX_LENGTH) errors.label = TABLE_DRAFT_MESSAGES.labelTooLong;
   else if (tables.some((table) => table.id !== editingId && normalize(table.label) === label)) {
-    errors.label = "Ya existe una mesa con ese nombre.";
+    errors.label = TABLE_DRAFT_MESSAGES.labelDuplicate;
   }
-  if (spaces && !spaces.some((space) => space.id === draft.spaceId)) errors.spaceId = "Elegí un espacio.";
-  if (parseCapacity(draft.capacity) === null) {
-    errors.capacity = `Ingresá un número entero entre ${CAPACITY_MIN} y ${CAPACITY_MAX}.`;
-  }
-  if (draft.description.trim().length > DESCRIPTION_MAX_LENGTH) {
-    errors.description = `Usá hasta ${DESCRIPTION_MAX_LENGTH} caracteres.`;
-  }
+  if (spaces && !spaces.some((space) => space.id === draft.spaceId)) errors.spaceId = TABLE_DRAFT_MESSAGES.unknownSpace;
+  if (parseCapacity(draft.capacity) === null) errors.capacity = TABLE_DRAFT_MESSAGES.capacity;
+  if (draft.description.trim().length > DESCRIPTION_MAX_LENGTH) errors.description = TABLE_DRAFT_MESSAGES.descriptionTooLong;
   return errors;
 }
 
@@ -138,27 +144,15 @@ export function getTableChanges(table: VenueTable | null, draft: TableDraft): Ta
   return FIELDS.filter((field) => saved[field] !== edited[field]);
 }
 
-export type CredentialContext = {
-  /** ISO date of the service. */
-  today: string;
-  staffName: string;
-  /** Issues a new token; the screen passes a unique, secure one. */
-  createToken: () => string;
-};
-
-export function issueCredential({ today, staffName, createToken }: CredentialContext): QrCredential {
-  return { token: createToken(), generatedOn: today, generatedBy: staffName };
-}
-
 /**
- * Saves a valid draft. An existing table keeps its id, number and credential and bumps its
- * version; a new one takes the next number, the `tbl_NN` id and a fresh credential.
+ * Local preview of saving a valid draft (the API decides). An existing table keeps its id,
+ * number and credential and bumps its version; a new one takes the next number and the
+ * `tbl_NN` id, with no credential: the API issues its QR token.
  */
 export function applyTableDraft(
   tables: readonly VenueTable[],
   editingId: string | null,
   draft: TableDraft,
-  context: CredentialContext,
 ): { tables: VenueTable[]; id: string } {
   const fields = {
     label: draft.label.trim(),
@@ -189,7 +183,7 @@ export function applyTableDraft(
     number,
     ...fields,
     version: 1,
-    qr: issueCredential(context),
+    qr: null,
     revokedQrs: [],
     layout: getFreeLayout(tables, fields.spaceId),
   };
@@ -197,6 +191,8 @@ export function applyTableDraft(
 }
 
 // Enable / disable
+
+export const QUICK_TOGGLE_OPEN_SESSION = "No se puede deshabilitar mientras exista una cuenta activa.";
 
 export type QuickToggle = { enabled: boolean; label: string; allowed: boolean; reason?: string };
 
@@ -211,7 +207,7 @@ export function getQuickToggle(table: VenueTable, session: SessionStatus): Quick
       enabled: true,
       label: "Deshabilitar mesa",
       allowed: false,
-      reason: "No se puede deshabilitar mientras exista una cuenta activa.",
+      reason: QUICK_TOGGLE_OPEN_SESSION,
     };
   }
   return { enabled: true, label: "Deshabilitar mesa", allowed: true };

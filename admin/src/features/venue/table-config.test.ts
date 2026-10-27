@@ -15,12 +15,10 @@ import {
   type TableDraft,
 } from "./table-config";
 
-const TODAY = SERVICE_DAY.date;
 const tables = SERVICE_DAY.tables;
 const sessions = getSessionStatuses(SERVICE_DAY);
 const spaces = SERVICE_DAY.spaces;
 const table = (id: string, list: readonly VenueTable[] = tables) => list.find((candidate) => candidate.id === id)!;
-const context = (token = "N3wT0k3nAa") => ({ today: TODAY, staffName: "Sofía M.", createToken: () => token });
 
 describe("session statuses", () => {
   it("derives Disponible / Ocupada / Cuenta solicitada from the service day", () => {
@@ -91,7 +89,7 @@ describe("table drafts", () => {
 
   it("saves an existing table keeping its id, number and QR, and bumps its version", () => {
     const draft = { ...toTableDraft(table("tbl_07")), label: " Ventana ", capacity: "6" };
-    const result = applyTableDraft(tables, "tbl_07", draft, context());
+    const result = applyTableDraft(tables, "tbl_07", draft);
     expect(result.id).toBe("tbl_07");
     expect(table("tbl_07", result.tables)).toMatchObject({
       id: "tbl_07",
@@ -104,8 +102,8 @@ describe("table drafts", () => {
     expect(result.tables).toHaveLength(12);
   });
 
-  it("creates a new table with a fresh credential", () => {
-    const result = applyTableDraft(tables, null, { ...createEmptyTableDraft(tables, spaces), spaceId: "patio" }, context());
+  it("previews a new table without credential (the API issues it)", () => {
+    const result = applyTableDraft(tables, null, { ...createEmptyTableDraft(tables, spaces), spaceId: "patio" });
     expect(result.id).toBe("tbl_13");
     expect(table("tbl_13", result.tables)).toEqual({
       id: "tbl_13",
@@ -116,7 +114,7 @@ describe("table drafts", () => {
       description: "",
       enabled: true,
       version: 1,
-      qr: { token: "N3wT0k3nAa", generatedOn: TODAY, generatedBy: "Sofía M." },
+      qr: null,
       revokedQrs: [],
       // Patio only uses the third row of the plan, so the first free spot is the top-left one.
       layout: { x: 38, y: 64, width: 150, height: 132, shape: "rect" },
@@ -125,14 +123,14 @@ describe("table drafts", () => {
 
   it("moves a table to a free spot of its new space", () => {
     const draft = { ...toTableDraft(table("tbl_01")), spaceId: "terraza" };
-    expect(table("tbl_01", applyTableDraft(tables, "tbl_01", draft, context()).tables).layout).toEqual({
+    expect(table("tbl_01", applyTableDraft(tables, "tbl_01", draft).tables).layout).toEqual({
       x: 38,
       y: 64,
       width: 150,
       height: 132,
       shape: "rect",
     });
-    const same = applyTableDraft(tables, "tbl_01", { ...toTableDraft(table("tbl_01")), capacity: "4" }, context());
+    const same = applyTableDraft(tables, "tbl_01", { ...toTableDraft(table("tbl_01")), capacity: "4" });
     expect(table("tbl_01", same.tables).layout).toEqual(table("tbl_01").layout);
   });
 

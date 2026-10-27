@@ -1,5 +1,4 @@
 import { SERVICE_DAY, type ServiceDay, type SpaceIcon, type SpaceId, type SpaceTone, type VenueSpace, type VenueTable } from "@/mocks/service-day";
-import { regenerateTableQr } from "@/features/table-qr/qr-config";
 import { deleteSpace, moveSpace, saveSpace, validateSpaceName } from "./space-config";
 import {
   applyTableDraft,
@@ -15,7 +14,8 @@ import { deleteTable, getTableNumbersWithHistory, getTableRemoval } from "./tabl
 
 /**
  * The venue configuration shared by `/tables`, `/tables/management` and `/tables/qr`: spaces
- * and tables as edited in this browser session, plus the service-day facts the rules need.
+ * and tables as the API serves them, plus the live service-day facts the rules need (sessions
+ * and history still come from the service-day mocks).
  */
 export type VenueState = {
   spaces: readonly VenueSpace[];
@@ -26,20 +26,18 @@ export type VenueState = {
   history: readonly number[];
 };
 
-/** Who issues a credential and the token it carries (generated unique by the screen). */
-export type CredentialInput = { token: string; today: string; staffName: string };
-
 export type VenueAction =
   | { type: "save-space"; editingId: SpaceId | null; name: string; icon?: SpaceIcon; tone?: SpaceTone }
   | { type: "move-space"; id: SpaceId; direction: -1 | 1 }
   | { type: "delete-space"; id: SpaceId }
-  | { type: "save-table"; editingId: string | null; draft: TableDraft; shape?: TableShape; credential: CredentialInput }
+  | { type: "save-table"; editingId: string | null; draft: TableDraft; shape?: TableShape }
   | { type: "set-table-enabled"; id: string; enabled: boolean }
   | { type: "delete-table"; id: string }
   | { type: "move-table"; id: string; x: number; y: number }
   | { type: "resize-table"; id: string; x: number; y: number; width: number; height: number }
   | { type: "set-table-shape"; id: string; shape: TableShape }
-  | ({ type: "regenerate-qr"; id: string } & CredentialInput);
+  /** Server only: the API issues the new token, its date and issuer. */
+  | { type: "regenerate-qr"; id: string };
 
 export function createVenueState(day: ServiceDay = SERVICE_DAY): VenueState {
   return {
@@ -54,11 +52,11 @@ export const sessionOf = (state: VenueState, table: VenueTable): SessionStatus =
 
 const withTables = (state: VenueState, tables: readonly VenueTable[]) => (tables === state.tables ? state : { ...state, tables });
 
-const toContext = ({ token, today, staffName }: CredentialInput) => ({ today, staffName, createToken: () => token });
-
 /**
- * Pure venue reducer. Every action re-checks its rule, so an invalid one (duplicate name,
- * overlapping drop, deleting a table with history…) returns the same state.
+ * Pure local preview of a venue action (the API decides): the management screen predicts its
+ * UI with it and the store applies layout changes on drop before the API answers. Every action
+ * re-checks its rule, so an invalid one (duplicate name, overlapping drop, deleting a table with
+ * history…) returns the same state.
  */
 export function venueReducer(state: VenueState, action: VenueAction): VenueState {
   switch (action.type) {
@@ -82,7 +80,7 @@ export function venueReducer(state: VenueState, action: VenueAction): VenueState
     case "save-table": {
       const errors = validateTableDraft(action.draft, state.tables, action.editingId, state.spaces);
       if (Object.keys(errors).length > 0) return state;
-      const saved = applyTableDraft(state.tables, action.editingId, action.draft, toContext(action.credential));
+      const saved = applyTableDraft(state.tables, action.editingId, action.draft);
       const tables = action.shape ? setTableShape(saved.tables, saved.id, action.shape) : saved.tables;
       return withTables(state, tables);
     }
@@ -107,7 +105,6 @@ export function venueReducer(state: VenueState, action: VenueAction): VenueState
     case "set-table-shape":
       return withTables(state, setTableShape(state.tables, action.id, action.shape));
     case "regenerate-qr":
-      if (!state.tables.some((table) => table.id === action.id)) return state;
-      return withTables(state, regenerateTableQr(state.tables, action.id, toContext(action)));
+      return state;
   }
 }

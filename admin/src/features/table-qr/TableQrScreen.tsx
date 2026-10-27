@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Printer } from "lucide-react";
-import { dispatchVenue, useVenue } from "@/features/venue/venue-store";
+import { toLocalDate } from "@/features/venue/tables-mapper";
+import { describeVenueError } from "@/features/venue/venue-errors";
+import { VenueGate } from "@/features/venue/VenueGate";
+import { commitVenue, useVenue } from "@/features/venue/venue-store";
 import type { VenueState } from "@/features/venue/venue-state";
 import { parseScreenState } from "@/shared/lib/screen-state";
 import { useScreenState } from "@/shared/lib/use-screen-state";
@@ -14,18 +17,17 @@ import { PrintPortal, printDocument } from "./PrintPortal";
 import { PrintSheets } from "./PrintSheets";
 import { copyText, downloadPng, downloadSvg } from "./qr-download";
 import { buildQrSvgMarkup } from "./qr-matrix";
-import { createUniqueQrToken } from "./qr-token";
 import { buildTableQrUrl } from "./qr-url";
 import { QrDetail, type DownloadFormat } from "./QrDetail";
 import { PrintMaterial } from "./PrintMaterial";
 import { RegenerateDialog } from "./RegenerateDialog";
-import { getUsedTokens } from "./qr-config";
 import {
   createTableQrState,
   getBulkView,
   getDetailView,
   getListView,
   getMaterialView,
+  getVenueCommand,
   tableQrReducer,
   type TableQrAction,
   type TableQrState,
@@ -64,7 +66,8 @@ const MOVED_STATE_IDS = Object.keys(MOVED_STATES) as (keyof typeof MOVED_STATES)
 const tableManagementHref = (id: string) => `/tables/management?table=${encodeURIComponent(id)}`;
 
 function initState(venue: VenueState, forcedState: ForcedState | null): TableQrState {
-  const state = createTableQrState(venue);
+  // Credentials carry the date the API issued them; "hoy" is the browser's local date.
+  const state = createTableQrState(venue, toLocalDate(new Date().toISOString()) ?? undefined);
   if (!forcedState) return state;
   return { ...FORCED_ACTIONS[forcedState].reduce(tableQrReducer, state), notice: null };
 }
@@ -74,37 +77,46 @@ const QR_PNG_WIDTH = 1024;
 const CARD_PNG_WIDTH = 960;
 
 /**
- * 09 · Mesas y códigos QR. Container: spaces and tables come from the shared venue store (they
- * are configured in Gestión de mesas); this screen owns which view is open: the 09A list (with
- * the 09E bulk print modal), the 09C QR detail (with the 09F confirmation) or the 09D printable
- * material. Enabling/disabling and rotated credentials (a secure token no table has ever used)
- * are written back to the store.
+ * 09 · Mesas y códigos QR. Container: spaces and tables come from the shared venue store (loaded
+ * from the API, configured in Gestión de mesas); this screen owns which view is open: the 09A
+ * list (with the 09E bulk print modal), the 09C QR detail (with the 09F confirmation) or the 09D
+ * printable material. Enabling/disabling and QR rotations go to the API, which issues the new
+ * token, its date and issuer.
  */
 export function TableQrScreen() {
+  return (
+    <VenueGate>
+      <TableQr />
+    </VenueGate>
+  );
+}
+
+function TableQr() {
   const forcedState = useScreenState(TABLE_QR_FORCED_STATES);
   const movedState = parseScreenState(useSearchParams().get("state"), MOVED_STATE_IDS);
   const router = useRouter();
   const venue = useVenue();
   const [ui, setUi] = useState(() => initState(venue, forcedState));
   const state: TableQrState = { ...ui, spaces: venue.spaces, tables: venue.tables, sessions: venue.sessions };
-  const newToken = () => createUniqueQrToken(getUsedTokens(state.tables));
 
   useEffect(() => {
     if (movedState) router.replace(MOVED_STATES[movedState]);
   }, [movedState, router]);
 
-  /** Runs the pure reducer over the store's tables and mirrors table changes into the store. */
+  /**
+   * Runs the pure reducer over the store's tables. A configuration change goes to the API first:
+   * the reducer's outcome (closing 09F, the notice) applies once the API answers.
+   */
   const dispatch = (action: TableQrAction) => {
     const next = tableQrReducer(state, action);
-    if (next.tables !== state.tables) {
-      if (action.type === "toggle-enabled") {
-        const table = state.tables.find((candidate) => candidate.id === action.id);
-        if (table) dispatchVenue({ type: "set-table-enabled", id: table.id, enabled: !table.enabled });
-      } else if (action.type === "confirm-regenerate" && state.detailId) {
-        dispatchVenue({ type: "regenerate-qr", id: state.detailId, token: action.token, today: state.today, staffName: state.staffName });
+    const command = getVenueCommand(state, action);
+    if (!command) return setUi(next);
+    void commitVenue(command).then((outcome) => {
+      if (outcome.ok) setUi((current) => ({ ...current, regenerating: next.regenerating, notice: next.notice }));
+      else if (outcome.error.kind !== "unauthorized") {
+        setUi((current) => ({ ...current, regenerating: false, notice: describeVenueError(outcome.error, command, venue) }));
       }
-    }
-    setUi(next);
+    });
   };
 
   const downloadQr = (id: string, format: "png" | "svg") => {
@@ -200,7 +212,7 @@ export function TableQrScreen() {
       {state.view === "detail" && state.regenerating && (
         <RegenerateDialog
           onCancel={() => dispatch({ type: "cancel-regenerate" })}
-          onConfirm={() => dispatch({ type: "confirm-regenerate", token: newToken() })}
+          onConfirm={() => dispatch({ type: "confirm-regenerate" })}
         />
       )}
       {bulkView && (

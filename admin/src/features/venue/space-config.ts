@@ -28,14 +28,19 @@ export function getSpaceCards(spaces: readonly VenueSpace[], tables: readonly Ve
   });
 }
 
+/** Name messages of the space form, shared by the client rule and the API's `issues`. */
+export const SPACE_NAME_MESSAGES = {
+  required: "Ingresá el nombre del espacio.",
+  tooLong: `Usá hasta ${SPACE_NAME_MAX_LENGTH} caracteres.`,
+  duplicate: "Ese espacio ya existe.",
+} as const;
+
 /** Unique, non-empty name up to 24 characters (messages invented). */
 export function validateSpaceName(name: string, spaces: readonly VenueSpace[], editingId: SpaceId | null): string | null {
   const normalized = normalize(name);
-  if (normalized === "") return "Ingresá el nombre del espacio.";
-  if (name.trim().length > SPACE_NAME_MAX_LENGTH) return `Usá hasta ${SPACE_NAME_MAX_LENGTH} caracteres.`;
-  if (spaces.some((space) => space.id !== editingId && normalize(space.name) === normalized)) {
-    return "Ese espacio ya existe.";
-  }
+  if (normalized === "") return SPACE_NAME_MESSAGES.required;
+  if (name.trim().length > SPACE_NAME_MAX_LENGTH) return SPACE_NAME_MESSAGES.tooLong;
+  if (spaces.some((space) => space.id !== editingId && normalize(space.name) === normalized)) return SPACE_NAME_MESSAGES.duplicate;
   return null;
 }
 
@@ -81,19 +86,19 @@ export function moveSpace(spaces: readonly VenueSpace[], id: SpaceId, direction:
   return next;
 }
 
+export const LAST_SPACE_REASON = "El local necesita al menos un espacio.";
+
+export function spaceWithTablesReason(name: string, count: number): string {
+  return `${name} tiene ${count} ${count === 1 ? "mesa" : "mesas"}. Mové o eliminá sus mesas antes de eliminar el espacio.`;
+}
+
 export type SpaceRemoval = { allowed: true } | { allowed: false; reason: string };
 
 /** A space can be deleted only when it has no tables and is not the last one (messages invented). */
 export function getSpaceRemoval(spaces: readonly VenueSpace[], tables: readonly VenueTable[], id: SpaceId): SpaceRemoval {
   const count = tables.filter((table) => table.spaceId === id).length;
-  if (count > 0) {
-    const name = getSpaceName(spaces, id);
-    return {
-      allowed: false,
-      reason: `${name} tiene ${count} ${count === 1 ? "mesa" : "mesas"}. Mové o eliminá sus mesas antes de eliminar el espacio.`,
-    };
-  }
-  if (spaces.length <= 1) return { allowed: false, reason: "El local necesita al menos un espacio." };
+  if (count > 0) return { allowed: false, reason: spaceWithTablesReason(getSpaceName(spaces, id), count) };
+  if (spaces.length <= 1) return { allowed: false, reason: LAST_SPACE_REASON };
   return { allowed: true };
 }
 

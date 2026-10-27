@@ -1,8 +1,9 @@
 # Café Central · Admin
 
 Frontend-only prototype of the Café Central staff back-office, built from the Pencil exports in
-`exports/` (1440×900 desktop frames). Staff sign-in, MFA and logout use the Café Central API
-(`../api`); forgot/reset password and all module data are still mocks in `src/mocks/`.
+`exports/` (1440×900 desktop frames). Staff sign-in, MFA and logout and the table configuration
+(spaces, tables, floor plan, QR credentials) use the Café Central API (`../api`); forgot/reset
+password and all other module data are still mocks in `src/mocks/`.
 
 ## Run it
 
@@ -18,7 +19,8 @@ Checks: `npm run lint`, `npx tsc --noEmit`, `npm test`, `npm run build`.
 Browser calls go to `/api/*`, which `next.config.ts` rewrites to the Café Central API
 (`../api`), so its httpOnly `cp_session` cookie is first-party and no CORS is involved.
 `src/features/auth/auth-api.ts` is the typed client for `/auth/login`, `/auth/mfa/verify`,
-`/auth/logout` and `/auth/me`.
+`/auth/logout` and `/auth/me`; `src/features/venue/tables-api.ts` the one for `/tables/*`
+(configuration and every change to it, mapped to the admin types by `tables-mapper.ts`).
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
@@ -91,9 +93,13 @@ many attempts (HTTP 429) show "Demasiados intentos. Esperá un minuto y volvé a
     checks that the screens agree with each other. Some numbers differ from the exports on purpose
     (see `odd/tasks/admin-mock-unification.md`). Each screen keeps its in-memory actions to itself,
     except the venue configuration below.
-  - `src/features/venue` — the shared venue store (`useSyncExternalStore`): spaces and tables
-    seeded from the service day and edited in Gestión de mesas, read by `/tables`,
-    `/tables/management` and `/tables/qr`. It lives in memory for the browser session: client
-    navigation keeps the changes, a full reload starts again from the seed (the server and the
-    hydration render always use the seed).
+  - `src/features/venue` — the shared venue store (`useSyncExternalStore`) read by `/tables`,
+    `/tables/management` and `/tables/qr`: spaces and tables load from `GET /api/tables/config`
+    (the screens show "Cargando mesas…" meanwhile, and on the server, so pages stay static; an
+    unreachable API shows an error with "Reintentar"). Every change goes to the API, whose answer
+    (the full configuration) replaces the store, so it survives a reload; the API issues table
+    numbers, ids, versions and QR tokens. Floor-plan drags show on drop and revert if the API
+    refuses them; refusals reuse the screens' Spanish copy. Live sessions and history (who can be
+    disabled or deleted, the 02 live state) still come from the service-day mocks, while the
+    API's activity check reports no activity until table sessions exist.
   - `src/mocks/payments.ts` — the saved 06 payment configuration.

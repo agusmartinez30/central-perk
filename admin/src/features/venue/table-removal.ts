@@ -14,12 +14,18 @@ export function getTableNumbersWithHistory(day: Pick<ServiceDay, "sessions">): n
  */
 export type TableRemoval = { kind: "delete" } | { kind: "disable"; reason: string } | { kind: "blocked"; reason: string };
 
+export const openSessionReason = (label: string) =>
+  `${label} tiene una cuenta activa: no se puede eliminar ni deshabilitar hasta que se cierre.`;
+
+export const historyReason = (label: string) =>
+  `${label} tiene sesiones registradas: su historial se conserva, por eso no se puede eliminar.`;
+
 export function getTableRemoval(table: VenueTable, { hadSession, session }: { hadSession: boolean; session: SessionStatus }): TableRemoval {
   if (session !== "available") {
-    return { kind: "blocked", reason: `${table.label} tiene una cuenta activa: no se puede eliminar ni deshabilitar hasta que se cierre.` };
+    return { kind: "blocked", reason: openSessionReason(table.label) };
   }
   if (!hadSession) return { kind: "delete" };
-  const kept = `${table.label} tiene sesiones registradas: su historial se conserva, por eso no se puede eliminar.`;
+  const kept = historyReason(table.label);
   if (!table.enabled) return { kind: "blocked", reason: `${kept} Ya está deshabilitada.` };
   return { kind: "disable", reason: `${kept} Podés deshabilitarla para que no admita nuevas sesiones.` };
 }

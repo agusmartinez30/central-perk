@@ -4,8 +4,6 @@ import { getSpaceName } from "@/features/venue/space-config";
 import {
   SESSION_STATUS_LABELS,
   formatCapacity,
-  issueCredential,
-  type CredentialContext,
   type SessionStatus,
 } from "@/features/venue/table-config";
 
@@ -100,36 +98,6 @@ export function filterTableRows(rows: readonly TableRow[], { query, spaceId, con
       (configuration === "all" || row.configuration.enabled === (configuration === "enabled")) &&
       matchesQuery(row, normalized),
   );
-}
-
-// 09F · Regenerar código QR
-
-/** Next audit entry after the highest recorded rotation ("QR-118" → "QR-119"). */
-export function nextAuditId(tables: readonly VenueTable[]): string {
-  const highest = tables
-    .flatMap((table) => table.revokedQrs)
-    .reduce((max, credential) => Math.max(max, Number(credential.auditId.replace(/\D/g, "")) || 0), 0);
-  return `QR-${highest + 1}`;
-}
-
-/** Revokes the active token (its printed code stops working) and issues a new one. */
-export function regenerateTableQr(tables: readonly VenueTable[], id: string, context: CredentialContext): VenueTable[] {
-  const auditId = nextAuditId(tables);
-  return tables.map((table) => {
-    if (table.id !== id) return table;
-    const revokedQrs = table.qr
-      ? [{ ...table.qr, revokedOn: context.today, auditId }, ...table.revokedQrs]
-      : table.revokedQrs;
-    return { ...table, qr: issueCredential(context), revokedQrs, version: table.version + 1 };
-  });
-}
-
-/** Every token the venue has used, so a new one never repeats a revoked code. */
-export function getUsedTokens(tables: readonly VenueTable[]): string[] {
-  return tables.flatMap((table) => [
-    ...(table.qr ? [table.qr.token] : []),
-    ...table.revokedQrs.map((credential) => credential.token),
-  ]);
 }
 
 const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];

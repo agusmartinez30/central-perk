@@ -3,7 +3,6 @@ import { SERVICE_DAY } from "@/mocks/service-day";
 import { createEmptyTableDraft, toTableDraft } from "./table-config";
 import { createVenueState, venueReducer, type VenueAction, type VenueState } from "./venue-state";
 
-const credential = { token: "N3wT0k3nAa", today: SERVICE_DAY.date, staffName: "Sofía M." };
 const run = (...actions: VenueAction[]) => actions.reduce(venueReducer, createVenueState());
 const tableOf = (state: VenueState, id: string) => state.tables.find((table) => table.id === id);
 const seed = createVenueState();
@@ -36,7 +35,7 @@ describe("spaces", () => {
 });
 
 describe("tables", () => {
-  it("creates a table with a QR credential in the chosen space and shape", () => {
+  it("previews a new table in the chosen space and shape, without credential (the API issues it)", () => {
     const state = run(
       { type: "save-space", editingId: null, name: "Barra" },
       {
@@ -44,23 +43,22 @@ describe("tables", () => {
         editingId: null,
         draft: { ...createEmptyTableDraft(SERVICE_DAY.tables, SERVICE_DAY.spaces), spaceId: "barra" },
         shape: "round",
-        credential,
       },
     );
     expect(tableOf(state, "tbl_13")).toMatchObject({
       label: "Mesa 13",
       spaceId: "barra",
       enabled: true,
-      qr: { token: "N3wT0k3nAa", generatedOn: SERVICE_DAY.date, generatedBy: "Sofía M." },
+      qr: null,
       layout: { x: 38, y: 64, width: 150, height: 132, shape: "round" },
     });
   });
 
   it("updates an existing table and ignores an invalid draft", () => {
     const draft = { ...toTableDraft(tableOf(seed, "tbl_07")!), capacity: "6" };
-    const state = run({ type: "save-table", editingId: "tbl_07", draft, credential });
+    const state = run({ type: "save-table", editingId: "tbl_07", draft });
     expect(tableOf(state, "tbl_07")).toMatchObject({ capacity: 6, version: 19, qr: { token: "4pX9kR2mL7" } });
-    expect(run({ type: "save-table", editingId: "tbl_07", draft: { ...draft, label: "Mesa 05" }, credential })).toEqual(seed);
+    expect(run({ type: "save-table", editingId: "tbl_07", draft: { ...draft, label: "Mesa 05" } })).toEqual(seed);
   });
 
   it("enables and disables, but never disables a table with an open session", () => {
@@ -75,7 +73,6 @@ describe("tables", () => {
       type: "save-table",
       editingId: null,
       draft: createEmptyTableDraft(SERVICE_DAY.tables, SERVICE_DAY.spaces),
-      credential,
     });
     expect(venueReducer(created, { type: "delete-table", id: "tbl_13" }).tables).toEqual(SERVICE_DAY.tables);
     expect(run({ type: "delete-table", id: "tbl_01" })).toEqual(seed);
@@ -94,9 +91,7 @@ describe("tables", () => {
     expect(run({ type: "resize-table", id: "tbl_01", x: 38, y: 64, width: 240, height: 132 })).toEqual(seed);
   });
 
-  it("rotates a table's QR credential", () => {
-    const state = run({ type: "regenerate-qr", id: "tbl_07", ...credential });
-    expect(tableOf(state, "tbl_07")?.qr?.token).toBe("N3wT0k3nAa");
-    expect(tableOf(state, "tbl_07")?.revokedQrs[0]).toMatchObject({ token: "4pX9kR2mL7", auditId: "QR-119" });
+  it("leaves QR rotation to the API", () => {
+    expect(run({ type: "regenerate-qr", id: "tbl_07" })).toEqual(seed);
   });
 });

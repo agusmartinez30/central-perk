@@ -7,8 +7,6 @@ import {
   getCredentialHistory,
   getTableMetrics,
   getTableRows,
-  nextAuditId,
-  regenerateTableQr,
 } from "./qr-config";
 
 const TODAY = SERVICE_DAY.date;
@@ -16,7 +14,6 @@ const tables = SERVICE_DAY.tables;
 const sessions = getSessionStatuses(SERVICE_DAY);
 const spaces = SERVICE_DAY.spaces;
 const table = (id: string, list: readonly VenueTable[] = tables) => list.find((candidate) => candidate.id === id)!;
-const context = (token = "N3wT0k3nAa") => ({ today: TODAY, staffName: "Sofía M.", createToken: () => token });
 
 describe("getTableRows", () => {
   it("lists every table by number with space, capacity, configuration, session and QR status", () => {
@@ -76,27 +73,6 @@ describe("filterTableRows", () => {
     ).toEqual([5, 6, 8]);
     expect(filterTableRows(rows, { query: "", spaceId: "all", configuration: "disabled" })).toEqual([]);
     expect(filterTableRows(rows, { query: "", spaceId: "all", configuration: "enabled" })).toHaveLength(12);
-  });
-});
-
-
-describe("regenerateTableQr", () => {
-  it("revokes the active token with an audit entry and issues a new one", () => {
-    const changed = regenerateTableQr(tables, "tbl_07", context("Q7wE3rT9yU"));
-    const updated = table("tbl_07", changed);
-    expect(updated.qr).toEqual({ token: "Q7wE3rT9yU", generatedOn: TODAY, generatedBy: "Sofía M." });
-    expect(updated.revokedQrs[0]).toEqual({ ...table("tbl_07").qr, revokedOn: TODAY, auditId: "QR-119" });
-    expect(updated.revokedQrs).toHaveLength(2);
-    expect(updated.version).toBe(19);
-    expect(nextAuditId(tables)).toBe("QR-119");
-    expect(nextAuditId(changed)).toBe("QR-120");
-  });
-
-  it("issues a first credential to a table without QR", () => {
-    const withoutQr = tables.map((candidate) => (candidate.id === "tbl_01" ? { ...candidate, qr: null } : candidate));
-    const updated = table("tbl_01", regenerateTableQr(withoutQr, "tbl_01", context()));
-    expect(updated.qr?.token).toBe("N3wT0k3nAa");
-    expect(updated.revokedQrs).toEqual(table("tbl_01").revokedQrs);
   });
 });
 

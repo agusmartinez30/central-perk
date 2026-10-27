@@ -4,16 +4,13 @@ import clsx from "clsx";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Armchair, Plus, QrCode } from "lucide-react";
-import { SERVICE_DAY } from "@/mocks/service-day";
-import { DEMO_STAFF } from "@/mocks/staff";
 import { useScreenState } from "@/shared/lib/use-screen-state";
 import { ConfirmDialog } from "@/shared/ui";
 import type { PlanTransform } from "@/features/tables/floor-plan";
-import { getUsedTokens } from "@/features/table-qr/qr-config";
-import { createUniqueQrToken } from "@/features/table-qr/qr-token";
 import { HeaderButton, HeaderLink, PageHeader } from "@/features/table-qr/TableQrParts";
 import { resolveMove, resolveResize } from "@/features/venue/table-layout";
-import { dispatchVenue, useVenue } from "@/features/venue/venue-store";
+import { VenueGate } from "@/features/venue/VenueGate";
+import { commitVenue, useVenue } from "@/features/venue/venue-store";
 import type { VenueState } from "@/features/venue/venue-state";
 import {
   getConfirmView,
@@ -22,8 +19,10 @@ import {
   getSpaceFormView,
   getSpaceTabs,
   getTableFormView,
+  failManagement,
   initManagementState,
   reduceManagement,
+  settleManagement,
   type ManagementAction,
   type ManagementState,
   type SpaceTab,
@@ -51,8 +50,6 @@ export const TABLE_MANAGEMENT_FORCED_STATES = [
 
 type ForcedState = (typeof TABLE_MANAGEMENT_FORCED_STATES)[number];
 
-const NO_CREDENTIAL = { token: "", today: SERVICE_DAY.date, staffName: DEMO_STAFF.name };
-
 const FORCED_ACTIONS: Record<ForcedState, ManagementAction[]> = {
   "table-edit": [{ type: "select-table", id: "tbl_07" }],
   "table-new": [{ type: "new-table" }],
@@ -64,7 +61,7 @@ const FORCED_ACTIONS: Record<ForcedState, ManagementAction[]> = {
     { type: "select-table", id: "tbl_07" },
     { type: "set-table-field", field: "label", value: "Mesa 05" },
     { type: "set-table-field", field: "capacity", value: "0" },
-    { type: "save-table", credential: NO_CREDENTIAL },
+    { type: "save-table" },
   ],
 };
 
@@ -112,29 +109,42 @@ function initialState(venue: VenueState, forced: ForcedState | null, table: stri
 }
 
 /**
- * Gestión de mesas. Container: the venue configuration comes from the shared venue store (so
- * `/tables` and `/tables/qr` see every change in this browser session); this screen owns only
- * the UI state (active space, side panel, delete dialog, notice and zoom). `?table=` and
- * `?space=` open a table or space directly (`new` for the creation forms).
+ * Gestión de mesas. Container: the venue configuration comes from the shared venue store, which
+ * loads it from the API and sends every change there (so `/tables` and `/tables/qr` see it and
+ * it survives a reload); this screen owns only the UI state (active space, side panel, delete
+ * dialog, notice and zoom). `?table=` and `?space=` open a table or space directly (`new` for
+ * the creation forms).
  */
 export function TableManagementScreen() {
+  return (
+    <VenueGate>
+      <TableManagement />
+    </VenueGate>
+  );
+}
+
+function TableManagement() {
   const forcedState = useScreenState(TABLE_MANAGEMENT_FORCED_STATES);
   const searchParams = useSearchParams();
   const venue = useVenue();
   const [ui, setUi] = useState(() => initialState(venue, forcedState, searchParams.get("table"), searchParams.get("space")));
   const [transform, setTransform] = useState<PlanTransform>(DEFAULT_EDITOR_TRANSFORM);
 
+  /**
+   * Shows the UI the local rules predict right away; a configuration change then goes to the
+   * API, whose answer settles the UI (ids it assigned) or restores the previous one with why.
+   */
   const dispatch = (action: ManagementAction) => {
     const result = reduceManagement(ui, action, venue);
-    if (result.venue) dispatchVenue(result.venue);
     if (result.ui.spaceId !== ui.spaceId) setTransform(DEFAULT_EDITOR_TRANSFORM);
     setUi(result.ui);
+    const change = result.venue;
+    if (!change) return;
+    void commitVenue(change).then((outcome) => {
+      if (outcome.ok) setUi((current) => settleManagement(current, outcome.before, outcome.venue));
+      else if (outcome.error.kind !== "unauthorized") setUi(failManagement(ui, change, outcome.error, venue));
+    });
   };
-  const credential = () => ({
-    token: createUniqueQrToken(getUsedTokens(venue.tables)),
-    today: SERVICE_DAY.date,
-    staffName: DEMO_STAFF.name,
-  });
 
   const plan = getPlanView(ui, venue);
   const tableForm = getTableFormView(ui, venue);
@@ -186,7 +196,7 @@ export function TableManagementScreen() {
               view={tableForm}
               spaces={venue.spaces}
               onAction={dispatch}
-              onSave={() => dispatch({ type: "save-table", credential: credential() })}
+              onSave={() => dispatch({ type: "save-table" })}
             />
           )}
           {spaceForm && <SpacePanel view={spaceForm} activeSpaceId={ui.spaceId} onAction={dispatch} />}

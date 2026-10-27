@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { Armchair } from "lucide-react";
 import { SERVICE_DAY, TABLES_BOARD } from "@/mocks/service-day";
 import { useScreenState } from "@/shared/lib/use-screen-state";
+import { VenueGate } from "@/features/venue/VenueGate";
 import { useVenue } from "@/features/venue/venue-store";
 import { FloorPlan } from "./FloorPlan";
 import { getLiveTables, getPlanSummary, getSpacePlan, getSpaceTabs, type PlanTransform } from "./floor-plan";
@@ -27,11 +28,20 @@ const DEFAULT_TRANSFORM: PlanTransform = { scale: 1, x: 0, y: 0 };
 
 /**
  * 02 · Mesas (live operation). Container: owns the active space, view, search, zoom and the
- * selected table. Spaces, layout and capacities come from the shared venue store (configured in
- * Gestión de mesas); the live state (status, account, time seated, kitchen) is derived from the
- * service day, so tables created in this session show as free.
+ * selected table. Spaces, layout and capacities come from the shared venue store (loaded from
+ * the API, configured in Gestión de mesas); the live state (status, account, time seated,
+ * kitchen) is still derived from the service-day mocks, so tables the mocks do not know show as
+ * free.
  */
 export function TablesScreen() {
+  return (
+    <VenueGate>
+      <Tables />
+    </VenueGate>
+  );
+}
+
+function Tables() {
   const forcedState = useScreenState(TABLES_FORCED_STATES);
   const board = TABLES_BOARD;
   const venue = useVenue();
