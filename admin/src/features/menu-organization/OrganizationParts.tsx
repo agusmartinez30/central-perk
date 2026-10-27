@@ -8,15 +8,18 @@ import type { OrganizationTab } from "./organization-state";
 /** "Breadcrumb" of every 08 page, shown uppercase. */
 export const ORGANIZATION_BREADCRUMB = "Carta digital / Categorías y momentos";
 
-type PageHeaderProps = { title: string; subtitle: string; actions?: ReactNode };
+type PageHeaderProps = { title: string; subtitle: string; actions?: ReactNode; breadcrumb?: string };
 
-/** "Moments Header" / "Categories Header": 9px uppercase breadcrumb → 11px, 25px title, 10px subtitle → 12px. */
-export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
+/**
+ * "Moments Header" / "Categories Header" / "Studio Header": 9px uppercase breadcrumb → 11px,
+ * 25px title, 10px subtitle → 12px.
+ */
+export function PageHeader({ title, subtitle, actions, breadcrumb = ORGANIZATION_BREADCRUMB }: PageHeaderProps) {
   return (
     <header className="flex min-h-[68px] w-full shrink-0 items-center justify-between gap-4">
       <div className="flex flex-col gap-[3px]">
         <p className="text-[11px] font-bold tracking-[0.6px] whitespace-nowrap text-brand uppercase">
-          {ORGANIZATION_BREADCRUMB}
+          {breadcrumb}
         </p>
         <h2 className="text-[25px] leading-tight font-bold whitespace-nowrap text-ink">{title}</h2>
         <p className="text-[12px] whitespace-nowrap text-muted">{subtitle}</p>

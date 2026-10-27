@@ -87,7 +87,7 @@ describe("moment editor (08B)", () => {
     });
     expect(view?.products[0]).toMatchObject({ name: "Cappuccino", categoryLabel: "Cafés", availabilityLabel: "Disponible" });
     expect(view?.selectedCategories.map((category) => category.label)).toEqual(["Cafés", "Tostadas", "Panadería", "Bebidas"]);
-    expect(view?.preview.countLabel).toBe("7 productos");
+    expect(view?.preview.countLabel).toBe("7 productos disponibles");
   });
 
   it("tracks unsaved changes and discards them", () => {
@@ -119,7 +119,7 @@ describe("moment editor (08B)", () => {
     const preview = getMomentEditorView(state)?.preview;
     expect(preview?.title).toBe("Desayunos");
     expect(preview?.filters.map((filter) => filter.label)).toEqual(["Todos", "Tostadas", "Panadería", "Bebidas"]);
-    expect(preview?.countLabel).toBe("1 producto");
+    expect(preview?.countLabel).toBe("1 producto disponible");
   });
 
   it("suggests categories and products from the search boxes", () => {
@@ -524,7 +524,7 @@ describe("customer explore preview (08E)", () => {
     ]);
     const view = getPreviewView(state);
     expect(view?.preview.title).toBe("Cenas");
-    expect(view?.preview.countLabel).toBe("5 productos");
+    expect(view?.preview.countLabel).toBe("5 productos disponibles");
     expect(view?.draft).toBe(true);
     expect(view?.canSwitchMoment).toBe(false);
     const back = organizationReducer(state, { type: "close-preview" });
@@ -592,7 +592,7 @@ describe("customer explore preview (08E)", () => {
       ),
       { type: "open-preview" },
     ]);
-    expect(getPreviewView(state)?.preview.countLabel).toBe("0 productos");
+    expect(getPreviewView(state)?.preview.countLabel).toBe("0 productos disponibles");
     expect(getPreviewView(state)?.preview.title).toBe("");
   });
 });

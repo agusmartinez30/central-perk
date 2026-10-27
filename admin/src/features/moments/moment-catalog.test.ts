@@ -227,7 +227,7 @@ describe("explore preview (08E)", () => {
       ["Panadería", false],
       ["Bebidas", false],
     ]);
-    expect(preview.countLabel).toBe("7 productos");
+    expect(preview.countLabel).toBe("7 productos disponibles");
     expect(preview.products[0]).toMatchObject({
       name: "Café con leche",
       description: "Espresso con leche caliente, servido en taza.",
@@ -246,7 +246,7 @@ describe("explore preview (08E)", () => {
 
   it("filters by category", () => {
     const preview = getExplorePreview(breakfastDraft, { products: PRODUCTS, categories }, "tostadas");
-    expect(preview.countLabel).toBe("1 producto");
+    expect(preview.countLabel).toBe("1 producto disponible");
     expect(preview.products.map((product) => product.name)).toEqual(["Tostón de palta"]);
   });
 
@@ -260,6 +260,6 @@ describe("explore preview (08E)", () => {
     const changed = archiveCategory(setCategoryVisibility(categories, "cafes", false), "tostados");
     const filtered = getExplorePreview(afternoon, { products: PRODUCTS, categories: changed }, "todos");
     expect(filtered.filters.map((filter) => filter.label)).toEqual(["Todos", "Panadería"]);
-    expect(filtered.countLabel).toBe("8 productos");
+    expect(filtered.countLabel).toBe("8 productos disponibles");
   });
 });

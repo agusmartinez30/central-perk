@@ -331,6 +331,7 @@ export type ExplorePreview = {
   description: string;
   image?: string;
   filters: ExploreFilter[];
+  /** "7 productos disponibles" (08E explore subtitle). */
   countLabel: string;
   products: ExploreProductCard[];
 };
@@ -370,7 +371,7 @@ export function getExplorePreview(
       { id: ALL_FILTER_ID, label: "Todos", active: activeId === ALL_FILTER_ID },
       ...categories.map((category) => ({ id: category.id, label: category.label, active: category.id === activeId })),
     ],
-    countLabel: formatCount(products.length, "producto", "productos"),
+    countLabel: formatCount(products.length, "producto disponible", "productos disponibles"),
     products: products.map((product) => ({
       id: product.id,
       name: product.name,
