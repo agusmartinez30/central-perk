@@ -61,6 +61,7 @@ Forecast well over 400 authored lines across modules; strategy `ask-on-risk`; ch
 
 ## Rebase onto feat/products-redesign (2026-10-27)
 User decision: the API chain now sits on top of `feat/products-redesign` so the API can be tested with the current admin (`main ← feat/products-redesign ← feat/api-foundation ← feat/api-auth ← feat/api-venue`). From here each API module ships together with its admin wiring. Hashes cited above are pre-rebase: `b052a27` → `cc92ae1` (T1), `198035e` → `f2bb0e1` (T2), `2109657` → `074c081` (T3), `3a57b1d` → `4b40692` (configurable Postgres port). Local smoke test against Postgres on port 5434: migrations + seed applied; health, venue, login/me/logout, payment-settings all returned the expected status codes.
+- Second rebase (2026-10-27) after menu-organization R5 landed on `feat/products-redesign` (`595e767`): T1 `972d3ad`, T2 `bf769e1`, T3 `1012b68`, port `8e6b062`. Worktree removed; the main checkout now works on `feat/api-venue`. `npm test` 69 passed, typecheck clean after the rebase.
 
 ## Next step
 T4 (catalog module).
