@@ -41,5 +41,7 @@ lint, tsc, vitest, build; manual/Playwright smoke against the local API when it 
 - Password policy relaxed (user decision 2026-10-27, route: inline): minimum length 12 → 6 (6911ce2) and the guessable-password rule removed in API and admin (7f6cfec); test-first, RED 1+2 then 6+2 failing, GREEN api 68/68, admin 689/689; tsc and lint OK in both. The user confirmed the real login against the API works from the admin.
 - RDD for A1–A2: assessed high (`hot_path` auth, 20 paths, 843 lines); the preflight STATUS asked for an `intended_untracked_selection` whose exact JSON schema is not documented, one submission was refused (`invalid_request`), so no review ran.
 
+- Removed the unused `src/mocks/auth.ts` and `src/mocks/auth.test.ts` (user decision 2026-10-27, route: inline). Checks: tsc OK, lint OK, vitest 686/686, build OK.
+
 ## Next step
-Decide whether to delete `src/mocks/auth.ts` and its test; push / PR are the user's decision.
+Push / PR are the user's decision (branch stacked on `feat/api-venue`).
