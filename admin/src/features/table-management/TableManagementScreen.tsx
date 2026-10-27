@@ -140,7 +140,6 @@ function TableManagement() {
    */
   const dispatch = (action: ManagementAction) => {
     const result = reduceManagement(ui, action, venue);
-    if (result.ui.spaceId !== ui.spaceId) setTransform(DEFAULT_EDITOR_TRANSFORM);
     setUi(result.ui);
     const change = result.venue;
     if (!change) return;
@@ -182,6 +181,7 @@ function TableManagement() {
           </div>
           <PlanEditor
             view={plan}
+            fitKey={ui.spaceId}
             transform={transform}
             notice={ui.notice}
             onTransformChange={setTransform}

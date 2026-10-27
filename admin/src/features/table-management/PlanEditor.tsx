@@ -1,10 +1,10 @@
 "use client";
 
 import clsx from "clsx";
-import { useRef, useState, type PointerEvent } from "react";
+import { useLayoutEffect, useRef, useState, type PointerEvent } from "react";
 import { Map as MapIcon, MoveDiagonal2, Plus, X } from "lucide-react";
 import { TableFigure, ZoomControls } from "@/features/tables/FloorPlan";
-import { getChairs, getFitTransform, zoomAround, type PlanTransform } from "@/features/tables/floor-plan";
+import { getChairs, zoomAround, type PlanTransform } from "@/features/tables/floor-plan";
 import {
   PLAN_SIZE,
   RESIZE_HANDLES,
@@ -15,12 +15,10 @@ import {
 } from "@/features/venue/table-layout";
 import type { EditorTable, Notice, PlanView } from "./management-state";
 import { RESIZE_CURSORS, getArrowMove, getDragPoint, getGrabZone, hasDragged, isEdgeHandle } from "./plan-drag";
+import { getPlanFitTransform } from "./plan-fit";
 
-/** The plan opens at 1:1 with the editable area 16px from the corner. */
+/** Transform before the viewport is measured; the editor fits the plan before the first paint. */
 export const DEFAULT_EDITOR_TRANSFORM: PlanTransform = { scale: 1, x: 16, y: 16 };
-
-/** The whole editable area, so "Ajustar a la vista" shows the plan. */
-const PLAN_BOUNDS = [{ x: 0, y: 0, ...PLAN_SIZE }];
 
 /**
  * A press on a table: what it does (move, or resize from a border or corner), where it started,
@@ -165,6 +163,8 @@ function EditorTableButton(props: EditorTableProps) {
 
 type PlanEditorProps = {
   view: PlanView;
+  /** Changing it (the active space) fits the plan to the viewport again. */
+  fitKey: string;
   transform: PlanTransform;
   notice: Notice | null;
   onTransformChange: (transform: PlanTransform) => void;
@@ -189,6 +189,7 @@ type PlanEditorProps = {
  */
 export function PlanEditor({
   view,
+  fitKey,
   transform,
   notice,
   onTransformChange,
@@ -250,6 +251,18 @@ export function PlanEditor({
     const { width, height } = viewport();
     onTransformChange(zoomAround(transform, direction, { x: width / 2, y: height / 2 }));
   };
+
+  // The plan fills the viewport: fitted before the first paint, again when the space changes and
+  // whenever the viewport is resized (which also drops a manual zoom).
+  useLayoutEffect(() => {
+    const element = viewportRef.current;
+    if (!element) return;
+    const fit = () => onTransformChange(getPlanFitTransform({ width: element.clientWidth, height: element.clientHeight }));
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [fitKey, onTransformChange]);
   const { scale, x, y } = transform;
 
   return (
@@ -348,7 +361,7 @@ export function PlanEditor({
         </span>
       </p>
 
-      <ZoomControls onZoom={zoom} onFit={() => onTransformChange(getFitTransform(PLAN_BOUNDS, viewport()))} />
+      <ZoomControls onZoom={zoom} onFit={() => onTransformChange(getPlanFitTransform(viewport()))} />
     </section>
   );
 }
