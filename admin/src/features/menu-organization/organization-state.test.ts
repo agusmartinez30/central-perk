@@ -294,6 +294,26 @@ describe("categories list (08C)", () => {
     expect(getCategoriesListView(moved).rows.slice(0, 2).map((row) => row.label)).toEqual(["Tostadas", "Cafés"]);
   });
 
+  it("disables the order chevrons at the ends and reordering while searching or filtering", () => {
+    let state = onCategories();
+    for (const label of ["Té", "Jugos", "Combos"]) {
+      state = run(
+        [{ type: "open-new-category" }, { type: "category-set-field", field: "label", value: label }, saveCategory, { type: "close-editor" }],
+        state,
+      );
+    }
+    const first = getCategoriesListView(state);
+    expect(first.canReorder).toBe(true);
+    expect(first.rows[0]).toMatchObject({ canMoveUp: false, canMoveDown: true });
+    expect(first.rows[8]).toMatchObject({ canMoveUp: true, canMoveDown: true });
+    const last = getCategoriesListView(organizationReducer(state, { type: "set-category-page", page: 2 }));
+    expect(last.rows.at(-1)).toMatchObject({ label: "Combos", canMoveUp: true, canMoveDown: false });
+    const searching = getCategoriesListView(run([{ type: "set-category-query", query: "a" }], state));
+    expect(searching.canReorder).toBe(false);
+    expect(searching.rows.every((row) => !row.canMoveUp && !row.canMoveDown)).toBe(true);
+    expect(getCategoriesListView(run([{ type: "set-category-filter", filter: "visible" }], state)).canReorder).toBe(false);
+  });
+
   it("shows the associated categories in the new category order", () => {
     const moved = run([{ type: "move-category", id: "tostadas", step: -1 }], onCategories());
     expect(getMomentsListView(moved).cards[0].categorySummary).toBe("Tostadas · Cafés · Panadería · Bebidas");
@@ -320,7 +340,7 @@ describe("category editor (08D)", () => {
       positionLabel: "01",
       pendingLabel: null,
       saveBar: { title: "Sin cambios", hint: "La categoría publicada no cambia hasta guardar." },
-      image: null,
+      image: { src: "/images/categories/cafes.jpg", fileName: "categoria-cafes.jpg", metaLabel: "700 × 467 px · 50 KB" },
       breakdown: { total: 4, visible: 4, unavailable: 0, moments: 3 },
       archiveCard: {
         title: "Archivar categoría",
@@ -344,15 +364,28 @@ describe("category editor (08D)", () => {
       saveBar: { title: "Cambios sin guardar" },
       image: { src: "/images/x.jpg", fileName: "categoria-cafes.jpg", metaLabel: "1200 × 600 px · 284 KB" },
     });
-    expect(view?.contextLines).toEqual([
+    expect(view?.contextLines.map((line) => line.text)).toEqual([
       "Última actualización: hoy, 10:32",
       "Editado por Sofía M.",
       "Permiso: Administradora",
     ]);
     const saved = organizationReducer(state, saveCategory);
-    expect(getCategoryEditorView(saved, new Date(2026, 9, 27, 9, 0))?.contextLines[0]).toBe(
+    expect(getCategoryEditorView(saved, new Date(2026, 9, 27, 9, 0))?.contextLines[0].text).toBe(
       "Última actualización: ayer, 16:05",
     );
+  });
+
+  it("discards unsaved edits and clears a blocked save", () => {
+    const blocked = run([
+      { type: "open-category", id: "cafes" },
+      { type: "category-set-field", field: "label", value: "" },
+      saveCategory,
+    ]);
+    expect(getCategoryEditorView(blocked)?.saveBar.blocked).toBe(true);
+    const discarded = organizationReducer(blocked, { type: "category-discard" });
+    expect(discarded.categoryEditor?.draft.label).toBe("Cafés");
+    expect(getCategoryEditorView(discarded)).toMatchObject({ dirty: false, pendingLabel: null, saveBar: { blocked: false } });
+    expect(discarded.notice).toBe("Se descartaron los cambios.");
   });
 
   it("saves edits in memory and returns to the categories tab", () => {
@@ -392,7 +425,10 @@ describe("category editor (08D)", () => {
       breadcrumb: ["CARTA DIGITAL", "CATEGORÍAS", "NUEVA CATEGORÍA"],
       positionLabel: "10",
       pendingLabel: "Categoría nueva sin guardar",
-      contextLines: ["Todavía no se guardó.", "Permiso: Administradora"],
+      contextLines: [
+        { kind: "updated", text: "Todavía no se guardó." },
+        { kind: "permission", text: "Permiso: Administradora" },
+      ],
     });
     const saved = run(
       [

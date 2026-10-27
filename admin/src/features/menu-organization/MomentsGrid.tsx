@@ -5,7 +5,7 @@ import { useState, type KeyboardEvent } from "react";
 import { ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, Package, Pencil } from "lucide-react";
 import { RowMenu, type RowMenuItem } from "@/shared/ui";
 import type { MomentListCard } from "./organization-state";
-import { CoverImage } from "./OrganizationParts";
+import { CoverImage, InlineVisibility, OrderStep } from "./OrganizationParts";
 
 type MomentsGridProps = {
   cards: MomentListCard[];
@@ -23,59 +23,6 @@ function stepFromKey(event: KeyboardEvent): number {
   if (event.key === "ArrowUp" || event.key === "ArrowLeft") return -1;
   if (event.key === "ArrowDown" || event.key === "ArrowRight") return 1;
   return 0;
-}
-
-const VISIBILITY_TONES = { visible: "text-success", hidden: "text-warning", pending: "text-brand" } as const;
-
-/** "Visibility": state label and the 30×18 toggle; a failed save shows the inline error. */
-function MomentVisibility({ card, onChange }: { card: MomentListCard; onChange: (visible: boolean) => void }) {
-  const pending = card.visibilityState === "pending";
-  const tone = VISIBILITY_TONES[pending ? "pending" : card.visible ? "visible" : "hidden"];
-  return (
-    <div className="flex shrink-0 flex-col items-end gap-[3px]">
-      <span className="flex items-center gap-[7px]">
-        <span aria-hidden="true" className={clsx("text-[11px] font-bold whitespace-nowrap", tone)}>
-          {card.visibilityLabel}
-        </span>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={card.visible}
-          aria-label={`Mostrar ${card.title} en la carta`}
-          aria-busy={pending || undefined}
-          disabled={pending}
-          onClick={() => onChange(!card.visible)}
-          className={clsx(
-            "flex h-[18px] w-[30px] shrink-0 items-center rounded-[9px] p-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
-            card.visible ? "justify-end bg-brand" : "justify-start bg-[#D4D0C8]",
-            pending && "cursor-progress",
-          )}
-        >
-          <span aria-hidden="true" className="size-3.5 rounded-full bg-surface" />
-        </button>
-      </span>
-      {card.visibilityError && (
-        <span className="text-[11px] font-bold whitespace-nowrap text-danger">{card.visibilityError}</span>
-      )}
-    </div>
-  );
-}
-
-type OrderStepProps = { label: string; icon: typeof ChevronUp; disabled: boolean; onClick: () => void };
-
-/** "Move Up" / "Move Down" of "Accessible Reorder". */
-function OrderStep({ label, icon: Icon, disabled, onClick }: OrderStepProps) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="flex size-6 items-center justify-center rounded-[6px] text-ink hover:bg-sand focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:text-line disabled:hover:bg-transparent"
-    >
-      <Icon size={13} aria-hidden="true" />
-    </button>
-  );
 }
 
 /**
@@ -144,7 +91,15 @@ export function MomentsGrid({ cards, onEdit, onVisibilityChange, onReorder, onMo
                   <h3 className="truncate text-[15px] font-bold text-ink">{card.title}</h3>
                   <p className="truncate text-[12px] text-muted">{card.description}</p>
                 </div>
-                <MomentVisibility card={card} onChange={(visible) => onVisibilityChange(card.id, visible)} />
+                <InlineVisibility
+                  visible={card.visible}
+                  label={card.visibilityLabel}
+                  pending={card.visibilityState === "pending"}
+                  error={card.visibilityError}
+                  ariaLabel={`Mostrar ${card.title} en la carta`}
+                  labelSide="start"
+                  onChange={(visible) => onVisibilityChange(card.id, visible)}
+                />
               </div>
               <div className="flex min-w-0 items-center gap-2">
                 <span className="flex h-[25px] shrink-0 items-center gap-[5px] rounded-[7px] bg-[#F5F4F0] px-2 text-ink">

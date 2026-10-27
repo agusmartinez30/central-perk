@@ -22,7 +22,15 @@ export const CATALOG_VERSION = 42;
  * "Espresso, filtrados y especialidades de la casa." (its `?state=category-edit` draft).
  */
 export const PRODUCT_CATEGORIES: ProductCategoryInfo[] = [
-  { id: "cafes", label: "Cafés", description: "Espresso y filtrados de la casa.", visible: true, order: 1 },
+  {
+    id: "cafes",
+    label: "Cafés",
+    description: "Espresso y filtrados de la casa.",
+    // The 08D "Imagen cargada" photo (extracted from the export); the other categories have none.
+    image: { src: "/images/categories/cafes.jpg", fileName: "categoria-cafes.jpg", width: 700, height: 467, bytes: 51650 },
+    visible: true,
+    order: 1,
+  },
   { id: "bebidas", label: "Bebidas", description: "Jugos exprimidos y bebidas frías.", visible: true, order: 8 },
   { id: "panaderia", label: "Panadería", description: "Medialunas y facturas recién horneadas.", visible: true, order: 3 },
   { id: "tostadas", label: "Tostadas", description: "Panes de masa madre con toppings.", visible: true, order: 2 },

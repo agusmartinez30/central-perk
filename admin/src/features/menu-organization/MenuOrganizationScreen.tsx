@@ -102,6 +102,16 @@ export function MenuOrganizationScreen() {
     }
   }, []);
 
+  const changeCategoryVisibility = useCallback(async (id: string, visible: boolean) => {
+    dispatch({ type: "start-category-visibility-save", id, visible });
+    try {
+      await saveVisibility("category", id, visible);
+      dispatch({ type: "finish-category-visibility-save", id, ok: true });
+    } catch {
+      dispatch({ type: "finish-category-visibility-save", id, ok: false });
+    }
+  }, []);
+
   let content;
   const momentEditorView = getMomentEditorView(state);
   const categoryEditorView = getCategoryEditorView(state);
@@ -138,20 +148,35 @@ export function MenuOrganizationScreen() {
           }
         />
         <MetricStrip label="Resumen de categorías" items={categories.metrics} tones={CATEGORY_METRIC_TONES} />
-        <OrganizationTabs active="categories" onChange={changeTab} hint="Arrastrá o usá las flechas para ordenar">
+        <OrganizationTabs
+          active="categories"
+          onChange={changeTab}
+          hint={
+            categories.canReorder
+              ? "Arrastrá o usá las flechas para ordenar"
+              : "Limpiá la búsqueda y el filtro para ordenar"
+          }
+        >
           <CategoriesToolbar
             query={state.categoryQuery}
             onQueryChange={(query) => dispatch({ type: "set-category-query", query })}
+            filter={categories.filter}
+            filters={categories.filters}
+            onFilterChange={(filter) => dispatch({ type: "set-category-filter", filter })}
           />
         </OrganizationTabs>
         <CategoriesTable
-          rows={categories.rows}
-          filtered={state.categoryQuery.trim().length > 0}
+          view={categories}
           onEdit={(id) => dispatch({ type: "open-category", id })}
           onReorder={(id, toIndex) => dispatch({ type: "reorder-category", id, toIndex })}
           onMove={(id, step) => dispatch({ type: "move-category", id, step })}
+          onVisibilityChange={changeCategoryVisibility}
+          onArchive={(id) => {
+            dispatch({ type: "open-category", id });
+            dispatch({ type: "category-archive" });
+          }}
+          onPageChange={(page) => dispatch({ type: "set-category-page", page })}
         />
-        <p className="shrink-0 text-[11px] text-muted">{categories.footer}</p>
       </div>
     );
   } else {

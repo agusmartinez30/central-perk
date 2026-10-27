@@ -189,6 +189,7 @@ export type OrganizationAction =
   | { type: "category-set-image"; image: ImageAsset | undefined }
   /** `at`: ISO time of the save, recorded as the 08D "Última actualización". */
   | { type: "category-save"; at: string }
+  | { type: "category-discard" }
   | { type: "category-archive" }
   | { type: "category-cancel-archive" }
   | { type: "open-preview" }
@@ -611,6 +612,13 @@ export function organizationReducer(state: OrganizationState, action: Organizati
       return updateCategoryDraft(state, (draft) => ({ ...draft, image: action.image }));
     case "category-save":
       return saveCategory(state, action.at);
+    case "category-discard":
+      if (!state.categoryEditor) return state;
+      return {
+        ...state,
+        categoryEditor: openCategoryEditor(state.categoryEditor.id, state.categoryEditor.saved),
+        notice: "Se descartaron los cambios.",
+      };
     case "category-archive":
       return archiveEditedCategory(state);
     case "category-cancel-archive":
@@ -732,7 +740,8 @@ export function getMomentEditorView(state: OrganizationState): MomentEditorView 
   };
 }
 
-export type CategoryListRow = CategoryRow & Omit<SwitchView, "visible">;
+/** 08C row: the "Keyboard Reorder" chevrons are disabled at the ends and while reordering is off. */
+export type CategoryListRow = CategoryRow & Omit<SwitchView, "visible"> & { canMoveUp: boolean; canMoveDown: boolean };
 
 export type CategoriesListView = {
   metrics: MetricItem[];
@@ -744,6 +753,8 @@ export type CategoriesListView = {
   pageItems: PageItem[];
   /** "Mostrando 1–9 de 12 categorías · «Todos» se genera automáticamente". */
   footer: string;
+  /** Drag and chevrons only while the whole order is listed (no search, filter "Todas"). */
+  canReorder: boolean;
 };
 
 export function getCategoriesListView(state: OrganizationState): CategoriesListView {
@@ -755,19 +766,28 @@ export function getCategoriesListView(state: OrganizationState): CategoriesListV
     visibility: state.categoryFilter,
   });
   const { items, ...page } = paginate(rows, state.categoryPage, CATEGORIES_PAGE_SIZE);
+  const canReorder = state.categoryQuery.trim().length === 0 && state.categoryFilter === "all";
   return {
     metrics: getCategoryMetricItems(state.categories, state.products),
     filter: state.categoryFilter,
     filters: CATEGORY_VISIBILITY_FILTERS,
-    rows: items.map((row) => {
+    rows: items.map((row, index) => {
       const view = switchView(row.visible, state.categoryVisibilitySaves[row.id]);
       let visibilityLabel = view.visible ? CATEGORY_STATUS_LABELS.visible : CATEGORY_STATUS_LABELS.hidden;
       if (view.visibilityState === "pending") visibilityLabel = UPDATING_LABEL;
-      return { ...row, ...view, visibilityLabel };
+      const position = page.from - 1 + index;
+      return {
+        ...row,
+        ...view,
+        visibilityLabel,
+        canMoveUp: canReorder && position > 0,
+        canMoveDown: canReorder && position < rows.length - 1,
+      };
     }),
     page,
     pageItems: getPageItems(page.page, page.pageCount),
     footer: formatCategoriesFooter(page),
+    canReorder,
   };
 }
 
@@ -790,8 +810,8 @@ export type CategoryEditorView = {
   /** "PRODUCTOS ASOCIADOS", derived from the product assignments. */
   productCount: number;
   breakdown: CategoryProductBreakdown;
-  /** "Información contextual" lines (mock update metadata). */
-  contextLines: string[];
+  /** "Información contextual" lines (mock update metadata), each with the kind of its icon. */
+  contextLines: CategoryContextLine[];
   /** "Archivar categoría" card; its action opens the confirmation. */
   archiveCard: { title: string; description: string; actionLabel: string };
   /** Confirmation copy, shown once "Revisar archivado" was pressed. */
@@ -799,6 +819,8 @@ export type CategoryEditorView = {
   archiveMessage: string;
   confirmingArchive: boolean;
 };
+
+export type CategoryContextLine = { kind: "updated" | "editor" | "permission"; text: string };
 
 const EMPTY_BREAKDOWN: CategoryProductBreakdown = { total: 0, visible: 0, unavailable: 0, moments: 0 };
 
@@ -819,7 +841,7 @@ export function getCategoryEditorView(state: OrganizationState, now: Date = new 
   if (isNew) pendingLabel = "Categoría nueva sin guardar";
   else if (dirty) pendingLabel = "Cambios sin guardar";
   const { image } = editor.draft;
-  const permission = `Permiso: ${CATEGORY_EDITOR.role}`;
+  const permission: CategoryContextLine = { kind: "permission", text: `Permiso: ${CATEGORY_EDITOR.role}` };
   const errors = editor.submitted
     ? validateCategoryDraft(editor.draft, { categories: state.categories, editingId: editor.id })
     : {};
@@ -840,11 +862,11 @@ export function getCategoryEditorView(state: OrganizationState, now: Date = new 
     breakdown: editor.id ? getCategoryProductBreakdown(state.products, state.moments, editor.id) : EMPTY_BREAKDOWN,
     contextLines: category
       ? [
-          `Última actualización: ${formatRelativeDayTime(category.updatedAt, now)}`,
-          `Editado por ${category.updatedBy}`,
+          { kind: "updated", text: `Última actualización: ${formatRelativeDayTime(category.updatedAt, now)}` },
+          { kind: "editor", text: `Editado por ${category.updatedBy}` },
           permission,
         ]
-      : ["Todavía no se guardó.", permission],
+      : [{ kind: "updated", text: "Todavía no se guardó." }, permission],
     archiveCard: {
       title: "Archivar categoría",
       description: "Oculta la categoría sin eliminar productos ni historial.",

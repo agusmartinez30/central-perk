@@ -127,68 +127,83 @@ export function OrganizationTabs({ active, onChange, hint, children }: Organizat
   );
 }
 
-type VisibilitySwitchProps = { checked: boolean; label: string; onChange: (checked: boolean) => void };
+type InlineVisibilityProps = {
+  /** Shown value: the requested one while the save is pending. */
+  visible: boolean;
+  /** "Visible" / "Oculto" / "Oculta" / "Actualizando…". */
+  label: string;
+  pending: boolean;
+  /** "No se pudo guardar" after a failed save. */
+  error?: string;
+  ariaLabel: string;
+  /** Label before the switch (08A cards) or after it (08C rows). */
+  labelSide: "start" | "end";
+  onChange: (visible: boolean) => void;
+};
 
-/** "Visibility" / "Visibility Toggle": 42×24 switch with an 18px knob, brand when on. */
-export function VisibilitySwitch({ checked, label, onChange }: VisibilitySwitchProps) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={() => onChange(!checked)}
-      className={clsx(
-        "flex h-6 w-[42px] shrink-0 items-center rounded-xl p-[3px] transition-colors",
-        checked ? "justify-end bg-brand" : "justify-start bg-line",
-      )}
-    >
-      <span aria-hidden="true" className="size-[18px] rounded-full bg-surface" />
-    </button>
+const INLINE_VISIBILITY_TONES = { visible: "text-success", hidden: "text-warning", pending: "text-brand" } as const;
+
+/**
+ * "Visibility Toggle" of 08A cards and 08C rows: 30×18 switch wired to the async save, disabled
+ * and busy while pending, with the inline error of a failed save.
+ */
+export function InlineVisibility({ visible, label, pending, error, ariaLabel, labelSide, onChange }: InlineVisibilityProps) {
+  const tone = INLINE_VISIBILITY_TONES[pending ? "pending" : visible ? "visible" : "hidden"];
+  const text = (
+    <span aria-hidden="true" className={clsx("text-[11px] font-bold whitespace-nowrap", tone)}>
+      {label}
+    </span>
   );
-}
-
-type EditorStatusBarProps = { label: string; dirty: boolean; children: ReactNode };
-
-/** "Editor Status Bar": 44px amber bar while there are unsaved changes (neutral otherwise, invented). */
-export function EditorStatusBar({ label, dirty, children }: EditorStatusBarProps) {
   return (
-    <div
-      className={clsx(
-        "flex h-11 w-full shrink-0 items-center justify-between rounded-[10px] px-3.5",
-        dirty ? "bg-warning-bg" : "bg-surface outline-1 -outline-offset-[0.5px] outline-line",
-      )}
-    >
-      <p role="status" className={clsx("text-[12px] font-bold whitespace-nowrap", dirty ? "text-warning" : "text-muted")}>
-        {label}
-      </p>
-      <div className="flex items-center gap-2">{children}</div>
+    <div className={clsx("flex shrink-0 flex-col gap-[3px]", labelSide === "start" ? "items-end" : "items-start")}>
+      <span className="flex items-center gap-[7px]">
+        {labelSide === "start" && text}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={visible}
+          aria-label={ariaLabel}
+          aria-busy={pending || undefined}
+          disabled={pending}
+          onClick={() => onChange(!visible)}
+          className={clsx(
+            "flex h-[18px] w-[30px] shrink-0 items-center rounded-[9px] p-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
+            visible ? "justify-end bg-brand" : "justify-start bg-[#D4D0C8]",
+            pending && "cursor-progress",
+          )}
+        >
+          <span aria-hidden="true" className="size-3.5 rounded-full bg-surface" />
+        </button>
+        {labelSide === "end" && text}
+      </span>
+      {error && <span className="text-[11px] font-bold whitespace-nowrap text-danger">{error}</span>}
     </div>
   );
 }
 
-type BarButtonProps = {
+type OrderStepProps = {
   label: string;
-  tone: "primary" | "neutral" | "danger";
-  disabled?: boolean;
+  icon: LucideIcon;
+  disabled: boolean;
+  /** 08C "Keyboard Reorder": stacked 10px chevrons. */
+  compact?: boolean;
   onClick: () => void;
 };
 
-/** "Action · Descartar / Guardar cambios / Archivar": 32px buttons, 9px labels → 11px. */
-export function BarButton({ label, tone, disabled = false, onClick }: BarButtonProps) {
+/** "Move Up" / "Move Down" chevrons of the 08A cards and 08C rows. */
+export function OrderStep({ label, icon: Icon, disabled, compact = false, onClick }: OrderStepProps) {
   return (
     <button
       type="button"
+      aria-label={label}
       disabled={disabled}
       onClick={onClick}
       className={clsx(
-        "flex h-8 items-center rounded-nav px-3 text-[11px] font-bold whitespace-nowrap outline-1 -outline-offset-[0.5px] disabled:cursor-not-allowed disabled:opacity-50",
-        tone === "primary" && "bg-brand text-white outline-brand enabled:hover:bg-brand/92",
-        tone === "neutral" && "bg-surface text-ink outline-line enabled:hover:bg-cream",
-        tone === "danger" && "bg-surface text-danger outline-line enabled:hover:bg-danger-bg",
+        "flex items-center justify-center text-ink hover:bg-sand focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:text-line disabled:hover:bg-transparent",
+        compact ? "h-4 w-5 rounded-[4px]" : "size-6 rounded-[6px]",
       )}
     >
-      {label}
+      <Icon size={compact ? 10 : 13} aria-hidden="true" />
     </button>
   );
 }
