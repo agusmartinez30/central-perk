@@ -47,6 +47,7 @@ Forecast well over 400 authored lines across modules; strategy `ask-on-risk`; ch
 
 ## Progress / Evidence
 - T1 (route: delegated, 2+ non-trivial files; ~480 authored lines excl. lockfile, slightly over the 400 heuristic because config + docs + tests ship together). Versions: NestJS 12.2 (ESM, nodenext), Prisma 7.10.1 + @prisma/adapter-pg, Zod 4.6, TypeScript ~6.0.3 (typescript-eslint caps at <6.1), ESLint 10, Vitest 5 + unplugin-swc 2. RED observed for `ZodValidationPipe` spec (module not found) before GREEN. Checks after clean `npm ci`: `npm ci` ok (postinstall generates client, 0 vulnerabilities); `npm run lint` clean; `npm run typecheck` clean; `npm test` 3 files / 5 tests passed; `npm run build` ok; `npx prisma validate` valid. Boot without DATABASE_URL exits with a readable env error.
+- T1 commit `b052a27`. Parent spot check: `npm test` 3 files / 5 tests passed. Review assess: medium, `slice_budget_reached`; candidate review declined by user (2026-10-26). Next reviewed boundary stays `main` (`59e148c`).
 - T1 decisions: `/health` is DB-free liveness (e2e overrides PrismaService); Prisma client generated to `api/src/generated/prisma` (gitignored, `importFileExtension = "js"`); `overrides.multer ^2.5.0` fixes a high advisory in platform-express 12.2.0; default CORS origins 3000 and 3002 because admin and web both default to port 3000.
 
 ## Next step
