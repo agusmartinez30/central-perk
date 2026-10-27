@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Armchair, Plus, QrCode } from "lucide-react";
 import { useScreenState } from "@/shared/lib/use-screen-state";
-import { ConfirmDialog } from "@/shared/ui";
+import { ConfirmDialog, Modal } from "@/shared/ui";
 import type { PlanTransform } from "@/features/tables/floor-plan";
 import { HeaderButton, HeaderLink, PageHeader } from "@/features/table-qr/TableQrParts";
 import { resolveMove, resolveResize } from "@/features/venue/table-layout";
@@ -17,6 +17,7 @@ import {
   getDeepLinkActions,
   getPlanView,
   getSpaceFormView,
+  getSpaceList,
   getSpaceTabs,
   getTableFormView,
   failManagement,
@@ -28,15 +29,15 @@ import {
   type SpaceTab,
 } from "./management-state";
 import { DEFAULT_EDITOR_TRANSFORM, PlanEditor } from "./PlanEditor";
-import { SpacePanel } from "./SpacePanel";
-import { TableForm } from "./TableForm";
+import { SPACE_FORM_TITLE_ID, SpaceForm, SpaceList } from "./SpacePanel";
+import { TABLE_FORM_TITLE_ID, TableForm } from "./TableForm";
 
 /**
- * Forced variants: `table-edit` (Mesa 07 in the form), `table-new` (empty "Nueva mesa" in
- * Salón), `space-edit` (Salón renamed "Salón principal", unsaved), `space-new` ("Barra" typed),
- * `delete-table` (Mesa 01, which has history: the dialog offers to disable it), `delete-space`
- * (Patio, which has tables: the dialog explains why not) and `errors` (Mesa 07 renamed
- * "Mesa 05" with capacity 0 after saving). There is no export for this module.
+ * Forced variants, each with its modal open: `table-edit` (Mesa 07), `table-new` (empty "Nueva
+ * mesa" in Salón), `space-edit` (Salón renamed "Salón principal", unsaved), `space-new` ("Barra"
+ * typed), `delete-table` (Mesa 01, which has history: the dialog offers to disable it),
+ * `delete-space` (Patio, which has tables: the dialog explains why not) and `errors` (Mesa 07
+ * renamed "Mesa 05" with capacity 0 after saving). There is no export for this module.
  */
 export const TABLE_MANAGEMENT_FORCED_STATES = [
   "table-edit",
@@ -53,10 +54,13 @@ type ForcedState = (typeof TABLE_MANAGEMENT_FORCED_STATES)[number];
 const FORCED_ACTIONS: Record<ForcedState, ManagementAction[]> = {
   "table-edit": [{ type: "select-table", id: "tbl_07" }],
   "table-new": [{ type: "new-table" }],
-  "space-edit": [{ type: "set-space-field", field: "name", value: "Salón principal" }],
+  "space-edit": [
+    { type: "edit-space", id: "salon" },
+    { type: "set-space-field", field: "name", value: "Salón principal" },
+  ],
   "space-new": [{ type: "new-space" }, { type: "set-space-field", field: "name", value: "Barra" }],
   "delete-table": [{ type: "select-table", id: "tbl_01" }, { type: "request-delete" }],
-  "delete-space": [{ type: "select-space", id: "patio" }, { type: "request-delete" }],
+  "delete-space": [{ type: "edit-space", id: "patio" }, { type: "request-delete" }],
   errors: [
     { type: "select-table", id: "tbl_07" },
     { type: "set-table-field", field: "label", value: "Mesa 05" },
@@ -111,9 +115,9 @@ function initialState(venue: VenueState, forced: ForcedState | null, table: stri
 /**
  * Gestión de mesas. Container: the venue configuration comes from the shared venue store, which
  * loads it from the API and sends every change there (so `/tables` and `/tables/qr` see it and
- * it survives a reload); this screen owns only the UI state (active space, side panel, delete
- * dialog, notice and zoom). `?table=` and `?space=` open a table or space directly (`new` for
- * the creation forms).
+ * it survives a reload); this screen owns only the UI state (active space, create/edit modal,
+ * delete dialog, notice and zoom). `?table=` and `?space=` open a table or space in the modal
+ * directly (`new` for the creation forms).
  */
 export function TableManagementScreen() {
   return (
@@ -150,6 +154,7 @@ function TableManagement() {
   const tableForm = getTableFormView(ui, venue);
   const spaceForm = getSpaceFormView(ui, venue);
   const confirm = getConfirmView(ui, venue);
+  const close = () => dispatch({ type: "cancel" });
 
   return (
     <div className="flex h-[calc(100dvh-72px)] min-h-[760px] flex-col gap-3.5 px-6 pt-5 pb-4">
@@ -189,19 +194,20 @@ function TableManagement() {
             onNewTable={() => dispatch({ type: "new-table" })}
           />
         </div>
-        <aside aria-label="Configuración" className="flex w-[360px] shrink-0 flex-col gap-3 overflow-y-auto pb-1">
-          {tableForm && (
-            <TableForm
-              key={tableForm.form.id ?? "new"}
-              view={tableForm}
-              spaces={venue.spaces}
-              onAction={dispatch}
-              onSave={() => dispatch({ type: "save-table" })}
-            />
-          )}
-          {spaceForm && <SpacePanel view={spaceForm} activeSpaceId={ui.spaceId} onAction={dispatch} />}
+        <aside aria-label="Lista de espacios" className="flex w-[320px] shrink-0 flex-col gap-3 overflow-y-auto pb-1">
+          <SpaceList cards={getSpaceList(venue)} activeSpaceId={ui.spaceId} onAction={dispatch} />
         </aside>
       </div>
+      {tableForm && (
+        <Modal key={`table-${tableForm.form.id ?? "new"}`} labelledBy={TABLE_FORM_TITLE_ID} onClose={close}>
+          <TableForm view={tableForm} spaces={venue.spaces} onAction={dispatch} onSave={() => dispatch({ type: "save-table" })} />
+        </Modal>
+      )}
+      {spaceForm && (
+        <Modal key={`space-${spaceForm.id ?? "new"}`} labelledBy={SPACE_FORM_TITLE_ID} onClose={close}>
+          <SpaceForm view={spaceForm} onAction={dispatch} />
+        </Modal>
+      )}
       {confirm && (
         <ConfirmDialog
           title={confirm.title}

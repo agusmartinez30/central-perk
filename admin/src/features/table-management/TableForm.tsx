@@ -20,33 +20,34 @@ type TableFormProps = {
   onSave: () => void;
 };
 
+export const TABLE_FORM_TITLE_ID = "table-form-title";
+
 /**
- * Side-panel table form: the 09B fields (name, space, capacity, internal description, enabled)
- * plus the plan shape. "Eliminar mesa" opens the confirmation, which offers to disable a table
- * whose history must be kept.
+ * Table form shown in the modal: the 09B fields (name, space, capacity, internal description,
+ * enabled) plus the plan shape. "Eliminar mesa" opens the confirmation, which offers to disable
+ * a table whose history must be kept.
  */
 export function TableForm({ view, spaces, onAction, onSave }: TableFormProps) {
   const { draft, shape } = view.form;
   const setText = (field: "label" | "capacity" | "description") => (value: string) =>
     onAction({ type: "set-table-field", field, value });
+  const saveLabel = view.saving ? "Guardando…" : view.form.id ? "Guardar mesa" : "Crear mesa";
 
   return (
     <form
-      aria-labelledby="table-form-title"
+      aria-labelledby={TABLE_FORM_TITLE_ID}
+      aria-busy={view.saving}
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
         onSave();
       }}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") onAction({ type: "cancel" });
-      }}
-      className="flex w-full flex-col gap-3 rounded-[14px] bg-surface p-[18px] outline-1 -outline-offset-[0.5px] outline-line"
+      className="flex w-full flex-col gap-3"
     >
-      <div className="flex flex-col gap-1">
-        <h3 id="table-form-title" className="text-[14px] font-bold text-ink">
+      <div className="flex flex-col gap-1 pr-10">
+        <h2 id={TABLE_FORM_TITLE_ID} className="text-[17px] font-bold text-ink">
           {view.title}
-        </h3>
+        </h2>
         <p className="text-[11px] font-semibold text-muted">{view.idLabel}</p>
       </div>
 
@@ -178,7 +179,7 @@ export function TableForm({ view, spaces, onAction, onSave }: TableFormProps) {
         )}
         <div className="flex items-center gap-2">
           <BarButton label="Cancelar" tone="neutral" onClick={() => onAction({ type: "cancel" })} />
-          <BarButton label={view.form.id ? "Guardar mesa" : "Crear mesa"} tone="primary" onClick={onSave} />
+          <BarButton label={saveLabel} tone="primary" onClick={onSave} />
         </div>
       </div>
       {/* Enter in a field saves, like "Guardar mesa". */}

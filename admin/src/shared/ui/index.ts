@@ -5,6 +5,7 @@ export { Checkbox } from "./Checkbox";
 export { Notice, type NoticeTone } from "./Notice";
 export { Card } from "./Card";
 export { ConfirmDialog, type ConfirmDialogProps } from "./ConfirmDialog";
+export { Modal, type ModalProps } from "./Modal";
 export { Pagination, type PaginationProps } from "./Pagination";
 export { RowMenu, type RowMenuItem } from "./RowMenu";
 export { HeaderSwitch, SaveBar, SaveBarButton, UnsavedBadge } from "./EditorChrome";

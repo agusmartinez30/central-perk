@@ -43,7 +43,7 @@ export type SpaceForm = {
   serverError?: string | null;
 };
 
-/** Right panel: the selected (or new) table, otherwise the active (or new) space. */
+/** Form shown in the centered modal: a table or a space being created or edited. */
 export type Panel = { kind: "table"; form: TableForm } | { kind: "space"; form: SpaceForm };
 
 export type Notice = { tone: "info" | "error"; text: string };
@@ -51,8 +51,11 @@ export type Notice = { tone: "info" | "error"; text: string };
 export type ManagementState = {
   /** Space whose plan is open. */
   spaceId: SpaceId;
-  panel: Panel;
-  /** Delete confirmation for the panel's table or space. */
+  /** Open create/edit modal; null shows only the plan and the spaces list. */
+  modal: Panel | null;
+  /** The modal's save was sent to the API: it closes when the API accepts it. */
+  saving: boolean;
+  /** Delete confirmation for the modal's table or space. */
   confirm: { kind: "table" | "space"; id: string } | null;
   /** Last outcome, shown over the plan and announced. */
   notice: Notice | null;
@@ -67,6 +70,7 @@ export type ManagementAction =
   | { type: "set-table-shape"; shape: TableShape }
   | { type: "save-table" }
   | { type: "new-space" }
+  | { type: "edit-space"; id: SpaceId }
   | { type: "set-space-field"; field: "name"; value: string }
   | { type: "set-space-field"; field: "icon"; value: SpaceIcon }
   | { type: "set-space-field"; field: "tone"; value: SpaceTone }
@@ -99,8 +103,7 @@ const tablePanel = (table: VenueTable): Panel => ({
 });
 
 export function createManagementState(venue: VenueState): ManagementState {
-  const spaceId = venue.spaces[0]?.id ?? "";
-  return { spaceId, panel: spacePanel(venue, spaceId), confirm: null, notice: null };
+  return { spaceId: venue.spaces[0]?.id ?? "", modal: null, saving: false, confirm: null, notice: null };
 }
 
 const findTable = (venue: VenueState, id: string | null) => (id ? venue.tables.find((table) => table.id === id) : undefined);
@@ -117,72 +120,66 @@ const error = (text: string): Notice => ({ tone: "error", text });
 const refusal = (result: Exclude<MoveResult, { ok: true }>) =>
   result.reason === "overlap" ? `se superpone con ${result.conflict.label}` : "no está disponible";
 
+/**
+ * A valid save keeps the modal open, marked `saving`, with the predicted space and notice:
+ * `settleManagement` closes it once the API accepts, `failManagement` restores it on a refusal.
+ */
 function saveTable(ui: ManagementState, form: TableForm, venue: VenueState): ManagementResult {
   const errors = validateTableDraft(form.draft, venue.tables, form.id, venue.spaces);
   if (Object.keys(errors).length > 0) {
-    return { ui: { ...ui, panel: { kind: "table", form: { ...form, submitted: true } }, notice: error("Revisá los datos marcados.") } };
+    return { ui: { ...ui, modal: { kind: "table", form: { ...form, submitted: true } }, notice: error("Revisá los datos marcados.") } };
   }
   const saved = findTable(venue, form.id) ?? null;
   if (saved && getTableChanges(saved, form.draft).length === 0 && saved.layout.shape === form.shape) {
-    return { ui: { ...ui, notice: info(`Sin cambios en ${saved.label}.`) } };
+    return { ui: { ...ui, modal: null, notice: info(`Sin cambios en ${saved.label}.`) } };
   }
   const action: VenueAction = { type: "save-table", editingId: form.id, draft: form.draft, shape: form.shape };
   const next = venueReducer(venue, action);
   const table = findTable(next, form.id ?? nextTableId(venue.tables))!;
   return {
     venue: action,
-    ui: {
-      ...ui,
-      spaceId: table.spaceId,
-      panel: tablePanel(table),
-      notice: info(`${table.label} ${saved ? "guardada" : "creada"}.`),
-    },
+    ui: { ...ui, spaceId: table.spaceId, saving: true, notice: info(`${table.label} ${saved ? "guardada" : "creada"}.`) },
   };
 }
 
 function saveSpaceForm(ui: ManagementState, form: SpaceForm, venue: VenueState): ManagementResult {
   if (validateSpaceName(form.name, venue.spaces, form.id)) {
-    return { ui: { ...ui, panel: { kind: "space", form: { ...form, submitted: true } }, notice: error("Revisá el nombre del espacio.") } };
+    return { ui: { ...ui, modal: { kind: "space", form: { ...form, submitted: true } }, notice: error("Revisá el nombre del espacio.") } };
   }
   const action: VenueAction = { type: "save-space", editingId: form.id, name: form.name, icon: form.icon, tone: form.tone };
-  const id = form.id ?? createSpaceId(form.name.trim(), venue.spaces);
-  const next = venueReducer(venue, action);
   return {
     venue: action,
     ui: {
       ...ui,
-      spaceId: id,
-      panel: spacePanel(next, id),
+      spaceId: form.id ?? createSpaceId(form.name.trim(), venue.spaces),
+      saving: true,
       notice: info(`Espacio ${form.name.trim()} ${form.id ? "guardado" : "creado"}.`),
     },
   };
 }
 
+/** A confirmed delete (or disable) closes the dialog and the modal; a refusal restores both. */
 function confirmDelete(ui: ManagementState, venue: VenueState): ManagementResult {
   const { confirm } = ui;
   if (!confirm) return { ui };
   const closed = { ...ui, confirm: null };
+  const done = { ...closed, modal: null };
   if (confirm.kind === "space") {
     if (!getSpaceRemoval(venue.spaces, venue.tables, confirm.id).allowed) return { ui: closed };
     const action: VenueAction = { type: "delete-space", id: confirm.id };
-    const next = venueReducer(venue, action);
-    const spaceId = next.spaces[0]?.id ?? "";
+    const spaceId = venueReducer(venue, action).spaces[0]?.id ?? "";
     const name = getSpaceName(venue.spaces, confirm.id);
-    return { venue: action, ui: { ...closed, spaceId, panel: spacePanel(next, spaceId), notice: info(`Espacio ${name} eliminado.`) } };
+    return { venue: action, ui: { ...done, spaceId, notice: info(`Espacio ${name} eliminado.`) } };
   }
   const table = findTable(venue, confirm.id);
   if (!table) return { ui: closed };
   const removal = removalOf(venue, table);
   if (removal.kind === "delete") {
-    return {
-      venue: { type: "delete-table", id: table.id },
-      ui: { ...closed, panel: spacePanel(venue, ui.spaceId), notice: info(`${table.label} eliminada.`) },
-    };
+    return { venue: { type: "delete-table", id: table.id }, ui: { ...done, notice: info(`${table.label} eliminada.`) } };
   }
   if (removal.kind === "disable") {
     const action: VenueAction = { type: "set-table-enabled", id: table.id, enabled: false };
-    const updated = findTable(venueReducer(venue, action), table.id)!;
-    return { venue: action, ui: { ...closed, panel: tablePanel(updated), notice: info(`${table.label} deshabilitada.`) } };
+    return { venue: action, ui: { ...done, notice: info(`${table.label} deshabilitada.`) } };
   }
   return { ui: closed };
 }
@@ -194,48 +191,53 @@ function confirmDelete(ui: ManagementState, venue: VenueState): ManagementResult
  * reconciles with `settleManagement` (success) or `failManagement` (refusal).
  */
 export function reduceManagement(ui: ManagementState, action: ManagementAction, venue: VenueState): ManagementResult {
-  const { panel } = ui;
+  const { modal } = ui;
+  const open = (next: Panel, spaceId = ui.spaceId): ManagementResult => ({
+    ui: { ...ui, spaceId, modal: next, saving: false, confirm: null, notice: null },
+  });
   switch (action.type) {
     case "select-space":
       if (!venue.spaces.some((space) => space.id === action.id)) return { ui };
-      return { ui: { ...ui, spaceId: action.id, panel: spacePanel(venue, action.id), confirm: null } };
+      return { ui: { ...ui, spaceId: action.id } };
+    case "edit-space":
+      if (!venue.spaces.some((space) => space.id === action.id)) return { ui };
+      return open(spacePanel(venue, action.id), action.id);
     case "select-table": {
       const table = findTable(venue, action.id);
-      if (!table) return { ui };
-      return { ui: { ...ui, spaceId: table.spaceId, panel: tablePanel(table), confirm: null } };
+      return table ? open(tablePanel(table), table.spaceId) : { ui };
     }
     case "new-table": {
       const draft = { ...createEmptyTableDraft(venue.tables, venue.spaces), spaceId: ui.spaceId };
-      return { ui: { ...ui, panel: { kind: "table", form: { id: null, draft, shape: "rect", submitted: false } }, notice: null } };
+      return open({ kind: "table", form: { id: null, draft, shape: "rect", submitted: false } });
     }
     case "set-table-field":
-      if (panel.kind !== "table") return { ui };
+      if (modal?.kind !== "table") return { ui };
       return {
         ui: {
           ...ui,
-          panel: { kind: "table", form: { ...panel.form, serverErrors: undefined, draft: { ...panel.form.draft, [action.field]: action.value } } },
+          modal: { kind: "table", form: { ...modal.form, serverErrors: undefined, draft: { ...modal.form.draft, [action.field]: action.value } } },
         },
       };
     case "set-table-shape":
-      if (panel.kind !== "table") return { ui };
-      return { ui: { ...ui, panel: { kind: "table", form: { ...panel.form, shape: action.shape } } } };
+      if (modal?.kind !== "table") return { ui };
+      return { ui: { ...ui, modal: { kind: "table", form: { ...modal.form, shape: action.shape } } } };
     case "save-table":
-      return panel.kind === "table" ? saveTable(ui, panel.form, venue) : { ui };
+      return modal?.kind === "table" && !ui.saving ? saveTable(ui, modal.form, venue) : { ui };
     case "new-space":
-      return { ui: { ...ui, panel: { kind: "space", form: { ...spaceForm(venue, ""), id: null } }, notice: null } };
+      return open({ kind: "space", form: { ...spaceForm(venue, ""), id: null } });
     case "set-space-field":
-      if (panel.kind !== "space") return { ui };
-      return { ui: { ...ui, panel: { kind: "space", form: { ...panel.form, serverError: undefined, [action.field]: action.value } } } };
+      if (modal?.kind !== "space") return { ui };
+      return { ui: { ...ui, modal: { kind: "space", form: { ...modal.form, serverError: undefined, [action.field]: action.value } } } };
     case "save-space":
-      return panel.kind === "space" ? saveSpaceForm(ui, panel.form, venue) : { ui };
+      return modal?.kind === "space" && !ui.saving ? saveSpaceForm(ui, modal.form, venue) : { ui };
     case "move-space":
       return { venue: { type: "move-space", id: action.id, direction: action.direction }, ui };
     case "cancel":
-      return { ui: { ...ui, panel: spacePanel(venue, ui.spaceId) } };
+      return { ui: { ...ui, modal: null, saving: false, confirm: null } };
     case "request-delete": {
-      const id = panel.form.id;
-      if (!id) return { ui };
-      return { ui: { ...ui, confirm: { kind: panel.kind, id } } };
+      const id = modal?.form.id;
+      if (!modal || !id) return { ui };
+      return { ui: { ...ui, confirm: { kind: modal.kind, id } } };
     }
     case "confirm-delete":
       return confirmDelete(ui, venue);
@@ -265,40 +267,35 @@ export function reduceManagement(ui: ManagementState, action: ManagementAction, 
 }
 
 /**
- * Reconciles the predicted UI with the configuration the API answered: a table or space the
- * API created gets the id it assigned (numbers are never reused, so it may differ from the
+ * Reconciles the predicted UI with the configuration the API answered: a pending save closes
+ * its modal, a space the API created opens with the id it assigned (it may differ from the
  * prediction), and a vanished space falls back to the first one.
  */
 export function settleManagement(ui: ManagementState, before: VenueState, after: VenueState): ManagementState {
-  const { panel } = ui;
   const isNew = <T extends { id: string }>(list: readonly T[], id: string) => !list.some((item) => item.id === id);
-  if (panel.kind === "table" && panel.form.id && isNew(before.tables, panel.form.id) && isNew(after.tables, panel.form.id)) {
-    const created = after.tables.find((table) => isNew(before.tables, table.id));
-    if (created) return { ...ui, spaceId: created.spaceId, panel: tablePanel(created) };
+  let next = ui;
+  if (ui.saving) {
+    const { modal } = ui;
+    const created = modal?.kind === "space" && !modal.form.id ? after.spaces.find((space) => isNew(before.spaces, space.id)) : undefined;
+    next = { ...ui, spaceId: created?.id ?? ui.spaceId, modal: null, saving: false };
   }
-  if (panel.kind === "space" && panel.form.id && isNew(before.spaces, panel.form.id) && isNew(after.spaces, panel.form.id)) {
-    const created = after.spaces.find((space) => isNew(before.spaces, space.id));
-    if (created) return { ...ui, spaceId: created.id, panel: spacePanel(after, created.id) };
-  }
-  if (isNew(after.spaces, ui.spaceId)) {
-    const spaceId = after.spaces[0]?.id ?? "";
-    return { ...ui, spaceId, panel: panel.kind === "space" ? spacePanel(after, spaceId) : panel };
-  }
-  return ui;
+  if (isNew(after.spaces, next.spaceId)) next = { ...next, spaceId: after.spaces[0]?.id ?? "" };
+  return next;
 }
 
 /**
- * The API refused `action`: back to the UI before it (forms keep what was typed) with the
- * reason, the fields it rejected marked, and any delete dialog closed.
+ * The API refused `action`: back to the UI before it (the modal stays open with what was
+ * typed) with the reason, the fields it rejected marked, and any delete dialog closed.
  */
 export function failManagement(ui: ManagementState, action: VenueAction, apiError: TablesApiError, venue: VenueState): ManagementState {
-  const failed: ManagementState = { ...ui, confirm: null, notice: error(describeVenueError(apiError, action, venue)) };
+  const failed: ManagementState = { ...ui, saving: false, confirm: null, notice: error(describeVenueError(apiError, action, venue)) };
   if (apiError.kind !== "invalid") return failed;
-  if (action.type === "save-table" && ui.panel.kind === "table") {
-    return { ...failed, panel: { kind: "table", form: { ...ui.panel.form, submitted: true, serverErrors: tableIssueErrors(apiError.issues) } } };
+  const { modal } = ui;
+  if (action.type === "save-table" && modal?.kind === "table") {
+    return { ...failed, modal: { kind: "table", form: { ...modal.form, submitted: true, serverErrors: tableIssueErrors(apiError.issues) } } };
   }
-  if (action.type === "save-space" && ui.panel.kind === "space") {
-    return { ...failed, panel: { kind: "space", form: { ...ui.panel.form, submitted: true, serverError: spaceIssueError(apiError.issues) } } };
+  if (action.type === "save-space" && modal?.kind === "space") {
+    return { ...failed, modal: { kind: "space", form: { ...modal.form, submitted: true, serverError: spaceIssueError(apiError.issues) } } };
   }
   return failed;
 }
@@ -335,7 +332,7 @@ export type EditorTable = {
 export type PlanView = { spaceName: string; countLabel: string; tables: EditorTable[] };
 
 export function getPlanView(ui: ManagementState, venue: VenueState): PlanView {
-  const selectedId = ui.panel.kind === "table" ? ui.panel.form.id : null;
+  const selectedId = ui.modal?.kind === "table" ? ui.modal.form.id : null;
   const tables = venue.tables
     .filter((table) => table.spaceId === ui.spaceId)
     .sort((a, b) => a.number - b.number)
@@ -369,12 +366,14 @@ export type TableFormView = {
   activeSession: boolean;
   /** Existing tables show "Eliminar mesa"; the dialog explains when only disabling is possible. */
   canRemove: boolean;
+  /** The save is waiting for the API. */
+  saving: boolean;
   errors: TableDraftErrors;
 };
 
 export function getTableFormView(ui: ManagementState, venue: VenueState): TableFormView | null {
-  if (ui.panel.kind !== "table") return null;
-  const { form } = ui.panel;
+  if (ui.modal?.kind !== "table") return null;
+  const { form } = ui.modal;
   const table = findTable(venue, form.id);
   const errors = form.submitted ? { ...form.serverErrors, ...validateTableDraft(form.draft, venue.tables, form.id, venue.spaces) } : {};
   if (!table) {
@@ -384,6 +383,7 @@ export function getTableFormView(ui: ManagementState, venue: VenueState): TableF
       idLabel: `ID estable · ${nextTableId(venue.tables)} · se asigna al guardar`,
       activeSession: false,
       canRemove: false,
+      saving: ui.saving,
       errors,
     };
   }
@@ -393,23 +393,29 @@ export function getTableFormView(ui: ManagementState, venue: VenueState): TableF
     idLabel: `ID estable · ${table.id} · versión ${table.version}`,
     activeSession: sessionOf(venue, table) !== "available",
     canRemove: true,
+    saving: ui.saving,
     errors,
   };
 }
 
-export type SpaceFormView = { form: SpaceForm; title: string; id: SpaceId | null; name: string; error: string | null; cards: SpaceCard[] };
+export type SpaceFormView = { form: SpaceForm; title: string; id: SpaceId | null; name: string; error: string | null; saving: boolean };
 
 export function getSpaceFormView(ui: ManagementState, venue: VenueState): SpaceFormView | null {
-  if (ui.panel.kind !== "space") return null;
-  const { form } = ui.panel;
+  if (ui.modal?.kind !== "space") return null;
+  const { form } = ui.modal;
   return {
     form,
     title: form.id ? "Espacio" : "Nuevo espacio",
     id: form.id,
     name: form.name,
     error: form.submitted ? (validateSpaceName(form.name, venue.spaces, form.id) ?? form.serverError ?? null) : null,
-    cards: getSpaceCards(venue.spaces, venue.tables),
+    saving: ui.saving,
   };
+}
+
+/** "Espacios" list beside the plan: every space in order, with its table count. */
+export function getSpaceList(venue: VenueState): SpaceCard[] {
+  return getSpaceCards(venue.spaces, venue.tables);
 }
 
 export type ConfirmView = {
@@ -460,11 +466,14 @@ export function getConfirmView(ui: ManagementState, venue: VenueState): ConfirmV
   };
 }
 
-/** `?space=<id>|new` then `?table=<id>|new`: what the screen opens first (links from 09). */
+/**
+ * `?space=<id>|new` then `?table=<id>|new`: the modal the screen opens first (links from 09).
+ * With both, the space only picks the plan behind the table modal.
+ */
 export function getDeepLinkActions({ table, space }: { table: string | null; space: string | null }): ManagementAction[] {
   const actions: ManagementAction[] = [];
   if (space === "new") actions.push({ type: "new-space" });
-  else if (space) actions.push({ type: "select-space", id: space });
+  else if (space) actions.push(table ? { type: "select-space", id: space } : { type: "edit-space", id: space });
   if (table === "new") actions.push({ type: "new-table" });
   else if (table) actions.push({ type: "select-table", id: table });
   return actions;
