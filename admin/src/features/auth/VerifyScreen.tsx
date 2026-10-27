@@ -3,27 +3,27 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CircleAlert, Info } from "lucide-react";
-import { DEMO_STAFF } from "@/mocks/staff";
-import { verifyStaffMfaCode } from "@/mocks/auth";
-import { delay } from "@/shared/lib/delay";
 import { useScreenState } from "@/shared/lib/use-screen-state";
 import { Notice, PrimaryButton, TextButton } from "@/shared/ui";
+import { verifyMfa } from "./auth-api";
+import { REQUEST_ERROR_COPY, toVerifyError } from "./auth-errors";
 import { AuthCard } from "./AuthCard";
 import { CodeInput } from "./CodeInput";
-import { completeSession, readSession } from "./session";
+import { sessionStore } from "./session-store";
 import { isValidMfaCode } from "./validation";
 
 /** `?state=error` shows the wrong-code message without submitting. */
 export const VERIFY_FORCED_STATES = ["error"] as const;
 
-type VerifyError = "incomplete" | "wrong-code";
+type VerifyError = "incomplete" | "wrong-code" | keyof typeof REQUEST_ERROR_COPY;
 
 const ERROR_COPY: Record<VerifyError, string> = {
   incomplete: "Ingresá los 6 dígitos del código.",
   "wrong-code": "El código no es correcto. Probá con el código actual de tu aplicación.",
+  ...REQUEST_ERROR_COPY,
 };
 
-/** 11D · Multi-Factor Verification. */
+/** 11D · Multi-Factor Verification, against `POST /auth/mfa/verify`. */
 export function VerifyScreen() {
   const router = useRouter();
   const forcedState = useScreenState(VERIFY_FORCED_STATES);
@@ -44,14 +44,19 @@ export function VerifyScreen() {
       return;
     }
     setSubmitting(true);
-    await delay(600);
-    if (!verifyStaffMfaCode(code)) {
+    const result = await verifyMfa(code);
+    if (!result.ok) {
+      const requestError = toVerifyError(result.error);
+      // No pending login (expired, or /verify opened directly): start over.
+      if (requestError === "session-expired") {
+        router.replace("/login");
+        return;
+      }
       setSubmitting(false);
-      setError("wrong-code");
+      setError(requestError);
       return;
     }
-    // Reaching /verify directly (no pending login) signs in the seeded staff member.
-    completeSession(readSession()?.staffId ?? DEMO_STAFF.id);
+    if (result.value.status === "authenticated") sessionStore.signIn(result.value.staff);
     router.push("/");
   };
 

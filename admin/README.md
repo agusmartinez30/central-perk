@@ -1,8 +1,8 @@
 # Café Central · Admin
 
 Frontend-only prototype of the Café Central staff back-office, built from the Pencil exports in
-`exports/` (1440×900 desktop frames). There is no backend: auth and data are mocks in
-`src/mocks/`.
+`exports/` (1440×900 desktop frames). Staff sign-in, MFA and logout use the Café Central API
+(`../api`); forgot/reset password and all module data are still mocks in `src/mocks/`.
 
 ## Run it
 
@@ -24,18 +24,17 @@ Browser calls go to `/api/*`, which `next.config.ts` rewrites to the Café Centr
 | --- | --- | --- |
 | `API_URL` | `http://localhost:3001` | API base URL the `/api/*` rewrite targets. Server-only; read when `next dev` / `next build` loads the config, so set it before building (e.g. in `.env.local`). |
 
-## Demo credentials
+## Signing in
 
-| Field | Value |
-| --- | --- |
-| Email | `turno@cafecentral.com` |
-| Password | `Mostrador2026!` |
-| MFA code | `123456` |
+Start the API first (`../api/README.md`: Postgres, migrations and `npm run db:seed`). Sign in
+with the owner from the API's `SEED_OWNER_EMAIL` / `SEED_OWNER_PASSWORD`; with
+`SEED_OWNER_MFA=true` the seed prints an `otpauth://` URI to add to an authenticator app.
 
-Flow: `/login` → `/verify` (MFA) → `/` (overview). The admin routes redirect to `/login`
-until the MFA step is completed. "Recordarme en este dispositivo" keeps the mock session in
-`localStorage`; otherwise it lives in `sessionStorage` and ends with the tab. To sign out,
-clear the site storage.
+Flow: `/login` → `/verify` (only when the account has MFA) → `/` (overview). The session is the
+API's httpOnly `cp_session` cookie; "Recordarme en este dispositivo" makes it persistent,
+otherwise it ends with the browser session. Admin routes ask `GET /auth/me` and redirect to
+`/login` without a valid session; "Cerrar sesión" (sidebar) calls `POST /auth/logout`. Too
+many attempts (HTTP 429) show "Demasiados intentos. Esperá un minuto y volvé a intentar.".
 
 ## Routes
 
@@ -81,7 +80,7 @@ clear the site storage.
 - `src/app/(admin)` — authenticated shell (sidebar + top bar) and modules.
 - `src/features/<feature>` — screens, presentational components and pure helpers (with tests).
 - `src/shared/ui`, `src/shared/lib` — reusable primitives and utilities.
-- `src/mocks` — typed mock data and mock auth.
+- `src/mocks` — typed mock data (and the former mock credentials, no longer used by the screens).
   - `src/mocks/service-day` — the single "service day" (21/10/2026 at 14:42) that 10A, 02, 03, 04 and
     05 derive their rows and metrics from: tables sessions, orders, bill requests, collections, the
     product catalogue (also the 07 products screen: categories, moments, options, images in

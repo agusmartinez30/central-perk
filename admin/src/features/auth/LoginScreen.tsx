@@ -4,25 +4,26 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CircleAlert, LockKeyhole, Mail } from "lucide-react";
-import { authenticateStaff } from "@/mocks/auth";
-import { delay } from "@/shared/lib/delay";
 import { useScreenState } from "@/shared/lib/use-screen-state";
 import { Checkbox, Notice, PasswordField, PrimaryButton, TextField } from "@/shared/ui";
+import { login } from "./auth-api";
+import { REQUEST_ERROR_COPY, toLoginError, type LoginRequestError } from "./auth-errors";
 import { AuthCard } from "./AuthCard";
-import { writeSession } from "./session";
+import { sessionStore } from "./session-store";
 import { isValidEmail } from "./validation";
 
 /** `?state=error` shows the invalid-credentials message without submitting. */
 export const LOGIN_FORCED_STATES = ["error"] as const;
 
-type LoginError = "invalid-email" | "invalid-credentials";
+type LoginError = "invalid-email" | LoginRequestError;
 
 const ERROR_COPY: Record<LoginError, string> = {
   "invalid-email": "Ingresá un correo electrónico válido.",
   "invalid-credentials": "El correo o la contraseña no son correctos.",
+  ...REQUEST_ERROR_COPY,
 };
 
-/** 11A · Staff Login. */
+/** 11A · Staff Login, against `POST /auth/login`. */
 export function LoginScreen() {
   const router = useRouter();
   const forcedState = useScreenState(LOGIN_FORCED_STATES);
@@ -42,15 +43,18 @@ export function LoginScreen() {
     }
     setError(null);
     setSubmitting(true);
-    await delay(600);
-    const result = authenticateStaff(email, password);
+    const result = await login({ email: email.trim(), password, remember });
     if (!result.ok) {
       setSubmitting(false);
-      setError("invalid-credentials");
+      setError(toLoginError(result.error));
       return;
     }
-    writeSession({ stage: "mfa-pending", staffId: result.staff.id }, remember);
-    router.push("/verify");
+    if (result.value.status === "mfa_required") {
+      router.push("/verify");
+      return;
+    }
+    sessionStore.signIn(result.value.staff);
+    router.push("/");
   };
 
   return (
@@ -69,7 +73,7 @@ export function LoginScreen() {
         icon={Mail}
         value={email}
         onChange={(event) => setEmail(event.target.value)}
-        invalid={shownError !== null}
+        invalid={shownError === "invalid-email" || shownError === "invalid-credentials"}
       />
       <PasswordField
         id="login-password"

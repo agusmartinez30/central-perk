@@ -2,13 +2,15 @@
 
 import { usePathname } from "next/navigation";
 import { Bell, ShieldCheck } from "lucide-react";
+import { useSession, type StaffRole } from "@/features/auth";
 import { ConnectionBadge } from "./ConnectionBadge";
 import { StaffProfile } from "./StaffProfile";
 import { getTopbarConfig } from "./navigation";
 
-type AdminTopbarProps = {
-  staffName: string;
-  staffRole: string;
+const ROLE_LABELS: Record<StaffRole, string> = {
+  OWNER: "Titular",
+  MANAGER: "Gerente",
+  STAFF: "Personal",
 };
 
 /**
@@ -52,11 +54,16 @@ function NotificationsButton({ dot = "outlined" }: { dot?: "outlined" | "small" 
  * export through `NavItem.topbar`: the 10A section title, the 02 branch and shift, the 03
  * branch and shift with the "En vivo" pill (or 05 "Datos verificados"), the 06 branch with the
  * "Administrador" pill, the 07 "Carta digital" title with the "Sincronizado" pill, or the 09 "Gestión de mesas" title with
- * the "Tokens seguros" pill.
+ * the "Tokens seguros" pill. The staff profile is the signed-in member from `GET /auth/me`
+ * (blank until it answers).
  */
-export function AdminTopbar({ staffName, staffRole }: AdminTopbarProps) {
+export function AdminTopbar() {
   const pathname = usePathname();
   const { variant, title } = getTopbarConfig(pathname);
+  const session = useSession();
+  const staff = session.status === "ready" ? session.staff : null;
+  const staffName = staff?.name ?? "";
+  const staffRole = staff ? ROLE_LABELS[staff.role] : "";
 
   return (
     <header className="sticky top-0 z-10 flex h-[72px] shrink-0 items-center justify-between border-b border-line bg-surface px-7">

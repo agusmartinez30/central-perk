@@ -1,22 +1,13 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { parseStoredSession, readSessionSnapshot, subscribeToSession, type StoredSession } from "./session";
+import { sessionStore, type SessionState } from "./session-store";
 
-/** Sentinel snapshot used while prerendering/hydrating, when storage cannot be read yet. */
-const SERVER_SNAPSHOT = "__server__";
-
-export type SessionState =
-  | { status: "unknown" }
-  | { status: "ready"; session: StoredSession | null };
-
-/** Current mock session; `unknown` until the client has read Web Storage. */
+/** Current staff session; `unknown` until the client has asked `GET /auth/me`. */
 export function useSession(): SessionState {
-  const raw = useSyncExternalStore(
-    subscribeToSession,
-    readSessionSnapshot,
-    () => SERVER_SNAPSHOT,
+  return useSyncExternalStore(
+    sessionStore.subscribe,
+    sessionStore.getSnapshot,
+    sessionStore.getServerSnapshot,
   );
-  if (raw === SERVER_SNAPSHOT) return { status: "unknown" };
-  return { status: "ready", session: parseStoredSession(raw) };
 }

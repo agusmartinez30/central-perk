@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { LogoutButton } from "./LogoutButton";
 import { NAV_ITEMS, findActiveNavItem } from "./navigation";
 import { SidebarNavItem } from "./SidebarNavItem";
 
@@ -20,6 +21,7 @@ export function AdminSidebar() {
           <SidebarNavItem key={item.id} item={item} active={item.id === activeId} />
         ))}
       </nav>
+      <LogoutButton />
     </aside>
   );
 }
