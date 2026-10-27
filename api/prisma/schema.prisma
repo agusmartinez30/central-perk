@@ -38,6 +38,7 @@ model StaffUser {
   updatedAt           DateTime             @updatedAt
   sessions            Session[]
   passwordResetTokens PasswordResetToken[]
+  issuedQrCredentials TableQrCredential[]
 
   @@map("staff_users")
 }
@@ -165,4 +166,88 @@ model VenuePaymentSettings {
   updatedAt         DateTime
 
   @@map("venue_payment_settings")
+}
+
+// ── tables (src/modules/tables) ──────────────────────────────────────────
+// Configuration only (sessions come later): spaces in display order, tables with their
+// floor-plan box, and QR credentials. Credentials outlive a deleted table (tableId set to
+// null) so a token or a table number is never issued again.
+
+enum SpaceIcon {
+  STORE
+  SUN
+  TREES
+  MAP_PIN
+}
+
+enum SpaceTone {
+  BRAND
+  WARNING
+  SUCCESS
+  NEUTRAL
+}
+
+enum TableShape {
+  RECT
+  ROUND
+}
+
+model VenueSpace {
+  /// Slug of the first name, e.g. "salon".
+  id       String       @id
+  name     String
+  icon     SpaceIcon
+  tone     SpaceTone
+  /// Display order of tabs and filters, from 0.
+  position Int
+  tables   VenueTable[]
+
+  @@map("venue_spaces")
+}
+
+model VenueTable {
+  /// "tbl_07", derived from the number.
+  id           String              @id
+  /// Public identity used by the QR URL; never reused.
+  number       Int                 @unique
+  label        String              @unique
+  spaceId      String
+  space        VenueSpace          @relation(fields: [spaceId], references: [id], onDelete: Restrict)
+  capacity     Int
+  description  String              @default("")
+  enabled      Boolean             @default(true)
+  /// Bumped by every configuration change (display and audit only).
+  version      Int                 @default(1)
+  /// Box on the space's 780×620 plan, in plan units.
+  layoutX      Int
+  layoutY      Int
+  layoutWidth  Int
+  layoutHeight Int
+  layoutShape  TableShape          @default(RECT)
+  credentials  TableQrCredential[]
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([spaceId])
+  @@map("venue_tables")
+}
+
+/// One active credential per table (revokedAt null); rotated ones carry an audit number.
+model TableQrCredential {
+  id          String      @id @default(cuid())
+  /// 10 alphanumeric characters, unique across every credential ever issued.
+  token       String      @unique
+  tableId     String?
+  table       VenueTable? @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  /// Number of the table it was issued for, kept after the table is deleted.
+  tableNumber Int
+  issuedAt    DateTime
+  issuedById  String
+  issuedBy    StaffUser   @relation(fields: [issuedById], references: [id], onDelete: Restrict)
+  revokedAt   DateTime?
+  /// Audit entry of a rotation ("QR-118"); null when revoked by deleting the table.
+  auditNumber Int?        @unique
+
+  @@index([tableId])
+  @@map("table_qr_credentials")
 }

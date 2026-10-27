@@ -6,11 +6,13 @@ import { PrismaClient } from '../src/generated/prisma/client.js';
 import { unmetPasswordRequirements } from '../src/modules/auth/domain/password-policy.js';
 import { normalizeEmail } from '../src/modules/auth/domain/staff-user.js';
 import { Rfc6238Totp } from '../src/modules/auth/infrastructure/rfc6238-totp.js';
+import { seedTablesConfiguration } from './seed-tables.js';
 import { seedVenue } from './seed-venue.js';
 
 /**
- * Creates the single venue when missing (see `seed-venue.ts`) and creates (or updates) the initial
- * owner from environment variables. Run with `npm run db:seed`.
+ * Creates the single venue when missing (see `seed-venue.ts`), creates (or updates) the initial
+ * owner from environment variables, and creates the sample table configuration when there is none
+ * (see `seed-tables.ts`; its QR credentials are issued by the owner). Run with `npm run db:seed`.
  * Credentials always come from the environment; nothing is hardcoded.
  */
 const env = z
@@ -35,7 +37,7 @@ try {
   await seedVenue(prisma);
   console.log('Seeded venue profile and payment settings (kept existing ones).');
 
-  await prisma.staffUser.upsert({
+  const owner = await prisma.staffUser.upsert({
     where: { email },
     create: { email, name: env.SEED_OWNER_NAME, role: 'OWNER', passwordHash, mfaSecret },
     update: { name: env.SEED_OWNER_NAME, role: 'OWNER', passwordHash, mfaSecret, mfaLastUsedStep: null },
@@ -45,6 +47,9 @@ try {
     const label = encodeURIComponent(`Cafe Central:${email}`);
     console.log(`Add this to your authenticator app: otpauth://totp/${label}?secret=${mfaSecret}&issuer=Cafe%20Central`);
   }
+
+  const seededTables = await seedTablesConfiguration(prisma, owner);
+  console.log(seededTables ? 'Seeded spaces, tables and QR credentials.' : 'Kept the existing table configuration.');
 } finally {
   await prisma.$disconnect();
 }

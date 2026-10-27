@@ -81,6 +81,36 @@ Own session auth, no JWT. `src/modules/auth` stores sessions in PostgreSQL and h
 - Rules mirror `admin/src/features/payments/payment-settings.ts`: at least one method; the transfer request mode needs the transfer method; the bank account is always validated (holder and bank required, alias of 6–20 `[A-Za-z0-9.-]`, CBU/CVU of 22 digits with both check digits, staff instructions up to 120 characters). Saving an unchanged draft keeps the version.
 - Bank details are never public: the web bill screen only lets customers pick a request mode, and staff share the transfer data.
 
+## Tables (configuration and QR credentials)
+
+`src/modules/tables` holds the table configuration the admin edits on `/tables/management` and `/tables/qr`: spaces, tables, their floor-plan box and their QR credentials. Live service (table sessions, orders, bills) is not here yet. Admin routes use `SessionGuard` (any staff role); every admin mutation answers the full updated configuration.
+
+| Endpoint                               | Auth  | Body → response |
+| -------------------------------------- | ----- | --------------- |
+| `GET /tables/qr?number=07&token=…`     | —     | `200 { number, label, spaceName }`; `404 table_not_found` unless the table is enabled and the token is its active credential (no reason given) |
+| `GET /tables/config`                   | staff | `200 Configuration` |
+| `POST /tables/spaces`                  | staff | `{ name, icon?, tone? }` → `201 Configuration`; `400 invalid_space` |
+| `PATCH /tables/spaces/:spaceId`        | staff | `{ name, icon?, tone? }` → `200`; `400 invalid_space`, `404 space_not_found` |
+| `POST /tables/spaces/:spaceId/move`    | staff | `{ direction: "up" \| "down" }` → `200` (no change at either end) |
+| `DELETE /tables/spaces/:spaceId`       | staff | `200`; `409 space_not_removable` with `reason: "space_has_tables" \| "last_space"` and `tableCount` |
+| `POST /tables`                         | staff | `{ label, spaceId, capacity, description, enabled, shape? }` → `201`; `400 invalid_table` |
+| `PATCH /tables/:tableId`               | staff | `{ label, spaceId, capacity, description, enabled }` → `200`; `400 invalid_table`, `409 table_has_open_session` when disabling |
+| `POST /tables/:tableId/enable` · `/disable` | staff | `200`; disable: `409 table_has_open_session` |
+| `DELETE /tables/:tableId`              | staff | `200`; `409 table_has_open_session \| table_has_history` |
+| `PUT /tables/:tableId/position`        | staff | `{ x, y }` → `200`; `409 table_overlap` with `conflict: { id, number, label }` |
+| `PUT /tables/:tableId/size`            | staff | `{ x, y, width, height }` (integers) → `200`; `409 table_overlap` |
+| `PUT /tables/:tableId/shape`           | staff | `{ shape: "rect" \| "round" }` → `200` |
+| `POST /tables/:tableId/qr/regenerate`  | staff | `200`; the old token stops resolving |
+
+- `Configuration` is `{ spaces: Space[], tables: Table[] }`: spaces in display order, tables by number. `Space` is `{ id, name, icon, tone }` with `icon` one of `store`, `sun`, `trees`, `map-pin` and `tone` one of `brand`, `warning`, `success`, `neutral`. `Table` is `{ id, number, label, spaceId, capacity, description, enabled, version, layout: { x, y, width, height, shape }, qr, revokedQrs }`, where `qr` is `{ token, issuedAt, issuedBy: { id, name } }` or `null` and `revokedQrs` (newest first) add `revokedAt` and `auditNumber`.
+- Unknown space or table ids answer `404 space_not_found` / `table_not_found`. `400` errors carry `issues: [{ path, code }]` with `code` one of `required`, `too_long`, `duplicate`, `unknown_space`, `out_of_range`; `409` means the current configuration forbids the change.
+- Rules mirror `admin/src/features/venue/{space-config,table-config,table-removal,table-layout}.ts`: space names up to 24 characters, labels up to 30, both unique ignoring case, spaces and accents; capacity an integer from 1 to 20; description up to 60 characters. A space is deleted only without tables and when it is not the last one. Disabling or deleting a table is refused while a session is open; a table that ever had a session can only be disabled. Sessions do not exist yet, so the `TableActivity` adapter reports none.
+- Floor plan: each space has a 780×620 plan. A move snaps to the 8px grid and is clamped inside the plan; a resize is clamped to the plan and to the minimum box the table's seats need. Overlapping another table of the same space is refused. A new table, or one moved to another space, takes the first free spot of the 4-column grid.
+- Ids are internal (`tbl_07`, space slugs such as `barra-alta`); the public identity is the table `number`, assigned as the highest number ever used plus one, so deleted numbers are never reused.
+- QR tokens are 10 random alphanumeric characters (`node:crypto`), unique across every credential ever issued. Regenerating revokes the active credential with the next audit number (`QR-119` after `QR-118`); disabling keeps the credential (paused); deleting the table revokes it and keeps the row, so its token and number never come back. `issuedBy` is the signed-in staff member.
+- `version` is display and audit only (no optimistic concurrency): editing the form always bumps it; enable/disable, layout and regenerate bump it when something changes.
+- The seed creates the admin mock configuration (3 spaces, 12 tables with their fixed QR tokens, Mesa 07's audited rotation) only when there is no table configuration yet; its credentials are issued by the seeded owner.
+
 ## Notes
 
 - The project is ESM (`"type": "module"`, `nodenext`): relative imports use the `.js` extension.
