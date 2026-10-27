@@ -6,9 +6,11 @@ import { PrismaClient } from '../src/generated/prisma/client.js';
 import { unmetPasswordRequirements } from '../src/modules/auth/domain/password-policy.js';
 import { normalizeEmail } from '../src/modules/auth/domain/staff-user.js';
 import { Rfc6238Totp } from '../src/modules/auth/infrastructure/rfc6238-totp.js';
+import { seedVenue } from './seed-venue.js';
 
 /**
- * Creates (or updates) the initial owner from environment variables. Run with `npm run db:seed`.
+ * Creates the single venue when missing (see `seed-venue.ts`) and creates (or updates) the initial
+ * owner from environment variables. Run with `npm run db:seed`.
  * Credentials always come from the environment; nothing is hardcoded.
  */
 const env = z
@@ -30,6 +32,9 @@ const passwordHash = await hash(env.SEED_OWNER_PASSWORD);
 const mfaSecret = env.SEED_OWNER_MFA ? new Rfc6238Totp().generateSecret() : null;
 
 try {
+  await seedVenue(prisma);
+  console.log('Seeded venue profile and payment settings (kept existing ones).');
+
   await prisma.staffUser.upsert({
     where: { email },
     create: { email, name: env.SEED_OWNER_NAME, role: 'OWNER', passwordHash, mfaSecret },

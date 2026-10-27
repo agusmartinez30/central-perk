@@ -72,3 +72,97 @@ model PasswordResetToken {
   @@index([userId])
   @@map("password_reset_tokens")
 }
+
+// ── venue (src/modules/venue) ────────────────────────────────────────────
+// Single venue: one row with id "main", created by the seed.
+
+enum VenueLinkNetwork {
+  INSTAGRAM
+  FACEBOOK
+  WEBSITE
+}
+
+enum Weekday {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  OTHER
+}
+
+enum BillRequestMode {
+  TABLE
+  REGISTER
+  TRANSFER
+}
+
+model Venue {
+  id              String                @id @default("main")
+  name            String
+  description     String?
+  coverImageUrl   String
+  /// Street and city are both set or both null.
+  addressStreet   String?
+  addressCity     String?
+  addressMapsUrl  String?
+  whatsapp        String?
+  phone           String?
+  /// IANA time zone of the opening hours.
+  timezone        String
+  updatedAt       DateTime              @updatedAt
+  links           VenueLink[]
+  openingHours    VenueOpeningHours[]
+  paymentSettings VenuePaymentSettings?
+
+  @@map("venues")
+}
+
+model VenueLink {
+  venueId  String
+  venue    Venue            @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  network  VenueLinkNetwork
+  position Int
+  handle   String
+  url      String?
+
+  @@id([venueId, network])
+  @@map("venue_links")
+}
+
+/// One opening range per open weekday; missing weekdays are closed.
+model VenueOpeningHours {
+  venueId  String
+  venue    Venue   @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  weekday  Weekday
+  /// "HH:MM", venue local time.
+  opensAt  String
+  closesAt String
+
+  @@id([venueId, weekday])
+  @@map("venue_opening_hours")
+}
+
+model VenuePaymentSettings {
+  venueId           String            @id
+  venue             Venue             @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  acceptedMethods   PaymentMethod[]
+  billRequestModes  BillRequestMode[]
+  bankHolder        String
+  bankName          String
+  bankAlias         String
+  bankCbu           String
+  staffInstructions String
+  version           Int               @default(1)
+  updatedAt         DateTime
+
+  @@map("venue_payment_settings")
+}

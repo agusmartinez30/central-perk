@@ -32,7 +32,7 @@ Create a standalone backend in `api/` that both `admin/` and `web/` consume, rep
 ## Tasks
 - [x] T1 Scaffold `api/`: Nest app, strict TS, ESLint, Vitest+SWC, Zod env config, `ZodValidationPipe`, Prisma + Postgres docker-compose, `GET /health`, README with module conventions. Route: delegated (2+ non-trivial files).
 - [x] T2 `auth` module: staff login, TOTP MFA, sessions/guards, password reset, seed. Route: delegated (2+ non-trivial files).
-- [ ] T3 `venue` module. Route: TBD.
+- [x] T3 `venue` module: public profile with open status, payment settings with admin rules, public payment options, seed. Route: delegated (2+ non-trivial files).
 - [ ] T4 `catalog` module. Route: TBD.
 - [ ] T5 `tables` module (incl. table sessions and QR tokens). Route: TBD.
 - [ ] T6 `orders` module. Route: TBD.
@@ -54,5 +54,9 @@ Forecast well over 400 authored lines across modules; strategy `ask-on-risk`; ch
 - T2 commit `198035e`. Parent spot check: `npm test` 36 tests passed. Review assess: high, `high_risk`; candidate review declined by user (2026-10-27).
 - T2 follow-ups: real mail adapter before production; MFA enrollment endpoints; encrypt `mfaSecret` at rest; configure `trust proxy` when deployed behind a proxy so throttling sees client IPs.
 
+- T3 (route: delegated, 2+ non-trivial files; branch `feat/api-venue`; ~1,570 authored lines incl. ~460 of tests/fakes and the 85-line generated migration). Over the 400 heuristic because profile and payment settings ship with their four layers, schema, seed, docs and tests as one reviewable module. RED observed (4 new spec files failed: modules not found) before GREEN. Checks (deps unchanged, so no `npm ci`): `npm run lint` clean; `npm run typecheck` clean; `npm test` 11 files / 69 tests passed; `npm run build` ok; `npx prisma validate` valid. Seed data checked against the domain rules with `tsx` (no issues).
+- T3 decisions: single venue (both clients model one café): one `venues` row with id `main`, links and opening hours in child tables replaced as a whole on save, payment settings in `venue_payment_settings` with enum arrays. Field names mirror web `CafeDetail` (`coverImage` → `coverImageUrl`) and admin `PaymentSettings`. Opening hours are structured per weekday (`opensAt`/`closesAt` "HH:MM", missing day = closed) plus a `timezone`; the API computes `openStatus` (`{ open, closesAt }` or `{ open: false, reopensOn, reopensAt }`) and clients format the Spanish copy and the "Lunes a viernes" grouping. Admin payment rules copied into `domain/payment-settings.ts` with stable error codes instead of Spanish messages; unchanged drafts keep the version. Public payment data is only `GET /venue/payment-options` → `{ requestModes }`: the web bill screen never shows bank details ("El personal te indicará los datos"). Admin has no role restriction on payments, so any authenticated staff may edit (no RolesGuard). Seed creates the venue and settings only when missing (`update: {}`), so it never overwrites admin edits. Migration `20261027000000_venue` generated offline with `prisma migrate diff --from-schema <previous schema from git> --to-schema`.
+- T3 follow-ups: web uses `cashier` where admin/API use `register` (map when wiring web); no admin screen edits the profile yet (`PUT /venue` is ready for one); overnight opening ranges unsupported; payment settings have no optimistic concurrency check on `version`; `coverImageUrl` is a web-relative path until uploads exist.
+
 ## Next step
-T3 (venue module).
+T4 (catalog module).
