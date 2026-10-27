@@ -59,5 +59,8 @@ Forecast well over 400 authored lines across modules; strategy `ask-on-risk`; ch
 - T3 commit `2109657`. Parent spot check: `npm test` 69 tests passed. Review assess: medium, `slice_budget_reached`; candidate review declined by user (2026-10-27).
 - T3 follow-ups: web uses `cashier` where admin/API use `register` (map when wiring web); no admin screen edits the profile yet (`PUT /venue` is ready for one); overnight opening ranges unsupported; payment settings have no optimistic concurrency check on `version`; `coverImageUrl` is a web-relative path until uploads exist.
 
+## Rebase onto feat/products-redesign (2026-10-27)
+User decision: the API chain now sits on top of `feat/products-redesign` so the API can be tested with the current admin (`main ← feat/products-redesign ← feat/api-foundation ← feat/api-auth ← feat/api-venue`). From here each API module ships together with its admin wiring. Hashes cited above are pre-rebase: `b052a27` → `cc92ae1` (T1), `198035e` → `f2bb0e1` (T2), `2109657` → `074c081` (T3), `3a57b1d` → `4b40692` (configurable Postgres port). Local smoke test against Postgres on port 5434: migrations + seed applied; health, venue, login/me/logout, payment-settings all returned the expected status codes.
+
 ## Next step
 T4 (catalog module).
